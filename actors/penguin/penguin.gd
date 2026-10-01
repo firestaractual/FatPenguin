@@ -33,8 +33,9 @@ signal scrambled
 enum State { SWIM, AIR, WALK, SLIDE }
 
 const WATER_LEVEL := 0.0
-## Swimming along the top, the body centre sits this far below the surface.
-const SURFACE_DEPTH := 0.25
+## Swimming along the top, the body centre sits this far below the surface: shallow enough
+## that the back and head stay above the water, the way a resting penguin floats.
+const SURFACE_DEPTH := 0.1
 ## Shallower than this, the penguin can breathe.
 const BREATH_DEPTH := 0.45
 ## On ice, sinking deeper than this means you're in the water now.
@@ -783,10 +784,15 @@ func _update_air(delta: float) -> void:
 func _update_energy(delta: float) -> void:
 	if infinite_energy or not tuning.energy_drain_enabled:
 		return
+	if energy < tuning.energy_floor:
+		# Spent below the floor: get your breath back, up to the floor.
+		energy = minf(energy + tuning.floor_recovery * delta, tuning.energy_floor)
+		return
 	var rate := tuning.base_drain
 	if energy > tuning.overfill_threshold:
 		rate *= tuning.overfill_drain_mult
-	energy = maxf(energy - rate * delta, 0.0)
+	# The cold never takes you below the floor (a stand-in until there's a real exhausted state).
+	energy = maxf(energy - rate * delta, tuning.energy_floor)
 
 
 func _update_body(delta: float) -> void:

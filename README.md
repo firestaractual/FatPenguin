@@ -33,7 +33,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 - Dive deep, pitch up, then boost to rocket out of the water onto the iceberg. You'll land in a belly-slide.
 - Compare a thin penguin with a fat one (Q/E): the fat one turns wider and gets less height when launching.
-- If you're out of energy and can't boost, climb out using the low ramp on the east side of the iceberg.
+- Run low and you get thin and weak, but never quite stuck: the cold can't take you below the energy floor, and if you spend below it you get your breath back in a few seconds. You can also climb out of the water without boosting using the low ramp on the east side of the iceberg.
 - Try the three floes (easy, medium and hard): each sits higher above the water.
 - **The plateau** in the middle of the iceberg: walk into the small east steps to hop up (anyone can), or the big north steps (thin penguins only; press Q to slim down). Slide back down the gentle south chute or the steep west one. The south chute will shoot you into the sea.
 - **Bumping:** belly-slide into the blue dummy penguins. A thin one standing skids about a metre; one lying on its belly flies. Get stuffed (E) and you hit like a bowling ball; slide into the fat dummy while thin and you bounce off, but knock a fish loose. The dummy near the south-west edge teeters before it falls in. Get knocked to an edge yourself and pull the stick back to scramble to safety (costs a little energy).

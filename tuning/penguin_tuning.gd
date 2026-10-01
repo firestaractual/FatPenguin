@@ -15,6 +15,11 @@ extends Resource
 ## Energy lost per second in water or on open ice.
 @export var base_drain := 1.5
 @export var overfill_threshold := 70.0
+## The cold can't drain you below this, so an empty penguin is thin and weak but never stranded.
+## A stand-in until there's a real exhausted state (see docs/DECISIONS.md).
+@export var energy_floor := 20.0
+## Spend below the floor and energy comes back at this rate (per second), up to the floor.
+@export var floor_recovery := 4.0
 ## Drain is multiplied by this while energy is above the overfill threshold.
 @export var overfill_drain_mult := 2.0
 @export var fish_value := 10.0

@@ -4,6 +4,13 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-01: Energy has a floor for now; an exhausted state comes later
+
+- **Playtest:** at zero energy the penguin couldn't flop or boost, so it crawled at walking speed on the ice and couldn't launch out of the water. Exhaustion was fun, but a hard zero made it too hard.
+- **For now:** the cold can't drain you below an energy floor (20), and spending below it recovers up to the floor at 4 per second. An empty penguin is thin and weak but can always flop or boost again within a couple of seconds.
+- **Cost:** it takes some pressure off the "eat early, then hide" strategy, since a camper reaches the kill screen with about three dodges instead of none (TUNING, energy checks).
+- **Later:** design a real exhausted state to replace the floor (GDD §11, open question 10; ROADMAP Prototype 1). It should feel bad enough to avoid, never strand you, and bring back the pressure on campers.
+
 ## 2026-10-01: The iceberg is a 3D plateau: slide down, hop up
 
 - The iceberg gets raised tiers instead of being one flat disc. The ways down are **chutes**, too steep to stand on, so you slide, and gravity speeds you up. The ways up are **ledges** you hop by walking into them. Hop height shrinks as you fatten, so tall steps are shortcuts only thin penguins can take. See GDD §4.9 and §4.10.

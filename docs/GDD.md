@@ -53,6 +53,7 @@ This exists to prevent the "eat everything early, then hide" strategy (see DECIS
 - Energy drains all the time from the cold. A full belly lasts well under a round, so **every player must refuel at least once**, usually twice.
 - **Overfill decays fast:** above the overfill threshold, the drain multiplies while you digest. Stuffing yourself only pays off right before you need the energy. Overfill can also be knocked loose by a hard bump (§4.5).
 - Being in the waddle slows the drain but doesn't stop it.
+- **Energy floor** (a stand-in): the cold can't drain you below the floor, and if you spend below it you get your breath back up to it within a few seconds. An empty penguin is thin and weak, but it can always flop or boost again soon, so it's never stranded. A real exhausted state will replace this (§11).
 
 ### 4.3 Food pulses [Proposed]
 
@@ -302,6 +303,7 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 7. **Bump aiming:** is steering a slide with the stick precise enough to aim bumps on a phone, or does a flop need a short aim line?
 8. **Bump credit:** should knocking someone into a predator count for anything beyond the kill-feed callout?
 9. **Plateau layouts:** how many tiers does a real map want, and do chutes and ledges change as the ice breaks up?
+10. **Exhaustion:** what should running empty feel like? Playtesting showed a hard zero is fun but too punishing (you can't slide or boost, so you crawl and get stuck in the water), so the energy floor (§4.2) stands in for now. Candidates: an exhausted state that's slow and low in the water and can't boost, but recovers with rest or a fish. It should also bring back the pressure on campers that the floor takes away (see TUNING).
 
 ## 12. Glossary
 

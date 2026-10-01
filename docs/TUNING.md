@@ -23,12 +23,14 @@ Units: energy runs from 0 (empty) to 100 (full). Time is in seconds, distance in
 | Center time limit | 12 s | After that, the huddle rotates you to the edge |
 | Overfill threshold | 70 | |
 | Overfill drain multiplier | ×2 | Applies to any drain above the threshold |
+| Energy floor | 20 | The cold can't drain you below this. A stand-in until there's an exhausted state |
+| Recovery below the floor | +4 /s | Spend below the floor and it comes back up to the floor: a flop in under a second, a boost in about 2 s |
 | Fish value | +10 | |
 | Krill mouthful (optional) | +3 | Small, frequent food to fill the gaps |
 
-**Check, how long a full belly lasts:** 100→70 at 3.0/s takes 10 s, then 70→0 at 1.5/s takes 47 s, for about **57 s** with no boosting. That's under half of the 2:00 before the kill screen. ✓
+**Check, how long a full belly lasts:** 100→70 at 3.0/s takes 10 s, then 70→20 (the floor) at 1.5/s takes 33 s, for about **43 s** with no boosting. That's well under half of the 2:00 before the kill screen. ✓
 
-**Check, can you hide in the waddle after eating early?** Eat to full by about 0:20, then stay in the waddle. Even in the center the whole time (which rotation prevents), you'd be empty by about 2:05. You'd reach the kill screen with almost nothing to dodge with. ✓ Everyone has to refuel at least once.
+**Check, can you hide in the waddle after eating early?** Eat to full by about 0:20, then stay in the waddle. Even in the center the whole time (which rotation prevents), you'd hit the floor by about 1:40 and reach the kill screen with 20 energy: about three dodges, against up to 100 for whoever ate the last meal. ⚠ Refuelling still wins, but the floor takes some pressure off campers. Revisit when the exhausted state replaces the floor (DECISIONS, 2026-10-01).
 
 ## Energy costs
 

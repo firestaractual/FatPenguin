@@ -46,6 +46,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 - The waddle as a safe zone (center vs. edge)
 - One leopard seal: ambushes at edges and holes, targeting rule, visible lock-on, sated state
 - Chum drop
+- Exhaustion: design and try a real exhausted state to replace the energy floor stand-in
 - A short level built around a single-player goal (Journey or Feast)
 
 **Success signals**
@@ -54,6 +55,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 - Players hesitate at the edge and watch the seal before diving
 - Players tell near-miss stories without being asked
 - Nobody wins by eating everything early and then hiding
+- Running empty feels scary but recoverable, never like being stuck
 
 ## Prototype 2: Shrinking ice + orcas + kill screen + coop
 

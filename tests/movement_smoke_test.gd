@@ -38,6 +38,7 @@ func _run() -> void:
 	await _test_ramp_climb_out()
 	await _test_eat_fish_and_fatness()
 	await _test_energy_drain_and_overfill()
+	await _test_floats_with_back_above_water()
 	await _test_air_runs_out_and_forces_surface()
 	await _test_chute_slide()
 	await _test_hop_small_steps_when_fat()
@@ -132,6 +133,7 @@ func _test_ramp_climb_out() -> void:
 	_place_swimming(Vector3(45.0, -Penguin.SURFACE_DEPTH, 0.0), PI / 2.0, 0.0)
 	var out := await _wait_for_state(Penguin.State.WALK, 600)
 	_check(out, "swimming into the ramp climbs out onto the ice (state=%s, pos=%s)" % [_state(), _penguin.global_position])
+	_check(_penguin.global_position.y > -0.15, "climbing out up the ramp, the penguin stands clear of the water (y=%.2f)" % _penguin.global_position.y)
 
 
 func _test_eat_fish_and_fatness() -> void:
@@ -169,6 +171,32 @@ func _test_energy_drain_and_overfill() -> void:
 	var normal_loss := 50.0 - _penguin.energy
 	_check(absf(normal_loss - 1.5) < 0.1, "base drain ~1.5/s (got %.2f)" % normal_loss)
 	_check(absf(overfill_loss - 3.0) < 0.15, "overfill drain ~3.0/s (got %.2f)" % overfill_loss)
+
+	# The floor: the cold stops there, and spending below it comes back.
+	var t := _penguin.tuning
+	_penguin.energy = t.energy_floor + 0.5
+	await _frames(60)
+	_check(absf(_penguin.energy - t.energy_floor) < 0.01, "the cold can't drain you below the energy floor (energy=%.2f)" % _penguin.energy)
+	_penguin.energy = 5.0
+	await _frames(60)
+	_check(absf(_penguin.energy - (5.0 + t.floor_recovery)) < 0.2, "spent below the floor, you get your breath back (energy=%.2f)" % _penguin.energy)
+	# Even a penguin that has spent everything can belly-slide again after a moment.
+	await _place_on_ice(_penguin, Vector3(-12.0, 1.0, 16.0), 0.0, 0.0)
+	await _frames(int(t.slide_energy_cost / t.floor_recovery * 60.0) + 10)
+	_tap(&"action")
+	await _frames(3)
+	_check(_penguin.state == Penguin.State.SLIDE, "an emptied penguin can flop again after catching its breath (state=%s)" % _state())
+	await _wait_for_state(Penguin.State.WALK, 600)
+
+
+func _test_floats_with_back_above_water() -> void:
+	_place_swimming(Vector3(0, -Penguin.SURFACE_DEPTH, 90.0), 0.0, 0.0)
+	await _frames(40)
+	var top := -INF
+	for m in _penguin.get_node("Model").find_children("*", "MeshInstance3D"):
+		var mesh := m as MeshInstance3D
+		top = maxf(top, (mesh.global_transform * mesh.get_aabb()).end.y)
+	_check(_penguin.state == Penguin.State.SWIM and top > 0.1, "swimming along the top, the back stays above the water (top at %.2f)" % top)
 
 
 func _test_air_runs_out_and_forces_surface() -> void:
