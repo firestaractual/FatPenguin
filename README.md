@@ -6,7 +6,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 ## Status
 
-**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, eat fish and get fat. There are no predators or goals yet, by design. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, slide down chutes, hop up steps, bump other penguins, eat fish and get fat. There are no predators or goals yet, by design. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - **Engine:** Godot 4.7.2 (standard build), GDScript
 - **Renderer:** Mobile
@@ -23,6 +23,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 |---|---|---|---|
 | Steer (water: turn + up/down; ice: walk) | WASD / arrows | Left stick | Left half of the screen (floating stick) |
 | Boost (water) / belly-slide (ice) | Space | A | Tap the right half of the screen |
+| Flipper push (mid-slide) | Space again | A again | Tap again |
 | Reset to spawn | R | Start | – |
 | Energy −10 / +10 (testing) | Q / E | – | – |
 | Infinite energy (testing) | F2 | – | – |
@@ -34,6 +35,8 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 - Compare a thin penguin with a fat one (Q/E): the fat one turns wider and gets less height when launching.
 - If you're out of energy and can't boost, climb out using the low ramp on the east side of the iceberg.
 - Try the three floes (easy, medium and hard): each sits higher above the water.
+- **The plateau** in the middle of the iceberg: walk into the small east steps to hop up (anyone can), or the big north steps (thin penguins only; press Q to slim down). Slide back down the gentle south chute or the steep west one. The south chute will shoot you into the sea.
+- **Bumping:** belly-slide into the blue dummy penguins. A thin one standing skids about a metre; one lying on its belly flies. Get stuffed (E) and you hit like a bowling ball; slide into the fat dummy while thin and you bounce off, but knock a fish loose. The dummy near the south-west edge teeters before it falls in. Get knocked to an edge yourself and pull the stick back to scramble to safety (costs a little energy).
 
 ## Tuning
 
@@ -45,7 +48,7 @@ Every balance number is in **`tuning/penguin_tuning_default.tres`**. Select it i
 actors/penguin/     Penguin controller (penguin.gd) + placeholder model scene
 actors/fish/        Fish pickup
 camera/             Follow camera (also switches on the underwater fog)
-levels/movement_toy Prototype 0 test level (iceberg, ramp, floes, fish)
+levels/movement_toy Prototype 0 test level (iceberg + plateau, ramp, floes, fish, dummy penguins)
 tuning/             PenguinTuning resource class + default values
 ui/                 Debug HUD (air bar, numbers) and touch controls
 art/materials/      Placeholder materials

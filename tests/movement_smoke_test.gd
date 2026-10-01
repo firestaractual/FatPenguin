@@ -1,15 +1,21 @@
 extends SceneTree
 ## Headless smoke test for the Prototype 0 movement toy.
-## Drives the penguin with simulated input and checks each movement verb still works.
+## Drives the penguin with simulated input and checks each movement verb still works,
+## then checks the plateau (slide down chutes, hop up steps) and bumping with dummy penguins.
 ##
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --script res://tests/movement_smoke_test.gd
 ## Exit code 0 = all checks passed.
 
 const LEVEL := "res://levels/movement_toy/movement_toy.tscn"
+const PENGUIN_SCENE := "res://actors/penguin/penguin.tscn"
+## Open ice on the south-east of the berg, clear of the plateau, ramp and level dummies.
+const BUMP_LANE_Z := 10.0
 
 var _failures: Array[String] = []
 var _penguin: Penguin
+var _level: Node
+var _plateau: IcePlateau
 var _states_seen: Array[String] = []
 
 
@@ -20,6 +26,8 @@ func _initialize() -> void:
 func _run() -> void:
 	var level: Node = load(LEVEL).instantiate()
 	root.add_child(level)
+	_level = level
+	_plateau = level.get_node("Plateau") as IcePlateau
 	_penguin = level.get_node("Penguin") as Penguin
 	_penguin.state_changed.connect(func(s: Penguin.State) -> void: _states_seen.append(Penguin.State.keys()[s]))
 
@@ -31,6 +39,11 @@ func _run() -> void:
 	await _test_eat_fish_and_fatness()
 	await _test_energy_drain_and_overfill()
 	await _test_air_runs_out_and_forces_surface()
+	await _test_chute_slide()
+	await _test_hop_small_steps_when_fat()
+	await _test_big_steps_thin_only()
+	await _test_bump_knockback()
+	await _test_teeter_and_scramble()
 
 	print("\nStates seen: ", " > ".join(_states_seen))
 	if _failures.is_empty():
@@ -55,9 +68,12 @@ func _test_slide_off_edge_into_water() -> void:
 	# Spawn faces +Z toward the edge; camera is behind, so "up" = forward.
 	Input.action_press(&"move_up")
 	await _frames(10)
+	var energy_before := _penguin.energy
 	_tap(&"action")
 	await _frames(2)
 	_check(_penguin.state == Penguin.State.SLIDE, "action on ice starts a belly-slide (state=%s)" % _state())
+	var flop_cost := energy_before - _penguin.energy
+	_check(absf(flop_cost - _penguin.tuning.slide_energy_cost) < 0.2, "flopping onto your belly costs energy (%.2f)" % flop_cost)
 	Input.action_release(&"move_up")
 	var entered := await _wait_for_state(Penguin.State.SWIM, 300)
 	_check(entered, "slides off the edge and ends up swimming")
@@ -172,6 +188,162 @@ func _test_air_runs_out_and_forces_surface() -> void:
 	_check(_penguin.air >= _penguin.tuning.air_seconds - 0.1, "air refills at the surface (air=%.1f)" % _penguin.air)
 
 
+func _test_chute_slide() -> void:
+	# On top of the plateau, just behind the south chute, facing down it (+Z).
+	_penguin.infinite_energy = true
+	await _place_on_ice(_penguin, _plateau.south_chute_head(), PI, 50.0)
+	Input.action_press(&"move_up")
+	var slipped := await _wait_for_state(Penguin.State.SLIDE, 150)
+	_check(slipped, "walking onto a steep chute slips into a belly-slide (state=%s)" % _state())
+	var top_speed := 0.0
+	for i in 150:
+		await physics_frame
+		top_speed = maxf(top_speed, _penguin.get_speed())
+		if _penguin.global_position.y < _plateau.top_y() - _plateau.height + 0.6:
+			break
+	Input.action_release(&"move_up")
+	_check(top_speed > 4.5, "the chute speeds the slide up (top speed %.1f m/s)" % top_speed)
+	_penguin.infinite_energy = false
+
+
+func _test_hop_small_steps_when_fat() -> void:
+	_penguin.infinite_energy = true
+	await _place_on_ice(_penguin, _plateau.east_steps_foot(), PI / 2.0, 100.0) # facing -X, up the steps
+	var hops: Array[float] = []
+	var on_hop := func(ledge: float, cleared: bool) -> void:
+		if cleared:
+			hops.append(ledge)
+	_penguin.hopped.connect(on_hop)
+	Input.action_press(&"move_up")
+	var on_top := false
+	for i in 900:
+		await physics_frame
+		if _penguin.global_position.y > _plateau.top_y() + 0.2 and _penguin.state == Penguin.State.WALK:
+			on_top = true
+			break
+	Input.action_release(&"move_up")
+	_penguin.hopped.disconnect(on_hop)
+	_check(on_top, "a stuffed penguin hops up the small steps onto the plateau (y=%.2f, hops=%d)" % [_penguin.global_position.y, hops.size()])
+	_penguin.infinite_energy = false
+
+
+func _test_big_steps_thin_only() -> void:
+	_penguin.infinite_energy = true
+	var failed_hops := [0]
+	var on_hop := func(_ledge: float, cleared: bool) -> void:
+		if not cleared:
+			failed_hops[0] += 1
+	_penguin.hopped.connect(on_hop)
+	# Stuffed: tries, falls short, stays at the bottom.
+	await _place_on_ice(_penguin, _plateau.north_steps_foot(), PI, 100.0) # facing +Z, up the steps
+	var start_y := _penguin.global_position.y
+	Input.action_press(&"move_up")
+	await _frames(300)
+	Input.action_release(&"move_up")
+	await _wait_for_state(Penguin.State.WALK, 60)
+	_check(_penguin.global_position.y < start_y + 0.2 and failed_hops[0] > 0,
+		"a stuffed penguin can't hop the big steps (dy=%.2f, failed hops=%d)" % [_penguin.global_position.y - start_y, failed_hops[0]])
+	_penguin.hopped.disconnect(on_hop)
+	# Thin: straight up.
+	await _place_on_ice(_penguin, _plateau.north_steps_foot(), PI, 20.0)
+	Input.action_press(&"move_up")
+	var on_top := false
+	for i in 600:
+		await physics_frame
+		if _penguin.global_position.y > _plateau.top_y() + 0.2 and _penguin.state == Penguin.State.WALK:
+			on_top = true
+			break
+	Input.action_release(&"move_up")
+	_check(on_top, "a thin penguin hops the big steps (y=%.2f)" % _penguin.global_position.y)
+	_penguin.infinite_energy = false
+
+
+func _test_bump_knockback() -> void:
+	# Thin slides into thin standing: feet grip, short skid.
+	var target := await _spawn_standing(Vector3(15.0, 1.0, BUMP_LANE_Z), 0.0)
+	var hitter := await _spawn_standing(Vector3(12.0, 1.0, BUMP_LANE_Z), 0.0)
+	var start := target.global_position
+	_launch_slide(hitter, Vector3.RIGHT, 5.0)
+	var hit := await _wait_for_bump(target, 120)
+	_check(hit and target.is_immune(), "a slide into a penguin bumps it, and it's briefly immune")
+	var moved := await _wait_until_still(target, start)
+	_check(moved > 0.5 and moved < 1.6, "thin into thin standing: knocked %.2f m (feet grip)" % moved)
+	target.queue_free()
+	hitter.queue_free()
+	await _frames(2)
+
+	# Fat slides into thin lying on its belly: the puck flies.
+	target = await _spawn_standing(Vector3(15.0, 1.0, BUMP_LANE_Z), 0.0)
+	hitter = await _spawn_standing(Vector3(13.5, 1.0, BUMP_LANE_Z), 100.0)
+	target.call(&"_set_state", Penguin.State.SLIDE)
+	start = target.global_position
+	_launch_slide(hitter, Vector3.RIGHT, 5.0)
+	hit = await _wait_for_bump(target, 60)
+	moved = await _wait_until_still(target, start)
+	_check(hit and moved > 5.0, "fat into thin on its belly: thin tumbles %.1f m" % moved)
+	target.queue_free()
+	hitter.queue_free()
+	await _frames(2)
+
+	# Thin slides into a stuffed penguin standing: barely moves it, but a fish comes loose.
+	target = await _spawn_standing(Vector3(15.0, 1.0, BUMP_LANE_Z), 100.0)
+	hitter = await _spawn_standing(Vector3(12.0, 1.0, BUMP_LANE_Z), 0.0)
+	start = target.global_position
+	var spills := [0]
+	target.spilled_fish.connect(func(_at: Vector3) -> void: spills[0] += 1)
+	_launch_slide(hitter, Vector3.RIGHT, 5.0)
+	hit = await _wait_for_bump(target, 120)
+	moved = await _wait_until_still(target, start)
+	_check(hit and moved < 0.8, "thin into fat standing: fat moves only %.2f m" % moved)
+	_check(spills[0] == 1 and target.energy < 95.0, "a hard bump knocks a fish loose from an overfed penguin (energy=%.0f)" % target.energy)
+	target.queue_free()
+	hitter.queue_free()
+	await _frames(2)
+
+
+func _test_teeter_and_scramble() -> void:
+	# The player stands near the east edge facing out; a fat dummy slides in from behind.
+	_penguin.infinite_energy = false
+	var edge_x := sqrt(30.0 * 30.0 - BUMP_LANE_Z * BUMP_LANE_Z)
+	await _place_on_ice(_penguin, Vector3(edge_x - 1.4, 1.0, BUMP_LANE_Z), -PI / 2.0, 50.0)
+	await _frames(30) # let the camera settle behind
+	var teetered := [false]
+	_penguin.teetered.connect(func() -> void: teetered[0] = true)
+	var hitter := await _spawn_standing(Vector3(edge_x - 4.6, 1.0, BUMP_LANE_Z), 100.0)
+	_launch_slide(hitter, Vector3.RIGHT, 5.0)
+	for i in 120:
+		await physics_frame
+		if teetered[0]:
+			break
+	_check(teetered[0], "knocked to the edge on its feet, the penguin teeters")
+	var energy_before := _penguin.energy
+	Input.action_press(&"move_down") # pull back, away from the edge
+	await _frames(10)
+	Input.action_release(&"move_down")
+	var paid := energy_before - _penguin.energy
+	await _frames(60)
+	_check(_penguin.state == Penguin.State.WALK and _penguin.global_position.y > 1.0 and paid > 3.5,
+		"pulling back scrambles to safety (state=%s, paid %.1f energy)" % [_state(), paid])
+	hitter.queue_free()
+	await _frames(2)
+
+	# A dummy nobody saves goes in (a lane over, clear of the player).
+	var lane := BUMP_LANE_Z + 4.0
+	edge_x = sqrt(30.0 * 30.0 - lane * lane)
+	var target := await _spawn_standing(Vector3(edge_x - 1.0, 1.0, lane), 0.0)
+	hitter = await _spawn_standing(Vector3(edge_x - 4.0, 1.0, lane), 0.0)
+	_launch_slide(hitter, Vector3.RIGHT, 5.0)
+	var fell := false
+	for i in 240:
+		await physics_frame
+		if target.state == Penguin.State.SWIM:
+			fell = true
+			break
+	_check(fell, "with nobody pulling back, it falls in (state=%s)" % Penguin.State.keys()[target.state])
+	target.queue_free()
+	hitter.queue_free()
+
+
 # --- Helpers ----------------------------------------------------------------
 
 func _place_swimming(pos: Vector3, yaw: float, pitch_deg: float) -> void:
@@ -182,6 +354,72 @@ func _place_swimming(pos: Vector3, yaw: float, pitch_deg: float) -> void:
 	_penguin.set(&"_speed", _penguin.tuning.swim_cruise_speed)
 	_penguin.call(&"_set_state", Penguin.State.SWIM)
 	_penguin.reset_physics_interpolation()
+
+
+## Stand a penguin on the ice at `ground` (a point on the surface) and wait until it's on its feet.
+func _place_on_ice(p: Penguin, ground: Vector3, yaw: float, with_energy: float) -> void:
+	p.energy = with_energy
+	p.global_position = ground + Vector3.UP * (p.get_node("CollisionShape3D").shape.radius + 0.05)
+	p.velocity = Vector3.ZERO
+	p.set(&"_yaw", yaw)
+	p.set(&"_walk_vel", Vector3.ZERO)
+	p.set(&"_knock", Vector3.ZERO)
+	p.call(&"_set_state", Penguin.State.AIR)
+	p.reset_physics_interpolation()
+	for i in 60:
+		await physics_frame
+		if p.state == Penguin.State.WALK:
+			break
+	await _frames(20)
+
+
+func _spawn_standing(ground: Vector3, with_energy: float) -> Penguin:
+	var p: Penguin = load(PENGUIN_SCENE).instantiate()
+	p.player_controlled = false
+	p.infinite_energy = true
+	p.start_energy = with_energy
+	p.position = ground + Vector3.UP * 0.5
+	_level.add_child(p)
+	await _wait_for(p, Penguin.State.WALK, 60)
+	await _frames(5)
+	return p
+
+
+func _launch_slide(p: Penguin, dir: Vector3, speed: float) -> void:
+	p.set(&"_yaw", atan2(-dir.x, -dir.z))
+	p.velocity = dir * speed
+	p.call(&"_set_state", Penguin.State.SLIDE)
+
+
+func _wait_for_bump(p: Penguin, max_frames: int) -> bool:
+	var got := [false]
+	var cb := func(_o: Penguin, _s: float, _h: bool) -> void: got[0] = true
+	p.bumped.connect(cb)
+	for i in max_frames:
+		await physics_frame
+		if got[0]:
+			break
+	p.bumped.disconnect(cb)
+	return got[0]
+
+
+## Waits until `p` stops moving; returns how far it ended up from `from` (horizontally).
+func _wait_until_still(p: Penguin, from: Vector3) -> float:
+	var still := 0
+	for i in 600:
+		await physics_frame
+		still = still + 1 if Vector2(p.velocity.x, p.velocity.z).length() < 0.05 else 0
+		if still > 10:
+			break
+	return Vector2(p.global_position.x - from.x, p.global_position.z - from.z).length()
+
+
+func _wait_for(p: Penguin, state: Penguin.State, max_frames: int) -> bool:
+	for i in max_frames:
+		if p.state == state:
+			return true
+		await physics_frame
+	return p.state == state
 
 
 func _tap(action: StringName) -> void:

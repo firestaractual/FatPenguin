@@ -19,6 +19,10 @@ extends Camera3D
 @export_group("Underwater look")
 @export var underwater_fog_color := Color(0.05, 0.25, 0.38)
 @export var underwater_fog_density := 0.06
+@export_group("Bumps")
+## Camera shake per m/s of closing speed when the player is in a bump.
+@export var bump_shake := 0.04
+@export var max_shake := 0.3
 
 var _target: Penguin
 var _env: Environment
@@ -26,6 +30,7 @@ var _surface_fog_enabled := false
 var _surface_fog_color := Color.WHITE
 var _surface_fog_density := 0.0
 var _surface_fog_sky_affect := 0.0
+var _shake := 0.0
 
 
 func _ready() -> void:
@@ -40,6 +45,7 @@ func _ready() -> void:
 		_surface_fog_sky_affect = _env.fog_sky_affect
 	if _target:
 		global_position = _desired_position(_target.global_position)
+		_target.bumped.connect(_on_target_bumped)
 
 
 func _process(delta: float) -> void:
@@ -49,6 +55,9 @@ func _process(delta: float) -> void:
 	var desired := _desired_position(target_pos)
 	desired = _avoid_clipping(target_pos, desired)
 	global_position = global_position.lerp(desired, 1.0 - exp(-smoothing * delta))
+	if _shake > 0.0:
+		global_position += Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake
+		_shake = move_toward(_shake, 0.0, delta * 1.5)
 
 	var look_at_point := target_pos + _target.get_heading() * 2.0 + Vector3.UP * 0.4
 	if global_position.distance_squared_to(look_at_point) > 0.01:
@@ -69,7 +78,7 @@ func _desired_position(target_pos: Vector3) -> Vector3:
 
 ## Keep the camera from ending up inside the iceberg.
 func _avoid_clipping(from: Vector3, to: Vector3) -> Vector3:
-	var query := PhysicsRayQueryParameters3D.create(from, to)
+	var query := PhysicsRayQueryParameters3D.create(from, to, Penguin.WORLD_LAYER)
 	query.exclude = [_target.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit.is_empty():
@@ -86,3 +95,7 @@ func _update_underwater() -> void:
 	_env.fog_density = underwater_fog_density if under else _surface_fog_density
 	# Underwater the background is murky blue, not sky.
 	_env.fog_sky_affect = 1.0 if under else _surface_fog_sky_affect
+
+
+func _on_target_bumped(_other: Penguin, closing_speed: float, _hard: bool) -> void:
+	_shake = minf(maxf(_shake, closing_speed * bump_shake), max_shake)

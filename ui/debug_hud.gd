@@ -13,9 +13,9 @@ var _penguin: Penguin
 func _ready() -> void:
 	_penguin = get_tree().get_first_node_in_group(&"player") as Penguin
 	var touch := DisplayServer.is_touchscreen_available()
-	_hint_label.text = "Left thumb: steer   Right thumb: boost / belly-slide" if touch else \
-		"WASD / arrows: steer   Space: boost (water) / belly-slide (ice)   R: reset\n" + \
-		"Q / E: energy -/+   F2: infinite energy   F1: debug info"
+	_hint_label.text = "Left thumb: steer   Right thumb: boost / belly-slide (tap again to push)" if touch else \
+		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   R: reset\n" + \
+		"Slide into the blue dummies to bump them; walk into steps to hop.   Q / E: energy -/+   F2: infinite energy   F1: debug"
 
 
 func _process(_delta: float) -> void:
@@ -31,13 +31,31 @@ func _process(_delta: float) -> void:
 	_air_bar.visible = _penguin.air < t.air_seconds - 0.05
 
 	if _debug_label.visible:
-		_debug_label.text = "state   %s\nspeed   %.1f m/s\nenergy  %.0f%s%s\nfat     %.0f%%\nair     %.1f s\nfps     %d" % [
+		_debug_label.text = "state   %s%s\nspeed   %.1f m/s\nenergy  %.0f%s%s\nfat     %.0f%%   mass x%.2f   hop %.2f m\nair     %.1f s\nfps     %d" % [
 			Penguin.State.keys()[_penguin.state],
+			_status(),
 			_penguin.get_speed(),
 			_penguin.energy,
 			"  (overfill)" if _penguin.energy > t.overfill_threshold else "",
 			"  [infinite]" if _penguin.infinite_energy else "",
 			_penguin.fatness() * 100.0,
+			_penguin.mass(),
+			_penguin.hop_height(),
 			_penguin.air,
 			Engine.get_frames_per_second(),
 		]
+
+
+func _status() -> String:
+	var bits: Array[String] = []
+	if _penguin.is_teetering():
+		bits.append("TEETER")
+	if _penguin.is_skidding():
+		bits.append("skid")
+	if _penguin.is_tumbling():
+		bits.append("tumble")
+	if _penguin.is_spun_out():
+		bits.append("spun out")
+	if _penguin.is_immune():
+		bits.append("immune")
+	return "  (" + ", ".join(bits) + ")" if not bits.is_empty() else ""

@@ -4,12 +4,20 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-01: The iceberg is a 3D plateau: slide down, hop up
+
+- The iceberg gets raised tiers instead of being one flat disc. The ways down are **chutes**, too steep to stand on, so you slide, and gravity speeds you up. The ways up are **ledges** you hop by walking into them. Hop height shrinks as you fatten, so tall steps are shortcuts only thin penguins can take. See GDD §4.9 and §4.10.
+- **Why:** it puts the "full belly, bad jumper" rule from the thin-ice decision (below) on every trip, gives slides somewhere to build speed (so harder bumps), and adds ring-outs onto a lower tier as well as into the water.
+- **Built in the Prototype 0 movement toy, together with bumping:** a plateau with two chutes and two staircases, slope physics for slides, automatic hops, and bumper-car collisions against dummy penguins (flop cost, mass, feet vs. belly, skid, tumble, teeter and scramble, spin-out, knockback immunity, chain hits, fish spills). Not built yet: bump noise and credit (need predators), crowd mass (needs the waddle), hops across gaps (need ice breakup).
+- Locked as intent; the layout and numbers are proposed.
+
 ## 2026-10-01: PvP is physical: bumping, like bumper cars
 
 - Sliding (or boosting) into rivals is now the main PvP move. There's no attack button: weight and speed decide who goes flying. See GDD §4.5.
 - **This updates "PvP is indirect"** in "The core is swimming, evasion and greed" (below). Luring predators onto rivals stays, and bumps never kill directly. They move rivals toward predators, so predators still do all the killing.
-- **Why:** the bump works at every scale of the game. You can knock a rival off the food, back into the water at the ice edge where the seal waits, or onto a lunge line in the kill screen. It plugs straight into fat vs. thin (fat is heavy and hard to move; thin can knock fish loose from overfed penguins), and it needs no extra button in a one-thumb game.
+- **Why:** the bump works at every scale of the game. You can knock a rival off the food, back into the water at the ice edge where the seal waits, or onto a lunge line in the kill screen. It plugs straight into fat vs. thin (fat is heavy and hard to move; thin can knock fish loose from overfed penguins), and it needs no extra button on a phone.
 - The separate body-check/shove ability is folded into this. Its energy cost moves to the flop that starts a slide.
+- **No new button:** bumping uses the controls from the Godot entry below (tap to belly-slide, tap again for a flipper push).
 - Locked as intent; the details in GDD §4.5 are proposed.
 
 ## 2026-10-01: Thin ice is a title-screen gag, not a mechanic
@@ -18,6 +26,15 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 - The logo stays. The title screen acts it out: feed the penguin until it falls through.
 - **Instead, a full belly makes you a bad jumper:** lower launches out of the water (already in the GDD) and shorter hops across the cracks that open as the ice breaks up. Those gaps keep the old idea of shortcuts only thin penguins can take.
 - **Why:** energy has no meter, so a hard weight threshold for falling through would be hard to read from body size. A jump that shrinks smoothly as you fatten reads naturally and still gives thin penguins their shortcuts.
+
+## 2026-10-01: Godot 4.7.2 + GDScript + Mobile renderer; Prototype 0 started
+
+- **Godot 4.7.2** is the current stable release. 4.8 is still in development builds.
+- **GDScript:** fastest to iterate in, with the most reliable mobile export.
+- **Mobile renderer:** matches the target platform. It can be switched later if the PC look needs more.
+- **Controls:** one thumb steers (a floating stick on the left half of the screen), and a tap on the right half boosts in water or belly-slides on ice. Keyboard and gamepad map to the same actions.
+- **Swimming moves forward automatically:** penguins don't hover in water, and auto-forward keeps the controls to steering plus one button.
+- **Low exits:** with a 1 m ice edge, a penguin with no energy can't launch out of the water, so every map needs a low exit (see GDD §4.10).
 
 ## 2026-10-01: Engine is Godot 4 (3D)
 

@@ -8,6 +8,9 @@
 [ext_resource type="Script" path="res://camera/follow_camera.gd" id="6_ddo4l"]
 [ext_resource type="PackedScene" path="res://ui/debug_hud.tscn" id="7_w4e3x"]
 [ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="8_yvbwr"]
+[ext_resource type="Script" path="res://levels/movement_toy/ice_plateau.gd" id="9_plat1"]
+[ext_resource type="Material" path="res://art/materials/ice_slick.tres" id="10_slick"]
+[ext_resource type="Material" path="res://art/materials/ice_plateau.tres" id="11_platm"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_r75tr"]
 sky_top_color = Color(0.38, 0.6, 0.85, 1)
@@ -143,6 +146,12 @@ shape = SubResource("CylinderShape3D_851nm")
 [node name="Mesh" type="MeshInstance3D" parent="Iceberg" unique_id=1651693804]
 mesh = SubResource("CylinderMesh_nmmgk")
 
+[node name="Plateau" type="StaticBody3D" parent="." unique_id=1473158606]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -8)
+script = ExtResource("9_plat1")
+ice_material = ExtResource("11_platm")
+chute_material = ExtResource("10_slick")
+
 [node name="Ramp" type="StaticBody3D" parent="." unique_id=1641471842]
 transform = Transform3D(0.9766723, 0.21473531, 0, -0.21473531, 0.9766723, 0, 0, 0, 1, 33, -0.4, 0)
 
@@ -180,6 +189,43 @@ shape = SubResource("CylinderShape3D_x0esy")
 mesh = SubResource("CylinderMesh_rbbxl")
 
 [node name="Fish" type="Node3D" parent="." unique_id=733513361]
+
+[node name="Dummies" type="Node3D" parent="." unique_id=339081663]
+
+[node name="DummyThin" parent="Dummies" unique_id=153710184 instance=ExtResource("5_l3mpj")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, -5, 1.4, 17)
+player_controlled = false
+start_energy = 10.0
+infinite_energy = true
+body_tint = Color(0.22, 0.3, 0.46, 1)
+
+[node name="DummyFat" parent="Dummies" unique_id=1692467581 instance=ExtResource("5_l3mpj")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 5, 1.4, 17)
+player_controlled = false
+start_energy = 100.0
+infinite_energy = true
+body_tint = Color(0.22, 0.3, 0.46, 1)
+
+[node name="DummyMedium" parent="Dummies" unique_id=690620971 instance=ExtResource("5_l3mpj")]
+transform = Transform3D(0.877583, 0, 0.479426, 0, 1, 0, -0.479426, 0, 0.877583, -10, 1.4, 8)
+player_controlled = false
+start_energy = 50.0
+infinite_energy = true
+body_tint = Color(0.22, 0.3, 0.46, 1)
+
+[node name="DummyEdge" parent="Dummies" unique_id=625901256 instance=ExtResource("5_l3mpj")]
+transform = Transform3D(-0.588501, 0, -0.808496, 0, 1, 0, 0.808496, 0, -0.588501, -16, 1.4, 23)
+player_controlled = false
+start_energy = 30.0
+infinite_energy = true
+body_tint = Color(0.22, 0.3, 0.46, 1)
+
+[node name="DummyMesa" parent="Dummies" unique_id=579341423 instance=ExtResource("5_l3mpj")]
+transform = Transform3D(-0.856889, 0, 0.515501, 0, 1, 0, -0.515501, 0, -0.856889, -4.5, 3.5, -4)
+player_controlled = false
+start_energy = 20.0
+infinite_energy = true
+body_tint = Color(0.22, 0.3, 0.46, 1)
 
 [node name="Penguin" parent="." unique_id=1606681652 instance=ExtResource("5_l3mpj")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 1.4, 22)

@@ -22,7 +22,8 @@ Each prototype answers one question. Don't move on until the current one's answe
 - Eating fish (static fish, no AI) and body size changing with energy
 - Fat vs. thin handling (turn rate, acceleration, launch height)
 - Air meter
-- **Added with the bumping decision (not built yet):** a few dummy penguins of different sizes to slide into, to feel out mass, feet vs. belly, and teetering at the edge
+- A plateau on the iceberg: chutes to slide down, steps to hop up (fat penguins hop lower)
+- Bumping: dummy penguins of different sizes to slide into (mass, feet vs. belly, skid and tumble, teeter and scramble, spin-out, fish spills)
 
 **Out of scope:** predators, food pulses, the waddle, multiplayer, menus, art polish.
 
@@ -32,6 +33,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 - They try to chain moves (boost → launch → slide → dive)
 - They can feel the fat/thin difference without being told
 - They knock the dummies off the ice just to watch them go
+- They climb back up the plateau just to slide down again
 
 ## Prototype 1: Energy loop + leopard seal
 

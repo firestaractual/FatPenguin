@@ -6,7 +6,7 @@ Last updated: 2026-10-01
 
 **The live copy is in Godot:** `tuning/penguin_tuning_default.tres` (the class is `tuning/penguin_tuning.gd`). Edit the values in the Inspector, then copy the ones that work back here.
 
-**In the game so far (Prototype 0):** base and overfill drain, fish value, boost cost, fat vs. thin, movement, and air. Waddle drain, the other action costs, food pulses, predators, rounds and campaign values arrive with later prototypes.
+**In the game so far (Prototype 0):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump noise and credit, which need predators), and air. Waddle drain, the other action costs, food pulses, predators, rounds and campaign values arrive with later prototypes.
 
 Units: energy runs from 0 (empty) to 100 (full). Time is in seconds, distance in meters.
 
@@ -40,7 +40,7 @@ Units: energy runs from 0 (empty) to 100 (full). Time is in seconds, distance in
 | Edge scramble (saving yourself from a teeter) | 4 |
 | Chum drop | 10 (one fish) |
 
-Landing on your belly after a launch is free, since the boost already paid for it. The bump itself and the mid-slide flipper push are free. [Proposed] The flop cost isn't in the prototype yet.
+Landing on your belly after a launch is free, since the boost already paid for it. The bump itself, the mid-slide flipper push and hopping are free.
 
 ## Fat vs. thin handling
 
@@ -56,7 +56,8 @@ Each value scales in a straight line from energy 0 to energy 100. Swap in curves
 | Body size (mostly width) | ×1.00 | ×1.60 |
 | Collision radius | ×1.00 | ×1.30 |
 | Mass (for bumps) | ×1.00 | ×2.00 |
-| Hop distance | ×1.00 | ×0.40 |
+| Hop height (up ledges) | ×1.00 | ×0.55 |
+| Hop distance (across gaps; not built yet) | ×1.00 | ×0.40 |
 | Get-up time (belly to feet) | ×1.00 | ×2.00 |
 
 Nothing has a hard threshold: ice never breaks under a penguin's weight (see DECISIONS, 2026-10-01).
@@ -75,9 +76,15 @@ Nothing has a hard threshold: ice never breaks under a penguin's weight (see DEC
 | Walk speed (on ice) | 1.2 m/s | The slow penguin waddle. Called "walk" in code so it isn't confused with the waddle safe zone |
 | Belly-slide starting speed | 5.0 m/s | Slows down through friction |
 | Belly-slide ice friction | 0.6 m/s² | |
-| Get-up time (belly to feet) | 0.4 s | After the slide stops; you're still a puck until you're up. New, not in the prototype yet |
-| Skid friction on your feet | 2.5 m/s² | How quickly a standing penguin stops after a shove. New |
-| Hop distance | 1.5 m | Automatic when you reach a crack you can clear. New |
+| Get-up time (belly to feet) | 0.4 s | After the slide stops; you're still a puck until you're up |
+| Skid friction on your feet | 2.5 m/s² | How quickly a standing penguin stops after a shove |
+| Steepest slope you can stand on | 14° | Steeper is too slippery: you slip onto your belly and slide |
+| Slope gravity on slides | ×1.0 | Real gravity along the slope: speeds you up going down, slows you going up |
+| Slide top speed | 12 m/s | |
+| Hop height | 0.9 m | Walk into a ledge this high or lower and you hop it. Taller (up to 1.6 m) and you try and fall short |
+| Hop forward speed | 1.6 m/s | |
+| Hop cooldown | 0.3 s | After landing |
+| Hop distance | 1.5 m | Across cracks. Not built yet (gaps come with ice breakup) |
 | Ice edge height above water | 1.0 m | |
 | Speed needed to launch onto ice | 7.0 m/s | A boost can reach it; cruising can't |
 
@@ -106,7 +113,7 @@ Nothing has a hard threshold: ice never breaks under a penguin's weight (see DEC
 
 ## Bumping
 
-Knockback follows a simple collision: the target's push-off speed is (1 + bounciness) × hitter mass ÷ (hitter mass + target mass) × closing speed, then multiplied by grip if the target is on its feet. Godot's physics can do this for us; these are the values to aim for. None of this is in the prototype yet.
+Knockback follows a simple collision: the target's push-off speed is (1 + bounciness) × hitter mass ÷ (hitter mass + target mass) × closing speed, then multiplied by grip if the target is on its feet. The prototype does this by hand in `Penguin._bump()` rather than with rigid bodies, so these numbers are exactly what you get.
 
 | Value | Start | Notes |
 |---|---|---|
@@ -117,14 +124,15 @@ Knockback follows a simple collision: the target's push-off speed is (1 + bounci
 | Tumble friction (knocked onto your belly) | 2.0 m/s² | Higher than a normal slide (0.6), so one hit can't send someone across the whole iceberg |
 | Max knockback speed | 6.0 m/s | |
 | Knockback in water | ×0.35 | Drag soaks it up; water bumps are short shoves |
+| Water drag on knockback | 6.0 m/s² | |
 | Chain transfer | 50% | Share of a hit passed on when a knocked penguin hits another |
-| Crowd mass | Masses of all touching penguins add | Why nobody gets knocked out of the middle of the waddle |
+| Crowd mass | Masses of all touching penguins add | Why nobody gets knocked out of the middle of the waddle. Not built yet (no waddle) |
 | Spin-out | 0.5 s | No steering or dodging |
 | Knockback immunity | 0.75 s | After any bump. No juggling |
 | Teeter window | 0.6 s | Penguins on their feet only; belly-sliders go straight in |
 | Fish spill | 1 fish per hard bump | Only from penguins above the overfill threshold (70) |
-| Bump noise | 0.4 soft, 1.0 hard | Added to both penguins' noise score; fades over 2 s |
-| Credit window | 5 s | A predator catch this soon after a bump credits the bumper |
+| Bump noise | 0.4 soft, 1.0 hard | Added to both penguins' noise score; fades over 2 s. Not built yet (no predators) |
+| Credit window | 5 s | A predator catch this soon after a bump credits the bumper. Not built yet |
 
 **Check, how far does a bump send you?** A full-speed slide (5 m/s) into a penguin that isn't moving, on ice:
 
@@ -135,11 +143,33 @@ Knockback follows a simple collision: the target's push-off speed is (1 + bounci
 | Thin → fat | ~0.5 m | ~2.3 m |
 | Fat → fat | ~1.0 m | ~5 m |
 
+The smoke test measures three of these in the prototype (the hitter starts 3 m away, so it arrives a little slower): thin → thin on its feet **0.9 m**, fat → thin on its belly **8.6 m**, thin → fat on its feet **0.4 m**. ✓
+
 - The kill-screen floe is ≈8 m across, so its edge is ~4 m from the middle. A penguin on its feet only goes in if it was already within ~2 m of the edge, and even then it teeters and can scramble back. A penguin on its belly goes in from almost anywhere. ✓ Standing is the defense; sliding is the risk.
 - A lunge line only needs a ~1 m shove, which any full-speed hit on a thin penguin gives. ✓
 - A thin penguin barely moves a standing fat one (~0.5 m). Its tool against fat is the fish spill, not the shove. ✓ Intended.
 
 **Check, sliding on the kill-screen floe:** a missed slide from 5 m/s glides ~20 m before it slows to the 0.8 m/s stand-up speed, so on the 8 m floe a miss always ends in the water. A hit soaks up the hitter's speed instead. After a full-speed hit the hitter is left with 0.5 m/s (thin on thin, fat on fat) or bounces back at 1 m/s (thin on fat), and stops within ~0.3 m. Fat on thin is the exception: the fat penguin keeps sliding at 2 m/s for about another 3 m. ✓ The slide is all-in: connect and you stay, miss and you swim. If that's too punishing, add a dig-in brake (GDD §4.5, balance checks).
+
+## Plateau (movement toy)
+
+The iceberg in the movement toy has a plateau on top (`levels/movement_toy/ice_plateau.gd`; every value is editable in the Inspector).
+
+| Value | Start | Notes |
+|---|---|---|
+| Plateau height | 2.0 m | Above the main ice (which is 1.0 m above the water) |
+| Top | 16 × 12 m | |
+| South chute | 18°, 6 m wide | Long and gentle |
+| West chute | 28°, 5 m wide | Short and steep |
+| East steps | 4 × 0.4 m, 1.2 m deep | Anyone can hop these |
+| North steps | 2 × 0.67 m, 1.4 m deep | Thin penguins only |
+| Everywhere else | 2.0 m sheer drop | |
+
+**Check, who can climb which steps:** hop height is 0.9 m × (1 − 0.45 × fatness), and a hop needs 5 cm to spare. Full (100): 0.50 m, clears the 0.4 m east steps. ✓ The 0.67 m north steps need energy **45 or less**, so you start the round just too heavy for them and get light enough after a trip or two. ✓
+
+**Check, chute speeds:** slope gravity is 9.8 × sin(angle), minus 0.6 slide friction. The south chute (18°, 6.5 m long) adds 2.4 m/s²: walking in at 1.2 m/s you leave the bottom at ~5.5 m/s (the smoke test sees 5.0 just before the bottom), and flopping in at 5 m/s you leave at ~7.5 m/s. That glides ~47 m, and the berg's edge is 26 m away: the south chute shoots you into the sea. ✓ The west chute (28°, 4.3 m long) adds 4.0 m/s² and leaves you at ~7.7 m/s from a flop.
+
+**Check, a chute is a bump booster:** a 7.5 m/s slide off the south chute is a hard bump (≥ 4 m/s) on anyone at the bottom, with knockback capped at 6 m/s.
 
 ## Air
 

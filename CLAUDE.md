@@ -9,6 +9,8 @@ Mobile 3D game in **Godot 4.7.2, GDScript, Mobile renderer**. The design lives i
 - **Naming:** "waddle" means the safe group of penguins on the ice. The slow on-ice gait is called **walk** in code (`State.WALK`, `walk_speed`) so the two don't get confused.
 - **Water line:** the water surface is `y = 0` (`Penguin.WATER_LEVEL`). Anything below is water.
 - **Penguin body:** a sphere collider that never rotates. Only the `Model` node turns and changes width, so physics stays simple and art can be swapped freely.
+- **Physics layers:** layer 1 is the world (ice, seafloor), layer 2 is penguins (`Penguin.WORLD_LAYER`, `Penguin.PENGUIN_LAYER`). Ground and ledge probes ray-cast against the world layer only, so penguins never mistake each other for ice.
+- **Bumps:** penguin-on-penguin hits are resolved by hand in `Penguin._bump()` after every `move_and_slide` (call `_move()`, not `move_and_slide()`, in movement states). Dummies are ordinary penguins with `player_controlled = false`.
 - **Input:** gameplay reads only the input actions (`move_*`, `action`). Touch controls feed those same actions through `Input.action_press`, so don't read touch events directly in gameplay code.
 - **Typing:** use static typing throughout (`var x := ...`, typed function signatures).
 

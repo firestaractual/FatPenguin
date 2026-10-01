@@ -7,6 +7,7 @@
 [ext_resource type="Material" path="res://art/materials/penguin_beak.tres" id="5_0kkn6"]
 [ext_resource type="Material" path="res://art/materials/bubble.tres" id="6_vxcfp"]
 [ext_resource type="Material" path="res://art/materials/splash.tres" id="7_o82ok"]
+[ext_resource type="Material" path="res://art/materials/feather.tres" id="8_fthr1"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_1xsdw"]
 radius = 0.32
@@ -76,6 +77,10 @@ radius = 0.06
 height = 0.12
 radial_segments = 8
 rings = 4
+
+[sub_resource type="BoxMesh" id="BoxMesh_fthr2"]
+material = ExtResource("8_fthr1")
+size = Vector3(0.05, 0.012, 0.09)
 
 [node name="Penguin" type="CharacterBody3D" unique_id=1606681652]
 script = ExtResource("1_7mtwt")
@@ -155,3 +160,20 @@ direction = Vector3(0, 1, 0)
 spread = 35.0
 initial_velocity_min = 2.5
 initial_velocity_max = 5.5
+
+[node name="Puff" type="CPUParticles3D" parent="." unique_id=1730412966]
+emitting = false
+amount = 16
+lifetime = 0.8
+one_shot = true
+explosiveness = 0.95
+mesh = SubResource("BoxMesh_fthr2")
+direction = Vector3(0, 1, 0)
+spread = 90.0
+gravity = Vector3(0, -2.5, 0)
+initial_velocity_min = 1.5
+initial_velocity_max = 3.5
+angular_velocity_min = -360.0
+angular_velocity_max = 360.0
+damping_min = 2.0
+damping_max = 3.0

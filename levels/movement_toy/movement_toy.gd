@@ -1,5 +1,6 @@
 extends Node3D
-## Prototype 0 test level: one iceberg, a few floes, a low ramp out of the water, and fish to eat.
+## Prototype 0 test level: an iceberg with a plateau on top (chutes to slide down, steps to hop up),
+## a few floes, a low ramp out of the water, fish to eat, and dummy penguins to bump.
 ## No goals, no predators. The only question: is moving around fun?
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
@@ -12,6 +13,10 @@ const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 @export var berg_radius := 30.0
 @export var fish_ring := Vector2(34.0, 70.0)
 @export var fish_depth := Vector2(1.0, 8.0)
+## A dummy knocked into the water pops back to its spot after this long.
+@export var dummy_respawn_seconds := 2.0
+
+var _wet_time := {}
 
 
 func _ready() -> void:
@@ -38,3 +43,17 @@ func _make_fish(at: Vector3) -> Node3D:
 	var fish := FISH_SCENE.instantiate()
 	fish.position = at
 	return fish
+
+
+func _physics_process(delta: float) -> void:
+	for dummy in $Dummies.get_children():
+		var p := dummy as Penguin
+		if p == null:
+			continue
+		if p.state == Penguin.State.SWIM:
+			_wet_time[p] = _wet_time.get(p, 0.0) + delta
+			if _wet_time[p] >= dummy_respawn_seconds:
+				_wet_time[p] = 0.0
+				p.reset()
+		else:
+			_wet_time[p] = 0.0

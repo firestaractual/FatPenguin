@@ -70,11 +70,11 @@ This exists to prevent the "eat everything early, then hide" strategy (see DECIS
 | Straight line | Higher top speed, keeps momentum | Lower top speed |
 | Turning and starting | Wide turns, slow to get going | Sharp turns, quick starts |
 | Getting onto ice | Lower launch, struggles to climb out | High launch |
-| Hopping gaps | Short hop; stopped by wider cracks | Clears every crack |
+| Hopping (ledges and cracks) | Low, short hop; stopped by tall steps and wide cracks | Clears every step and crack |
 | Bumping | Heavy: hits hard, hard to move, slow to get up | Light: knocked far, but quick to get out of the way |
 | Predator interest | Targeted first | Usually ignored if anyone fatter is around |
 
-Fat wins in a straight line and in a collision; thin wins in tight spaces and over gaps. Neither one is "winning."
+Fat wins in a straight line and in a collision; thin wins in tight spaces and over ledges and gaps. Neither one is "winning."
 
 A full belly makes you a bad jumper, but it never breaks the ice. Every fat/thin difference scales smoothly with body size, so there's no hidden threshold to learn.
 
@@ -101,7 +101,7 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 
 - **On your feet** (walking, standing, dodging) you have grip. You take much less knockback, skid to a stop quickly, and **teeter** at the ice edge before falling in, which gives you a moment to scramble back for a little energy.
 - **On your belly** (sliding, or tumbling after a hit) you're a puck: full knockback, a long glide, and straight off the edge with no teeter.
-- So the slide is both the attack and the risk. A flop commits you. If you miss, you sail past, and getting back on your feet takes a moment (longer when you're fat). On the small kill-screen floe, a missed full-speed slide usually carries you into the water.
+- So the slide is both the attack and the risk. A flop commits you. If you connect, the hit soaks up your speed and you stop. If you miss, you sail past, and getting back on your feet takes a moment (longer when you're fat). On the small kill-screen floe, a miss carries you into the water.
 - **In water**, drag soaks up knockback, so a bump is a short shove. Boost-ramming is the water version. Water bumps are for crowding someone off a bait ball or blocking a fish; the ice is the arena.
 
 #### What a bump does
@@ -118,7 +118,7 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 - **Flopping costs energy**, a small amount. The bump itself is free. Slide-spamming drains the energy you need for boosts and dodges. Landing on your belly after a launch is free, since you already paid for the boost.
 - **Knockback immunity:** right after a bump, a penguin can't be bumped again for a moment (ruffled feathers show it). No juggling.
 - **Crowds are heavy:** a hit on a penguin that's touching others is shared across the whole cluster. You can peel penguins off the edge of the waddle, but you can't knock anyone out of the middle. Getting to the center is a shoving match, not a bump (§4.6).
-- **Bumps never kill.** Getting knocked into the water costs you a launch (a boost's worth of energy) to get back out. The danger is whatever is waiting in that water.
+- **Bumps never kill.** Getting knocked into the water costs you a launch (a boost's worth of energy) or a swim to a low exit (§4.10). The danger is whatever is waiting in that water.
 
 #### Where it plays out
 
@@ -126,8 +126,9 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 - **Pulses:** shove rivals off the bait ball, block them from a fish, or knock fish loose from whoever ate first.
 - **Predators:** knock a rival toward a predator's lock-on, or spin them out just as a seal lunges. A fat rival knocked toward a predator becomes the most tempting target nearby.
 - **Orca waves:** waves push everyone across the ice (§5.3), and a bump during a wave stacks with it.
+- **Slopes and drops:** a slide down a chute (§4.10) arrives fast enough for a hard bump, and a plateau's sheer edges are ring-outs onto the ice below: a fall and a long way round, not a swim.
 - **The waddle:** the edge is where bumps happen; the middle is a shoving match.
-- **Kill screen:** sumo on a shrinking floe. A short shove is enough to put someone on a lunge line during its 1-second warning, but every full-speed slide risks carrying you off too.
+- **Kill screen:** sumo on a shrinking floe. A short shove is enough to put someone on a lunge line during its 1-second warning, but every slide is all-in: connect and you stay, miss and you swim.
 
 #### Feel and readability [Proposed]
 
@@ -135,15 +136,18 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 - Belly vs. feet must read at a glance, since it decides how far someone will fly.
 - **Credit:** if a predator catches a penguin soon after it was bumped, the bumper gets a "bumped into the jaws" callout in the kill feed. It doesn't change the win condition; it's for bragging rights and metrics.
 
-#### Controls [Proposed]
+#### Controls
 
-- On ice, a swipe flops you onto your belly in that direction, and a longer swipe gives a faster slide, like a curling throw. Tap to stand up, which brakes you once you're back on your feet.
-- In water there's no separate move: boost into someone.
-- The exact gestures are still open (§11).
+Bumping uses the controls already in the prototype (DECISIONS, 2026-10-01, Godot entry), with no new button:
+
+- On ice, tap to flop into a belly-slide, steer it with the stick, and tap again mid-slide for a flipper push to speed into a hit. You stand back up when the slide slows down.
+- In water, boost into someone.
+- [Open] Whether steering is precise enough to aim bumps on a phone (§11).
 
 #### Balance checks
 
 - **Fat bullying:** fat penguins already get more fuel and top speed, and weight adds a third edge. Watch that the kill screen doesn't become "whoever ate the last meal pushes everyone off." Thin counters: knocking fish loose, side hits, and being targeted last.
+- **All-in slides:** if missing on the kill floe feels like a cheap death rather than a gamble, add a dig-in brake (pull the stick back against the slide).
 - **Griefing:** a player who does nothing but bump should run low on energy and draw predators well before they win.
 - **Comebacks:** thin players should be able to rob overfed leaders often enough to matter (§4.8).
 
@@ -177,17 +181,20 @@ The answer is one of: go now, wait, or go with someone else as bait.
 
 ### 4.9 Movement [Proposed]
 
-- **On ice:** walk (a slow waddle) or belly-slide (fast, momentum-based, hard to steer). Swipe to flop onto your belly; tap to stand. Sliding is also how you bump (§4.5).
-- **Hop:** walk or slide into a crack and you hop it automatically, if you can clear it. Hops get shorter as you get fatter. On your feet you stop at a gap you can't clear; on your belly you can't stop, so you slide in.
+- **On ice:** walk (a slow waddle) or belly-slide (fast, momentum-based, hard to steer). Tap to flop onto your belly, and tap mid-slide for a flipper push. Sliding is also how you bump (§4.5).
+- **Slopes:** anything steeper than you can stand on is a chute. Step onto one and you slip onto your belly. Gravity speeds a slide downhill and slows it uphill, so chutes are fast ways down, and you can't walk back up them.
+- **Hop:** walk into a ledge or a crack and you hop it automatically, if you can clear it. Hops get lower and shorter as you get fatter; at a ledge that's too tall you try and fall short. On your feet you stop at a gap you can't clear; on your belly you can't stop, so you slide in.
 - **In water:** one-thumb steering, plus porpoising (leaping in and out) at speed.
 - **Bubble boost:** a burst of speed that costs energy and leaves a trail of bubbles predators can follow. Boosting toward an ice edge launches you out of the water onto the ice. Fat penguins launch lower (§4.4).
 - **Air:** a separate breath meter, used only underwater. It forces you to surface, and breathing holes and ice edges are where leopard seals wait.
 
 ### 4.10 Ice [Proposed]
 
+- **The iceberg is a 3D plateau, not a flat disc.** Raised tiers are joined by **chutes** (the way down: you slide) and **ledges** (the way up: you hop). Small steps let anyone climb; tall steps are shortcuts only thin penguins can hop. Everywhere else a tier ends in a sheer drop. Height is something to spend: from the top you can launch down a chute toward the food or a rival, but getting back up is slow, and slower when you're fat.
 - The iceberg breaks up on a schedule. Cracks open new breathing holes and **gaps** between pieces of ice, and chunks breaking off reshape the route home.
 - Thin penguins hop the gaps. Fat ones go the long way around, or swim across past whatever is in the water. Gap routes are the thin penguins' shortcuts.
 - The ice shrinks down to the **kill-screen floe** (multiplayer, and late campaign levels).
+- **Low exits:** every map needs at least one ramp or low shelf where a penguin can climb out without boosting. Otherwise a penguin with no energy is stuck in the water. Low exits are predictable, so they're also where leopard seals wait (Prototype 1).
 
 ## 5. Predators
 
@@ -278,7 +285,7 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | Orca waves | Antarctic orcas swim side by side to make waves that wash seals off floating ice |
 | Kill-screen lunges | Orcas in Patagonia deliberately beach themselves to grab sea lions, and leopard seals lunge at ice edges |
 | Bumping | Adélie penguins bunch up at the ice edge until one goes in or gets jostled in, and penguins settle fights by shoving and beating each other with their flippers |
-| Hopping gaps | Penguins hop across cracks and between rocks; rockhopper penguins are named for it |
+| Hopping ledges and gaps | Penguins hop up rocks and ice ledges and across cracks; rockhopper penguins are named for it |
 | Food pulses | Krill rise toward the surface at night and sink by day, and diving seabirds mark where fish are |
 | Waddle rotation | Emperor-penguin huddles rotate, with penguins moving from the edge to the center and back |
 | Belly-slide | Penguins slide on their bellies, which is called tobogganing |
@@ -292,8 +299,9 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 4. **Meta loop for D7 retention:** campaign progress alone probably isn't enough. One candidate is **species as unlocks with different stats**, all based on real penguins: Adélie (feisty, balanced), Gentoo (the fastest swimmer), Emperor (big belly, slow turns), Chinstrap, and so on.
 5. **Hero species / art look:** which penguin is on the logo and is the default character?
 6. **Kill-screen tuning:** should it be nearly impossible to survive without eating the last meal? (Weight now helps fat penguins here too; see the balance checks in §4.5.)
-7. **Bump controls:** swipe-to-flop with swipe length as speed, or hold-and-release? Should a flop show a short aim line?
+7. **Bump aiming:** is steering a slide with the stick precise enough to aim bumps on a phone, or does a flop need a short aim line?
 8. **Bump credit:** should knocking someone into a predator count for anything beyond the kill-feed callout?
+9. **Plateau layouts:** how many tiers does a real map want, and do chutes and ledges change as the ice breaks up?
 
 ## 12. Glossary
 
@@ -312,3 +320,5 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | **Flop** | Diving onto your belly to start a slide; costs a little energy |
 | **Teeter** | The moment a penguin on its feet wobbles at the ice edge before falling in |
 | **Gap** | A crack between pieces of ice; thin penguins can hop it, fat ones may not |
+| **Chute** | A slope too steep to stand on: the way down from a plateau tier |
+| **Ledge** | A step up between tiers: hop it if your belly lets you |
