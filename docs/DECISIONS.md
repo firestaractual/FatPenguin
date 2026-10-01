@@ -4,6 +4,16 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-01: Fish come in species and school with their own kind
+
+- **Change:** fish now come in three species based on real Antarctic forage fish (Antarctic silverfish, lanternfish, mackerel icefish), and they school by species. A fish is pulled toward fish of its own kind within school range (6 m), keeps a little personal space, matches their heading and stays near a home spot. It ignores every other species, so schools never mix, even when two kinds swim through each other. See GDD §4.11.
+- **Schools stay schools:** school mates slowly share one home spot, so a school that forms stays formed. A lone fish that drifts into range of its own kind joins for good, two schools of the same kind that meet merge, and an eaten fish comes back beside its school.
+- **More fish start in schools:** the movement toy spawns 8 single-species schools (every species gets at least one) and 12 loose fish, instead of 4 schools and 40 loose fish. About 85% of the fish are now in a school, up from about 40%.
+- **Why:** real forage fish school with their own kind (a fish that looks different from its school mates is the easiest one for a predator to pick out), and schools are the raw material for food pulses and bait balls (§4.3). Clumped food also turns a trip into a choice of which school to hit, instead of a scatter of single pickups.
+- **Kept the same:** every fish is still worth +10 energy, and the eat radius is the same for every species. Species differ only in look, size, speed, how tight they school and how deep they swim. Fish don't react to penguins yet.
+- **Cost:** a schooling fish costs about 7–8 µs per physics frame on a desktop CPU, against about 2 µs for the old circling fish (about 0.5 ms for the toy's 72 fish). Check it on a phone; if it's too much, move the swarm maths into one manager or update steering at 30 Hz.
+- Proposed. Numbers in TUNING (Fish).
+
 ## 2026-10-01: Faster on land, slicker ice, and a brake
 
 - **Playtest:** moving on the ice felt slow, and slides wanted to go further.

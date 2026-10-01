@@ -6,7 +6,7 @@ Last updated: 2026-10-01
 
 **The live copy is in Godot:** `tuning/penguin_tuning_default.tres` (the class is `tuning/penguin_tuning.gd`). Edit the values in the Inspector, then copy the ones that work back here.
 
-**In the game so far (Prototype 0):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump noise and credit, which need predators), and air. Waddle drain, the other action costs, food pulses, predators, rounds and campaign values arrive with later prototypes.
+**In the game so far (Prototype 0):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump noise and credit, which need predators), air, and fish schooling. Waddle drain, the other action costs, food pulses, predators, rounds and campaign values arrive with later prototypes.
 
 Units: energy runs from 0 (empty) to 100 (full). Time is in seconds, distance in meters.
 
@@ -182,6 +182,41 @@ The iceberg in the movement toy has a plateau on top (`levels/movement_toy/ice_p
 |---|---|
 | Time underwater | 25 s |
 | Time to refill at the surface | 2 s |
+
+## Fish
+
+Each species is a resource in `tuning/fish/` (the class is `tuning/fish_species.gd`). Edit them in the Inspector, then copy the values that work back here. A fish is pulled only by fish of its own species, so schools never mix.
+
+| Value | Silverfish | Lanternfish | Icefish | Notes |
+|---|---|---|---|---|
+| Spawn weight (abundance) | 3 | 2 | 1 | Relative chance a school or loose fish is this species |
+| School size | 6–10 | 6–9 | 3–5 | |
+| Spawn depth | 1–6 m | 4–8 m | 2–8 m | Below the surface |
+| Model size | ×1.0 | ×0.8 | ×1.4 | Looks only: the eat radius (0.6 m) is the same for all |
+| Cruise speed | 0.6 m/s | 0.8 m/s | 0.5 m/s | Each fish ±15%. A cruising penguin does 4 m/s, so anyone can catch any fish |
+| Max steering | 1.5 m/s² | 1.8 m/s² | 1.2 m/s² | |
+| Wander | 0.4 m/s² | 0.5 m/s² | 0.3 m/s² | A slowly turning random nudge |
+| School range (swarm pull reach) | 6 m | 6 m | 6 m | School mates closer than this pull together; farther apart they ignore each other |
+| Cohesion | 0.6 | 0.5 | 0.35 | Pull toward the middle of school mates in range, m/s² per metre |
+| Alignment | 1.0 /s | 1.2 /s | 0.8 /s | How hard a fish matches its school mates' heading |
+| Personal space | 0.5 m | 0.5 m | 0.9 m | Fish push apart inside this |
+| Separation | 3.0 | 3.0 | 3.0 | Push at zero distance, m/s² |
+| School mates followed | 7 | 7 | 7 | Nearest ones only, like real schooling fish |
+| Roam radius | 4 m | 4 m | 4 m | From the home spot before being pulled back |
+| Home pull | 0.3 | 0.3 | 0.3 | m/s² per metre past the roam radius |
+| Home merge rate | 0.1 /s | 0.1 /s | 0.1 /s | School mates slowly share one home spot, so a school that forms stays formed |
+| Fish value | +10 | +10 | +10 | Same for every species for now (GDD §11) |
+| Respawn after being eaten | 8 s | 8 s | 8 s | Comes back beside its school |
+
+**Movement toy spawning** (`levels/movement_toy/movement_toy.gd`): 8 schools (every species gets at least one, the rest by abundance), 12 loose fish, homes 36–70 m from the middle of the berg.
+
+**Check, do schools hold together?** Measured headless over 2 minutes: schools keep their size, the nearest school mate sits ~0.52 m away (personal space 0.5 m), and school mates swim almost exactly the same way (polarisation 0.99). The smoke test measures the widest fish of a 6-fish school **0.7 m** from its middle after 15 s. ✓
+
+**Check, do schools form and stay?** About 85% of the toy's fish (62 of 72) are in a school, up from about 40% (24 of 64) before schooling. A lone silverfish 4.5 m from a silverfish school joins it within 15 s, and its home spot ends up 1.3 m from the school's (smoke test). A lanternfish the same distance away never joins. Two schools of the same kind that wander within range merge. ✓
+
+**Check, fish stay out of the ice:** a fish can roam up to ~8 m from its home while it joins a school, so homes start 36 m out from the middle of the 30 m berg. The closest a fish came in shallow water (above the berg's 3 m draft) was ~31 m. ✓
+
+**Check, cost:** ~7–8 µs per fish per physics frame on a desktop CPU (about 0.5 ms for 72 fish), against ~2 µs for the old circling fish. ⚠ Check on a phone.
 
 ## Food pulses (multiplayer)
 

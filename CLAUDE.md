@@ -4,7 +4,7 @@ Mobile 3D game in **Godot 4.7.2, GDScript, Mobile renderer**. The design lives i
 
 ## Ground rules
 
-- **Balance numbers live in one place:** `tuning/penguin_tuning.gd` (the class) and `tuning/penguin_tuning_default.tres` (the values), mirrored in `docs/TUNING.md`. Don't hard-code tuning values in gameplay scripts.
+- **Balance numbers live in one place:** `tuning/penguin_tuning.gd` (the class) and `tuning/penguin_tuning_default.tres` (the values), mirrored in `docs/TUNING.md`. Fish species work the same way: `tuning/fish_species.gd` (the class) and `tuning/fish/*.tres` (one per species). Don't hard-code tuning values in gameplay scripts.
 - **Design changes get a log entry:** add a dated entry at the top of `docs/DECISIONS.md`, and update the status tags in `docs/GDD.md` (`[Locked]` / `[Proposed]` / `[Open]`).
 - **Naming:** "waddle" means the safe group of penguins on the ice. The slow on-ice gait is called **walk** in code (`State.WALK`, `walk_speed`) so the two don't get confused.
 - **Water line:** the water surface is `y = 0` (`Penguin.WATER_LEVEL`). Anything below is water.

@@ -37,20 +37,21 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 - Run low and you get thin and weak, but never quite stuck: the cold can't take you below the energy floor, and if you spend below it you get your breath back in a few seconds. You can also climb out of the water without boosting using the low ramp on the east side of the iceberg.
 - Try the three floes (easy, medium and hard): each sits higher above the water.
 - **The plateau** in the middle of the iceberg: walk into the small east steps to hop up (anyone can), or the big north steps (thin penguins only; press Q to slim down). Slide back down the gentle south chute or the steep west one. The south chute will shoot you into the sea unless you dig in (pull back) at the bottom.
+- **Fish schools:** fish come in three species, and each schools only with its own kind: silver Antarctic silverfish in big tight schools, small dark lanternfish deeper down, and big pale icefish in loose little groups. Swim through a school to grab several in one pass. An eaten fish comes back beside its school.
 - **Bumping:** belly-slide into the blue dummy penguins. A thin one standing skids about a metre; one lying on its belly flies. Get stuffed (E) and you hit like a bowling ball; slide into the fat dummy while thin and you bounce off, but knock a fish loose. The dummy near the south-west edge teeters before it falls in. Get knocked to an edge yourself and pull the stick back to scramble to safety (costs a little energy).
 
 ## Tuning
 
-Every balance number is in **`tuning/penguin_tuning_default.tres`**. Select it in the FileSystem dock and edit the values in the Inspector; no code changes needed. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
+Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, and each fish species is in **`tuning/fish/`**. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
 
 ## Project layout
 
 ```
 actors/penguin/     Penguin controller (penguin.gd) + placeholder model scene
-actors/fish/        Fish pickup
+actors/fish/        Fish pickup (schools with its own species)
 camera/             Follow camera (also switches on the underwater fog)
 levels/movement_toy Prototype 0 test level (iceberg + plateau, ramp, floes, fish, dummy penguins)
-tuning/             PenguinTuning resource class + default values
+tuning/             PenguinTuning resource class + default values; FishSpecies class + species in tuning/fish/
 ui/                 Debug HUD (air bar, numbers) and touch controls
 art/materials/      Placeholder materials
 tests/              Headless smoke test
@@ -66,6 +67,8 @@ godot --headless --fixed-fps 60 --path . --script res://tests/movement_smoke_tes
 ```
 
 Exit code 0 means every check passed. Run it after changing movement code or tuning values.
+
+If a pull adds a new script class and the test fails with "Could not find type", open the project in the editor once (or run `godot --headless --import --path .`) so Godot registers the new class, then run the test again.
 
 ## Docs
 

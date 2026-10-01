@@ -19,7 +19,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 - Porpoising at speed
 - Bubble boost and launching out of the water onto the ice
 - On ice: walk and belly-slide
-- Eating fish (static fish, no AI) and body size changing with energy
+- Eating fish (fish school with their own species; no reactions to penguins yet) and body size changing with energy
 - Fat vs. thin handling (turn rate, acceleration, launch height)
 - Air meter
 - A plateau on the iceberg: chutes to slide down, steps to hop up (fat penguins hop lower)

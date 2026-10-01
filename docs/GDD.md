@@ -197,6 +197,22 @@ The answer is one of: go now, wait, or go with someone else as bait.
 - The ice shrinks down to the **kill-screen floe** (multiplayer, and late campaign levels).
 - **Low exits:** every map needs at least one ramp or low shelf where a penguin can climb out without boosting. Otherwise a penguin with no energy is stuck in the water. Low exits are predictable, so they're also where leopard seals wait (Prototype 1).
 
+### 4.11 Fish and schools [Proposed]
+
+Fish come in species, all based on real Antarctic forage fish. For now every species is worth the same energy (TUNING, Energy); they differ in look, size, speed, how tight they school and how deep they swim.
+
+| Species | Look | Schools | Depth |
+|---|---|---|---|
+| **Antarctic silverfish** | Silver; the common one | Big, tight schools | Shallow to mid |
+| **Lanternfish** | Small and dark, with a faint blue glow | Big, quick schools | Deep |
+| **Mackerel icefish** | Big and pale | Small, loose groups | Mid to deep |
+
+- **Fish school with their own kind.** A fish is pulled toward fish of its own species within school range, keeps a little personal space and matches its school mates' heading. It ignores other species, so schools never mix, even when two kinds swim through each other.
+- **Schools stay together.** School mates share a home spot they roam around. A lone fish that drifts into range of its own kind joins up and stays, two schools of the same kind that meet merge into one, and an eaten fish comes back beside its school.
+- **Most fish spawn in schools,** with a few loose fish in between.
+- Schools are the building block for food pulses (§4.3): a pulse is a school, or several, rising into reach, and a bait ball is a school at its tightest.
+- [Open] Should species be worth different amounts (a big icefish worth more than a lanternfish)? Should schools react to penguins and predators by scattering or balling up? (§11)
+
 ## 5. Predators
 
 ### 5.1 Targeting rule [Proposed]
@@ -288,6 +304,7 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | Bumping | Adélie penguins bunch up at the ice edge until one goes in or gets jostled in, and penguins settle fights by shoving and beating each other with their flippers |
 | Hopping ledges and gaps | Penguins hop up rocks and ice ledges and across cracks; rockhopper penguins are named for it |
 | Food pulses | Krill rise toward the surface at night and sink by day, and diving seabirds mark where fish are |
+| Fish schooling by species | Forage fish school with others of their own kind and size. A fish that looks different from its school mates is the easiest one for a predator to pick out (the oddity effect), so mixed schools sort themselves out. Antarctic silverfish and lanternfish are staple penguin food |
 | Waddle rotation | Emperor-penguin huddles rotate, with penguins moving from the edge to the center and back |
 | Belly-slide | Penguins slide on their bellies, which is called tobogganing |
 | Knocking fish loose | Adélie penguins steal nest pebbles from each other |
@@ -304,6 +321,7 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 8. **Bump credit:** should knocking someone into a predator count for anything beyond the kill-feed callout?
 9. **Plateau layouts:** how many tiers does a real map want, and do chutes and ledges change as the ice breaks up?
 10. **Exhaustion:** what should running empty feel like? Playtesting showed a hard zero is fun but too punishing (you can't slide or boost, so you crawl and get stuck in the water), so the energy floor (§4.2) stands in for now. Candidates: an exhausted state that's slow and low in the water and can't boost, but recovers with rest or a fish. It should also bring back the pressure on campers that the floor takes away (see TUNING).
+11. **Fish:** should species be worth different amounts of energy, and should schools react to penguins and predators (scatter, ball up)? See §4.11.
 
 ## 12. Glossary
 
@@ -312,6 +330,7 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | **Waddle** | The group of penguins on the ice; the safe zone |
 | **Trip** | One departure from the waddle to feed and return |
 | **Pulse** | A timed food event at one location |
+| **School** | A group of fish of one species swimming together; fish never school with another species |
 | **Last meal** | The final and biggest pulse, just before the kill screen |
 | **Kill screen** | The final phase: one small floe, predators lunging across it |
 | **Chum** | A fish spat up to lure or distract a predator |

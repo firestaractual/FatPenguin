@@ -21,10 +21,12 @@ script = ExtResource("1_l4bjg")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=328093166]
 shape = SubResource("SphereShape3D_k2cow")
 
-[node name="Body" type="MeshInstance3D" parent="." unique_id=102338188]
+[node name="Model" type="Node3D" parent="." unique_id=1590382716]
+
+[node name="Body" type="MeshInstance3D" parent="Model" unique_id=102338188]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
 mesh = SubResource("CapsuleMesh_7s1vu")
 
-[node name="Tail" type="MeshInstance3D" parent="." unique_id=179474647]
+[node name="Tail" type="MeshInstance3D" parent="Model" unique_id=179474647]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2)
 mesh = SubResource("BoxMesh_pwq6l")

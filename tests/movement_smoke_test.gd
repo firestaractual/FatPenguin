@@ -1,7 +1,8 @@
 extends SceneTree
 ## Headless smoke test for the Prototype 0 movement toy.
 ## Drives the penguin with simulated input and checks each movement verb still works,
-## then checks the plateau (slide down chutes, hop up steps) and bumping with dummy penguins.
+## then checks the plateau (slide down chutes, hop up steps), bumping with dummy penguins,
+## and fish schooling with their own species.
 ##
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --script res://tests/movement_smoke_test.gd
@@ -30,6 +31,10 @@ func _run() -> void:
 	_plateau = level.get_node("Plateau") as IcePlateau
 	_penguin = level.get_node("Penguin") as Penguin
 	_penguin.state_changed.connect(func(s: Penguin.State) -> void: _states_seen.append(Penguin.State.keys()[s]))
+	# The level's fish swim about in schools, so one could cross the penguin's path and skew an
+	# energy or speed check. They stay in the level but can't be eaten during this test.
+	for fish: Fish in level.get_node("Fish").get_children():
+		fish.monitoring = false
 
 	await _test_lands_on_ice()
 	await _test_slide_off_edge_into_water()
@@ -46,6 +51,7 @@ func _run() -> void:
 	await _test_big_steps_thin_only()
 	await _test_bump_knockback()
 	await _test_teeter_and_scramble()
+	await _test_fish_schools()
 
 	print("\nStates seen: ", " > ".join(_states_seen))
 	if _failures.is_empty():
@@ -409,7 +415,82 @@ func _test_teeter_and_scramble() -> void:
 	hitter.queue_free()
 
 
+func _test_fish_schools() -> void:
+	# The level puts most of its fish in single-species schools.
+	var level_fish := _level.get_node("Fish").get_children()
+	var schooled := 0
+	for f: Fish in level_fish:
+		if _school_mates_in_range(f, level_fish) >= 2:
+			schooled += 1
+	_check(schooled >= level_fish.size() * 0.75, "most of the level's fish swim in a school (%d of %d)" % [schooled, level_fish.size()])
+
+	# Far from the level's fish: a school of silverfish, plus a lone silverfish and a lone
+	# lanternfish, each just inside school range of it.
+	var silverfish: FishSpecies = load("res://tuning/fish/silverfish.tres")
+	var lanternfish: FishSpecies = load("res://tuning/fish/lanternfish.tres")
+	var centre := Vector3(0.0, -6.0, -110.0)
+	var school: Array[Fish] = []
+	for i in 6:
+		var fish := _spawn_fish(silverfish, centre + Vector3(randf_range(-1.0, 1.0), randf_range(-0.3, 0.3), randf_range(-1.0, 1.0)))
+		fish.home = centre
+		school.append(fish)
+	var stray := _spawn_fish(silverfish, centre + Vector3(4.5, 0.0, 0.0))
+	var stranger := _spawn_fish(lanternfish, centre + Vector3(-4.5, 0.0, 0.0))
+	var stranger_home := stranger.home
+	await _frames(15 * 60)
+
+	var middle := _middle_of(school)
+	var widest := 0.0
+	for fish in school:
+		widest = maxf(widest, fish.global_position.distance_to(middle))
+	_check(widest < 2.5, "a school stays together (widest fish %.1f m from the middle)" % widest)
+	var stray_gap := stray.global_position.distance_to(middle)
+	_check(stray_gap < 2.5, "a lone fish in range is pulled into a school of its own kind (%.1f m from the middle)" % stray_gap)
+	var stray_home := stray.home.distance_to(centre)
+	_check(stray_home < 2.0, "and it stays: it now shares the school's home spot (%.1f m away)" % stray_home)
+	var stranger_mates := (stranger.get(&"_neighbours") as Array).size()
+	_check(stranger_mates == 0 and stranger.home == stranger_home, "a fish of another kind is never pulled in (school mates=%d)" % stranger_mates)
+
+	# An eaten fish comes back beside its school, wherever it was eaten.
+	var eaten := school[0]
+	eaten.call(&"_set_active", false)
+	eaten.global_position = centre + Vector3(30.0, 0.0, 0.0)
+	eaten.call(&"_set_active", true)
+	await _frames(2)
+	var eaten_gap := eaten.global_position.distance_to(_middle_of(school))
+	_check(eaten.visible and eaten_gap < 2.5, "an eaten fish respawns beside its school (%.1f m from the middle)" % eaten_gap)
+
+	for fish in school:
+		fish.queue_free()
+	stray.queue_free()
+	stranger.queue_free()
+
+
 # --- Helpers ----------------------------------------------------------------
+
+func _spawn_fish(species: FishSpecies, at: Vector3) -> Fish:
+	var fish := load("res://actors/fish/fish.tscn").instantiate() as Fish
+	fish.species = species
+	fish.position = at
+	root.add_child(fish)
+	return fish
+
+
+func _school_mates_in_range(fish: Fish, all: Array) -> int:
+	var mates := 0
+	for other: Fish in all:
+		if other != fish and other.species == fish.species \
+				and other.global_position.distance_to(fish.global_position) <= fish.species.school_range:
+			mates += 1
+	return mates
+
+
+func _middle_of(fishes: Array[Fish]) -> Vector3:
+	var sum := Vector3.ZERO
+	for fish in fishes:
+		sum += fish.global_position
+	return sum / fishes.size()
+
 
 func _place_swimming(pos: Vector3, yaw: float, pitch_deg: float) -> void:
 	_penguin.global_position = pos
