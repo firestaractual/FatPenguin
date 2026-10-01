@@ -1,0 +1,157 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://actors/penguin/penguin.gd" id="1_7mtwt"]
+[ext_resource type="Resource" path="res://tuning/penguin_tuning_default.tres" id="2_78top"]
+[ext_resource type="Material" path="res://art/materials/penguin_black.tres" id="3_qd4mg"]
+[ext_resource type="Material" path="res://art/materials/penguin_white.tres" id="4_yaqks"]
+[ext_resource type="Material" path="res://art/materials/penguin_beak.tres" id="5_0kkn6"]
+[ext_resource type="Material" path="res://art/materials/bubble.tres" id="6_vxcfp"]
+[ext_resource type="Material" path="res://art/materials/splash.tres" id="7_o82ok"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_1xsdw"]
+radius = 0.32
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_c1p0v"]
+material = ExtResource("3_qd4mg")
+radius = 0.26
+height = 0.72
+
+[sub_resource type="SphereMesh" id="SphereMesh_ohheg"]
+material = ExtResource("4_yaqks")
+radius = 0.2
+height = 0.52
+
+[sub_resource type="SphereMesh" id="SphereMesh_mkb4e"]
+material = ExtResource("4_yaqks")
+radius = 0.045
+height = 0.09
+
+[sub_resource type="SphereMesh" id="SphereMesh_hmfao"]
+material = ExtResource("3_qd4mg")
+radius = 0.022
+height = 0.044
+
+[sub_resource type="BoxMesh" id="BoxMesh_bn1v6"]
+material = ExtResource("3_qd4mg")
+size = Vector3(0.04, 0.34, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gik1m"]
+material = ExtResource("5_0kkn6")
+size = Vector3(0.1, 0.03, 0.14)
+
+[sub_resource type="SphereMesh" id="SphereMesh_v5em0"]
+material = ExtResource("4_yaqks")
+radius = 0.045
+height = 0.09
+
+[sub_resource type="SphereMesh" id="SphereMesh_hu3ej"]
+material = ExtResource("3_qd4mg")
+radius = 0.022
+height = 0.044
+
+[sub_resource type="BoxMesh" id="BoxMesh_tpane"]
+material = ExtResource("3_qd4mg")
+size = Vector3(0.04, 0.34, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_qncp6"]
+material = ExtResource("5_0kkn6")
+size = Vector3(0.1, 0.03, 0.14)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_xvh8p"]
+material = ExtResource("5_0kkn6")
+top_radius = 0.0
+bottom_radius = 0.045
+height = 0.14
+
+[sub_resource type="SphereMesh" id="SphereMesh_cco28"]
+material = ExtResource("6_vxcfp")
+radius = 0.04
+height = 0.08
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="SphereMesh_ylaux"]
+material = ExtResource("7_o82ok")
+radius = 0.06
+height = 0.12
+radial_segments = 8
+rings = 4
+
+[node name="Penguin" type="CharacterBody3D" unique_id=1606681652]
+script = ExtResource("1_7mtwt")
+tuning = ExtResource("2_78top")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1352846942]
+shape = SubResource("SphereShape3D_1xsdw")
+
+[node name="Model" type="Node3D" parent="." unique_id=1959943088]
+
+[node name="Body" type="MeshInstance3D" parent="Model" unique_id=1933708824]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+mesh = SubResource("CapsuleMesh_c1p0v")
+
+[node name="Belly" type="MeshInstance3D" parent="Model" unique_id=1941916382]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -0.1)
+mesh = SubResource("SphereMesh_ohheg")
+
+[node name="EyeL" type="MeshInstance3D" parent="Model" unique_id=755560611]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.09, 0.27, -0.2)
+mesh = SubResource("SphereMesh_mkb4e")
+
+[node name="PupilL" type="MeshInstance3D" parent="Model" unique_id=1027157409]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.09, 0.27, -0.24)
+mesh = SubResource("SphereMesh_hmfao")
+
+[node name="FlipperL" type="MeshInstance3D" parent="Model" unique_id=1570196643]
+transform = Transform3D(0.9781476, 0.2079117, 0, -0.2079117, 0.9781476, 0, 0, 0, 1, -0.27, 0, 0)
+mesh = SubResource("BoxMesh_bn1v6")
+
+[node name="FootL" type="MeshInstance3D" parent="Model" unique_id=1551783927]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08, -0.32, -0.06)
+mesh = SubResource("BoxMesh_gik1m")
+
+[node name="EyeR" type="MeshInstance3D" parent="Model" unique_id=384039907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.09, 0.27, -0.2)
+mesh = SubResource("SphereMesh_v5em0")
+
+[node name="PupilR" type="MeshInstance3D" parent="Model" unique_id=2138051755]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.09, 0.27, -0.24)
+mesh = SubResource("SphereMesh_hu3ej")
+
+[node name="FlipperR" type="MeshInstance3D" parent="Model" unique_id=1814239473]
+transform = Transform3D(0.9781476, -0.2079117, 0, 0.2079117, 0.9781476, 0, 0, 0, 1, 0.27, 0, 0)
+mesh = SubResource("BoxMesh_tpane")
+
+[node name="FootR" type="MeshInstance3D" parent="Model" unique_id=238690081]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, -0.32, -0.06)
+mesh = SubResource("BoxMesh_qncp6")
+
+[node name="Beak" type="MeshInstance3D" parent="Model" unique_id=322402699]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0.2, -0.27)
+mesh = SubResource("CylinderMesh_xvh8p")
+
+[node name="Bubbles" type="CPUParticles3D" parent="." unique_id=1181619831]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.3)
+emitting = false
+amount = 32
+lifetime = 1.2
+mesh = SubResource("SphereMesh_cco28")
+direction = Vector3(0, 1, 0)
+spread = 30.0
+gravity = Vector3(0, 1.5, 0)
+initial_velocity_min = 0.3
+initial_velocity_max = 1.0
+scale_amount_min = 0.5
+scale_amount_max = 1.5
+
+[node name="Splash" type="CPUParticles3D" parent="." unique_id=1506333718]
+emitting = false
+amount = 24
+lifetime = 0.9
+one_shot = true
+explosiveness = 0.9
+mesh = SubResource("SphereMesh_ylaux")
+direction = Vector3(0, 1, 0)
+spread = 35.0
+initial_velocity_min = 2.5
+initial_velocity_max = 5.5

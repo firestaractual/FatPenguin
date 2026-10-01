@@ -1,0 +1,43 @@
+extends CanvasLayer
+## Prototype HUD. Body size is the real energy display (no energy bar, per the design),
+## so the numbers here are for testers only (F1 toggles them).
+## The air bar is a real game element: it shows only while underwater and short of breath.
+
+@onready var _debug_label: Label = $DebugLabel
+@onready var _hint_label: Label = $HintLabel
+@onready var _air_bar: ProgressBar = $AirBar
+
+var _penguin: Penguin
+
+
+func _ready() -> void:
+	_penguin = get_tree().get_first_node_in_group(&"player") as Penguin
+	var touch := DisplayServer.is_touchscreen_available()
+	_hint_label.text = "Left thumb: steer   Right thumb: boost / belly-slide" if touch else \
+		"WASD / arrows: steer   Space: boost (water) / belly-slide (ice)   R: reset\n" + \
+		"Q / E: energy -/+   F2: infinite energy   F1: debug info"
+
+
+func _process(_delta: float) -> void:
+	if Input.is_action_just_pressed(&"debug_toggle_hud"):
+		_debug_label.visible = not _debug_label.visible
+		_hint_label.visible = _debug_label.visible
+	if _penguin == null:
+		return
+
+	var t := _penguin.tuning
+	_air_bar.max_value = t.air_seconds
+	_air_bar.value = _penguin.air
+	_air_bar.visible = _penguin.air < t.air_seconds - 0.05
+
+	if _debug_label.visible:
+		_debug_label.text = "state   %s\nspeed   %.1f m/s\nenergy  %.0f%s%s\nfat     %.0f%%\nair     %.1f s\nfps     %d" % [
+			Penguin.State.keys()[_penguin.state],
+			_penguin.get_speed(),
+			_penguin.energy,
+			"  (overfill)" if _penguin.energy > t.overfill_threshold else "",
+			"  [infinite]" if _penguin.infinite_energy else "",
+			_penguin.fatness() * 100.0,
+			_penguin.air,
+			Engine.get_frames_per_second(),
+		]

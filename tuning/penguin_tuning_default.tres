@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="PenguinTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/penguin_tuning.gd" id="1_cv0tt"]
+
+[resource]
+script = ExtResource("1_cv0tt")

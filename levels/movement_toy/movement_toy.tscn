@@ -1,0 +1,195 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://levels/movement_toy/movement_toy.gd" id="1_alxdu"]
+[ext_resource type="Material" path="res://art/materials/water.tres" id="2_ahjiq"]
+[ext_resource type="Material" path="res://art/materials/seafloor.tres" id="3_80702"]
+[ext_resource type="Material" path="res://art/materials/ice.tres" id="4_qkewv"]
+[ext_resource type="PackedScene" path="res://actors/penguin/penguin.tscn" id="5_l3mpj"]
+[ext_resource type="Script" path="res://camera/follow_camera.gd" id="6_ddo4l"]
+[ext_resource type="PackedScene" path="res://ui/debug_hud.tscn" id="7_w4e3x"]
+[ext_resource type="PackedScene" path="res://ui/touch_controls.tscn" id="8_yvbwr"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_r75tr"]
+sky_top_color = Color(0.38, 0.6, 0.85, 1)
+sky_horizon_color = Color(0.82, 0.9, 0.96, 1)
+ground_bottom_color = Color(0.1, 0.3, 0.45, 1)
+ground_horizon_color = Color(0.55, 0.72, 0.8, 1)
+
+[sub_resource type="Sky" id="Sky_jxixb"]
+sky_material = SubResource("ProceduralSkyMaterial_r75tr")
+
+[sub_resource type="Environment" id="Environment_fcj3g"]
+background_mode = 2
+sky = SubResource("Sky_jxixb")
+ambient_light_source = 3
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.75, 0.85, 0.92, 1)
+fog_density = 0.004
+fog_sky_affect = 0.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_tjefp"]
+material = ExtResource("2_ahjiq")
+size = Vector2(2000, 2000)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_m1d6o"]
+size = Vector3(400, 1, 400)
+
+[sub_resource type="BoxMesh" id="BoxMesh_8x1wb"]
+material = ExtResource("3_80702")
+size = Vector3(400, 1, 400)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ngl7y"]
+size = Vector3(300, 60, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_voj64"]
+size = Vector3(300, 60, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_qbusx"]
+size = Vector3(1, 60, 300)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rnbei"]
+size = Vector3(1, 60, 300)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_851nm"]
+height = 4.0
+radius = 30.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_nmmgk"]
+material = ExtResource("4_qkewv")
+top_radius = 30.0
+bottom_radius = 30.0
+height = 4.0
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_doa18"]
+size = Vector3(10, 0.6, 6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_be25f"]
+material = ExtResource("4_qkewv")
+size = Vector3(10, 0.6, 6)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_a8rsp"]
+radius = 4.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_0fqx4"]
+material = ExtResource("4_qkewv")
+top_radius = 4.0
+bottom_radius = 4.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_xbm22"]
+radius = 4.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_4nxf0"]
+material = ExtResource("4_qkewv")
+top_radius = 4.0
+bottom_radius = 4.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_x0esy"]
+radius = 4.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_rbbxl"]
+material = ExtResource("4_qkewv")
+top_radius = 4.0
+bottom_radius = 4.0
+
+[node name="MovementToy" type="Node3D" unique_id=1454715535]
+script = ExtResource("1_alxdu")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1397445420]
+environment = SubResource("Environment_fcj3g")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=184553700]
+transform = Transform3D(0.8660254, 0.38302222, -0.32139382, 0, 0.64278764, 0.76604444, 0.5, -0.66341394, 0.5566704, 0, 0, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="Water" type="MeshInstance3D" parent="." unique_id=65607157]
+cast_shadow = 0
+mesh = SubResource("PlaneMesh_tjefp")
+
+[node name="Seafloor" type="StaticBody3D" parent="." unique_id=1264747910]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -30.5, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Seafloor" unique_id=2137589383]
+shape = SubResource("BoxShape3D_m1d6o")
+
+[node name="Mesh" type="MeshInstance3D" parent="Seafloor" unique_id=1817448265]
+mesh = SubResource("BoxMesh_8x1wb")
+
+[node name="Bounds" type="StaticBody3D" parent="." unique_id=1684924901]
+
+[node name="Wall0" type="CollisionShape3D" parent="Bounds" unique_id=1379337094]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -5, 150)
+shape = SubResource("BoxShape3D_ngl7y")
+
+[node name="Wall1" type="CollisionShape3D" parent="Bounds" unique_id=1066849362]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -5, -150)
+shape = SubResource("BoxShape3D_voj64")
+
+[node name="Wall2" type="CollisionShape3D" parent="Bounds" unique_id=1945822109]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 150, -5, 0)
+shape = SubResource("BoxShape3D_qbusx")
+
+[node name="Wall3" type="CollisionShape3D" parent="Bounds" unique_id=348227007]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -150, -5, 0)
+shape = SubResource("BoxShape3D_rnbei")
+
+[node name="Iceberg" type="StaticBody3D" parent="." unique_id=1248616195]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Iceberg" unique_id=271363861]
+shape = SubResource("CylinderShape3D_851nm")
+
+[node name="Mesh" type="MeshInstance3D" parent="Iceberg" unique_id=1651693804]
+mesh = SubResource("CylinderMesh_nmmgk")
+
+[node name="Ramp" type="StaticBody3D" parent="." unique_id=1641471842]
+transform = Transform3D(0.9766723, 0.21473531, 0, -0.21473531, 0.9766723, 0, 0, 0, 1, 33, -0.4, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ramp" unique_id=544657455]
+shape = SubResource("BoxShape3D_doa18")
+
+[node name="Mesh" type="MeshInstance3D" parent="Ramp" unique_id=1840630036]
+mesh = SubResource("BoxMesh_be25f")
+
+[node name="FloeEasy" type="StaticBody3D" parent="." unique_id=2079502777]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, -0.5, -20)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FloeEasy" unique_id=1703631745]
+shape = SubResource("CylinderShape3D_a8rsp")
+
+[node name="Mesh" type="MeshInstance3D" parent="FloeEasy" unique_id=1029325962]
+mesh = SubResource("CylinderMesh_0fqx4")
+
+[node name="FloeMedium" type="StaticBody3D" parent="." unique_id=1435340636]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, -0.2, 35)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FloeMedium" unique_id=340890269]
+shape = SubResource("CylinderShape3D_xbm22")
+
+[node name="Mesh" type="MeshInstance3D" parent="FloeMedium" unique_id=1856697158]
+mesh = SubResource("CylinderMesh_4nxf0")
+
+[node name="FloeHard" type="StaticBody3D" parent="." unique_id=1670533821]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.2, 55)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FloeHard" unique_id=1226483311]
+shape = SubResource("CylinderShape3D_x0esy")
+
+[node name="Mesh" type="MeshInstance3D" parent="FloeHard" unique_id=1562129385]
+mesh = SubResource("CylinderMesh_rbbxl")
+
+[node name="Fish" type="Node3D" parent="." unique_id=733513361]
+
+[node name="Penguin" parent="." unique_id=1606681652 instance=ExtResource("5_l3mpj")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 1.4, 22)
+
+[node name="Camera" type="Camera3D" parent="." unique_id=726023668]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 16)
+fov = 70.0
+script = ExtResource("6_ddo4l")
+target_path = NodePath("../Penguin")
+
+[node name="DebugHud" parent="." unique_id=855342483 instance=ExtResource("7_w4e3x")]
+
+[node name="TouchControls" parent="." unique_id=1581323103 instance=ExtResource("8_yvbwr")]

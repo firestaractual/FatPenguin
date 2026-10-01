@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://actors/fish/fish.gd" id="1_l4bjg"]
+[ext_resource type="Material" path="res://art/materials/fish.tres" id="2_lqafy"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_k2cow"]
+radius = 0.6
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_7s1vu"]
+material = ExtResource("2_lqafy")
+radius = 0.07
+height = 0.34
+
+[sub_resource type="BoxMesh" id="BoxMesh_pwq6l"]
+material = ExtResource("2_lqafy")
+size = Vector3(0.02, 0.12, 0.1)
+
+[node name="Fish" type="Area3D" unique_id=1084001277]
+script = ExtResource("1_l4bjg")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=328093166]
+shape = SubResource("SphereShape3D_k2cow")
+
+[node name="Body" type="MeshInstance3D" parent="." unique_id=102338188]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+mesh = SubResource("CapsuleMesh_7s1vu")
+
+[node name="Tail" type="MeshInstance3D" parent="." unique_id=179474647]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2)
+mesh = SubResource("BoxMesh_pwq6l")
