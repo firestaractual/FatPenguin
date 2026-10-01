@@ -8,6 +8,7 @@ extends CharacterBody3D
 ##   WALK  - on its feet: slow, precise, with grip. Walk into a low ledge to hop up it.
 ##           (Called "walk" so it isn't confused with the waddle safe zone.)
 ##   SLIDE - on its belly (tobogganing): fast and slippery. Slopes speed it up. It's also how you bump.
+##           Pull the stick back to dig your feet in and brake.
 ##
 ## Food is energy: energy pays for boosts and flops, drains over time, and makes the penguin fat.
 ## Fat = more fuel, faster in a straight line, heavier in a bump, but slower to turn, slower to
@@ -210,6 +211,11 @@ func is_immune() -> bool:
 	return _immune_time > 0.0
 
 
+## Sliding with the stick pulled back: feet dug in, slowing hard.
+func is_braking() -> bool:
+	return state == State.SLIDE and not _tumbling and _move_input.y < -0.5
+
+
 ## Horizontal facing, for the camera.
 func get_facing() -> Vector3:
 	return Vector3(-sin(_yaw), 0.0, -cos(_yaw))
@@ -395,6 +401,8 @@ func _slide(delta: float, input: Vector2) -> void:
 		# Work on the motion along the surface (just the horizontal part if we're between contacts).
 		var along := v if on_floor else Vector3(v.x, 0.0, v.z)
 		var friction := tuning.tumble_friction if _tumbling else tuning.slide_friction
+		if is_braking():
+			friction += tuning.slide_brake_decel
 		var speed := maxf(along.length() - friction * delta, 0.0)
 		var face := get_facing() - n * get_facing().dot(n)
 		face = face.normalized() if face.length() > 0.01 else get_facing()

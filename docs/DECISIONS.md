@@ -4,6 +4,13 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-01: Faster on land, slicker ice, and a brake
+
+- **Playtest:** moving on the ice felt slow, and slides wanted to go further.
+- **Change:** walking, the flop and the mid-slide flipper push are 1.5× faster (walk 1.8 m/s, flop 7.5 m/s, push +2.25 m/s; walk acceleration scaled to match). Ice friction drops from 0.6 to 0.45 m/s², so a flop from standing glides ~62 m, further than the berg is wide.
+- **Brake:** since a slide could no longer be stopped on the ice, pulling the stick back mid-slide now digs your feet in (+6 m/s²), stopping a full-speed slide in about 4 m. It was already listed as the fix if slides felt too all-in (GDD §4.5).
+- **Cost:** full-speed bumps knock a standing penguin about twice as far (TUNING, bump checks). Fine on the big berg, but the 8 m kill-screen floe will need a bigger floe, more grip or a lower knockback cap when it's built.
+
 ## 2026-10-01: Energy has a floor for now; an exhausted state comes later
 
 - **Playtest:** at zero energy the penguin couldn't flop or boost, so it crawled at walking speed on the ice and couldn't launch out of the water. Exhaustion was fun, but a hard zero made it too hard.

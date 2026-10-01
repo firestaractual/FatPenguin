@@ -102,7 +102,7 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 
 - **On your feet** (walking, standing, dodging) you have grip. You take much less knockback, skid to a stop quickly, and **teeter** at the ice edge before falling in, which gives you a moment to scramble back for a little energy.
 - **On your belly** (sliding, or tumbling after a hit) you're a puck: full knockback, a long glide, and straight off the edge with no teeter.
-- So the slide is both the attack and the risk. A flop commits you. If you connect, the hit soaks up your speed and you stop. If you miss, you sail past, and getting back on your feet takes a moment (longer when you're fat). On the small kill-screen floe, a miss carries you into the water.
+- So the slide is both the attack and the risk. A flop commits you. If you connect, the hit soaks up your speed and you stop. If you miss, you sail on across the slick ice until you dig in (pull the stick back) to brake, and getting back on your feet takes a moment (longer when you're fat). On the small kill-screen floe, a miss means braking hard or swimming.
 - **In water**, drag soaks up knockback, so a bump is a short shove. Boost-ramming is the water version. Water bumps are for crowding someone off a bait ball or blocking a fish; the ice is the arena.
 
 #### What a bump does
@@ -129,7 +129,7 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 - **Orca waves:** waves push everyone across the ice (§5.3), and a bump during a wave stacks with it.
 - **Slopes and drops:** a slide down a chute (§4.10) arrives fast enough for a hard bump, and a plateau's sheer edges are ring-outs onto the ice below: a fall and a long way round, not a swim.
 - **The waddle:** the edge is where bumps happen; the middle is a shoving match.
-- **Kill screen:** sumo on a shrinking floe. A short shove is enough to put someone on a lunge line during its 1-second warning, but every slide is all-in: connect and you stay, miss and you swim.
+- **Kill screen:** sumo on a shrinking floe. A short shove is enough to put someone on a lunge line during its 1-second warning, but a slide that misses has to brake hard or it ends in the water.
 
 #### Feel and readability [Proposed]
 
@@ -141,14 +141,14 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 
 Bumping uses the controls already in the prototype (DECISIONS, 2026-10-01, Godot entry), with no new button:
 
-- On ice, tap to flop into a belly-slide, steer it with the stick, and tap again mid-slide for a flipper push to speed into a hit. You stand back up when the slide slows down.
+- On ice, tap to flop into a belly-slide, steer it with the stick, and tap again mid-slide for a flipper push to speed into a hit. Pull the stick back to dig in and brake. You stand back up when the slide slows down.
 - In water, boost into someone.
 - [Open] Whether steering is precise enough to aim bumps on a phone (§11).
 
 #### Balance checks
 
 - **Fat bullying:** fat penguins already get more fuel and top speed, and weight adds a third edge. Watch that the kill screen doesn't become "whoever ate the last meal pushes everyone off." Thin counters: knocking fish loose, side hits, and being targeted last.
-- **All-in slides:** if missing on the kill floe feels like a cheap death rather than a gamble, add a dig-in brake (pull the stick back against the slide).
+- **Braking:** digging in stops a full-speed slide in about 4 m. Watch that it doesn't make sliding risk-free; if it does, make it slower or cost energy.
 - **Griefing:** a player who does nothing but bump should run low on energy and draw predators well before they win.
 - **Comebacks:** thin players should be able to rob overfed leaders often enough to matter (§4.8).
 
@@ -182,7 +182,7 @@ The answer is one of: go now, wait, or go with someone else as bait.
 
 ### 4.9 Movement [Proposed]
 
-- **On ice:** walk (a slow waddle) or belly-slide (fast, momentum-based, hard to steer). Tap to flop onto your belly, and tap mid-slide for a flipper push. Sliding is also how you bump (§4.5).
+- **On ice:** walk (a slow waddle) or belly-slide (fast, momentum-based, hard to steer). Tap to flop onto your belly, tap mid-slide for a flipper push, and pull the stick back to dig in and brake. The ice is slick: an unbraked flop glides further than the iceberg is wide. Sliding is also how you bump (§4.5).
 - **Slopes:** anything steeper than you can stand on is a chute. Step onto one and you slip onto your belly. Gravity speeds a slide downhill and slows it uphill, so chutes are fast ways down, and you can't walk back up them.
 - **Hop:** walk into a ledge or a crack and you hop it automatically, if you can clear it. Hops get lower and shorter as you get fatter; at a ledge that's too tall you try and fall short. On your feet you stop at a gap you can't clear; on your belly you can't stop, so you slide in.
 - **In water:** one-thumb steering, plus porpoising (leaping in and out) at speed.

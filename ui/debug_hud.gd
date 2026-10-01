@@ -13,8 +13,8 @@ var _penguin: Penguin
 func _ready() -> void:
 	_penguin = get_tree().get_first_node_in_group(&"player") as Penguin
 	var touch := DisplayServer.is_touchscreen_available()
-	_hint_label.text = "Left thumb: steer   Right thumb: boost / belly-slide (tap again to push)" if touch else \
-		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   R: reset\n" + \
+	_hint_label.text = "Left thumb: steer (pull back mid-slide to brake)   Right thumb: boost / belly-slide (tap again to push)" if touch else \
+		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   S: brake a slide   R: reset\n" + \
 		"Slide into the blue dummies to bump them; walk into steps to hop.   Q / E: energy -/+   F2: infinite energy   F1: debug"
 
 
@@ -54,6 +54,8 @@ func _status() -> String:
 		bits.append("skid")
 	if _penguin.is_tumbling():
 		bits.append("tumble")
+	if _penguin.is_braking():
+		bits.append("braking")
 	if _penguin.is_spun_out():
 		bits.append("spun out")
 	if _penguin.is_immune():

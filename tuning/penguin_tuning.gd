@@ -72,17 +72,19 @@ extends Resource
 @export var water_entry_speed_keep := 0.8
 
 @export_group("Ice")
-@export var walk_speed := 1.2
-@export var walk_acceleration := 6.0
+@export var walk_speed := 1.8
+@export var walk_acceleration := 9.0
 @export var walk_turn_rate_deg := 300.0
-@export var slide_start_speed := 5.0
+@export var slide_start_speed := 7.5
 ## Belly-slide deceleration on ice (m/s²). Low = slippery.
-@export var slide_friction := 0.6
+@export var slide_friction := 0.45
+## Pull the stick back mid-slide to dig your feet in: extra deceleration on top of friction (m/s²).
+@export var slide_brake_decel := 6.0
 @export var slide_turn_rate_deg := 45.0
 ## How quickly a slide's direction follows the way the penguin is facing.
 @export var slide_grip := 1.5
 ## Tapping action mid-slide pushes off with the flippers.
-@export var slide_push_speed := 1.5
+@export var slide_push_speed := 2.25
 @export var slide_push_cooldown := 0.4
 @export var slide_stop_speed := 0.8
 ## Landing faster than this (horizontal m/s) turns into a belly-slide.
@@ -93,7 +95,7 @@ extends Resource
 @export var walk_max_slope_deg := 14.0
 ## Scales how hard slopes speed up (or slow down) a slide. 1.0 = real gravity.
 @export var slide_slope_gravity_mult := 1.0
-@export var slide_max_speed := 12.0
+@export var slide_max_speed := 18.0
 ## Walk into a ledge this high or lower and you hop up it (thin penguin; fat scales it down).
 @export var hop_height := 0.9
 @export var hop_forward_speed := 1.6

@@ -40,6 +40,7 @@ func _run() -> void:
 	await _test_energy_drain_and_overfill()
 	await _test_floats_with_back_above_water()
 	await _test_air_runs_out_and_forces_surface()
+	await _test_land_speeds_and_brake()
 	await _test_chute_slide()
 	await _test_hop_small_steps_when_fat()
 	await _test_big_steps_thin_only()
@@ -124,8 +125,11 @@ func _test_launch_onto_iceberg() -> void:
 	_penguin.infinite_energy = false
 	_check(landed, "boost + launch lands on the iceberg (state=%s, pos=%s)" % [_state(), _penguin.global_position])
 	if landed:
-		var stopped := await _wait_for_state(Penguin.State.WALK, 900)
-		_check(stopped, "belly-slide slows to a stop and stands up")
+		# The ice is slick enough that a landing slide crosses the berg, so dig in to stop.
+		Input.action_press(&"move_down")
+		var stopped := await _wait_for_state(Penguin.State.WALK, 300)
+		Input.action_release(&"move_down")
+		_check(stopped, "digging in after a launch stops the belly-slide and stands you up")
 
 
 func _test_ramp_climb_out() -> void:
@@ -214,6 +218,39 @@ func _test_air_runs_out_and_forces_surface() -> void:
 	_check(surfaced, "out of air forces the penguin up to breathe")
 	await _frames(150)
 	_check(_penguin.air >= _penguin.tuning.air_seconds - 0.1, "air refills at the surface (air=%.1f)" % _penguin.air)
+
+
+func _test_land_speeds_and_brake() -> void:
+	# Open ice south-east of the plateau, heading east (+X) toward the edge ~18 m away.
+	var t := _penguin.tuning
+	_penguin.infinite_energy = true
+	await _place_on_ice(_penguin, Vector3(10.0, 1.0, BUMP_LANE_Z), -PI / 2.0, 20.0)
+	await _frames(20)
+	Input.action_press(&"move_up")
+	await _frames(45)
+	var walk := Vector2(_penguin.velocity.x, _penguin.velocity.z).length()
+	_check(absf(walk - t.walk_speed) < 0.05, "walks at walk_speed (%.2f m/s)" % walk)
+	_tap(&"action")
+	await _frames(3)
+	Input.action_release(&"move_up")
+	_check(_penguin.state == Penguin.State.SLIDE and _penguin.get_speed() > t.slide_start_speed - 0.2,
+		"a flop starts at slide_start_speed (%.1f m/s)" % _penguin.get_speed())
+	var start := _penguin.global_position
+	Input.action_press(&"move_down") # dig in
+	var stood := await _wait_for_state(Penguin.State.WALK, 180)
+	Input.action_release(&"move_down")
+	var dist := Vector2(_penguin.global_position.x - start.x, _penguin.global_position.z - start.z).length()
+	var glide := t.slide_start_speed * t.slide_start_speed / (2.0 * t.slide_friction)
+	_check(stood and dist < 6.0, "pulling back digs in and stops a full-speed slide in %.1f m (no brake: ~%.0f m)" % [dist, glide])
+
+	# Left alone, a slow slide glides to a stop by itself (v² / 2 × friction).
+	start = _penguin.global_position
+	_launch_slide(_penguin, Vector3.LEFT, 3.0)
+	stood = await _wait_for_state(Penguin.State.WALK, 600)
+	dist = Vector2(_penguin.global_position.x - start.x, _penguin.global_position.z - start.z).length()
+	var expected := 3.0 * 3.0 / (2.0 * t.slide_friction)
+	_check(stood and absf(dist - expected) < 1.5, "a slow slide glides %.1f m on its own and stands up (expected ~%.0f m)" % [dist, expected])
+	_penguin.infinite_energy = false
 
 
 func _test_chute_slide() -> void:
