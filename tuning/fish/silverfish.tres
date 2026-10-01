@@ -22,5 +22,5 @@ roam_radius = 4.0
 home_pull = 0.3
 home_merge_rate = 0.1
 abundance = 3.0
-school_size = Vector2i(6, 10)
+school_size = Vector2i(8, 14)
 depth_range = Vector2(1, 6)

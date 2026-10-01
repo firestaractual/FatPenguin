@@ -31,17 +31,25 @@ var home := Vector3.ZERO
 ## Current swimming velocity (schooling fish only).
 var velocity := Vector3.ZERO
 
-## How often each fish looks for its nearest school mates (s). Searches are staggered across
-## fish so they don't all land on the same frame.
+## How often each fish looks for its nearest school mates (s); FAR_STEP times less often when
+## it's far away. Searches are staggered across fish so they don't all land on the same frame.
 const NEIGHBOUR_REFRESH := 0.25
 ## Schooling fish never come closer to the surface than this (m).
 const MIN_DEPTH := 0.3
 ## Fish swim mostly level: vertical steering is scaled by this, and vertical speed is capped
 ## at this share of cruising speed.
 const VERTICAL_SHARE := 0.35
+## Schooling fish farther than this from the camera (m) are lost in the underwater fog, so they
+## only take a (bigger) step every FAR_STEP physics frames. Roughly halves their cost.
+const FAR_DISTANCE := 40.0
+const FAR_STEP := 4
 
 ## Every schooling fish in the scene, by species. How fish find their school mates.
 static var _by_species := {}
+## The camera position, fetched once per physics frame by whichever fish asks first.
+static var _viewer_frame := -1
+static var _viewer_pos := Vector3.ZERO
+static var _has_viewer := false
 
 var _phase := 0.0
 var _age := 0.0
@@ -52,6 +60,11 @@ var _neighbours: Array[Fish] = []
 ## Where this fish was at its last schooling step. School mates read this instead of
 ## global_position, which is slower to fetch.
 var _pos := Vector3.ZERO
+## Time since this fish last took a schooling step (more than one frame when it's far away).
+var _pending := 0.0
+## Spreads far fish's steps across frames.
+var _step_offset := 0
+var _far := false
 
 @onready var _model: Node3D = $Model
 
@@ -89,6 +102,7 @@ func _ready() -> void:
 		_wander_dir = Vector3(cos(angle), 0.0, sin(angle))
 		velocity = _wander_dir * _speed
 		_refresh = randf() * NEIGHBOUR_REFRESH
+		_step_offset = randi() % FAR_STEP
 		_model.scale = Vector3.ONE * species.body_scale
 		if species.material != null:
 			for mesh: MeshInstance3D in [$Model/Body, $Model/Tail]:
@@ -99,8 +113,27 @@ func _physics_process(delta: float) -> void:
 	_age += delta
 	if species == null:
 		_swim_circle(delta)
-	elif visible:
-		_swim_in_school(delta)
+		return
+	if not visible:
+		return
+	_pending += delta
+	_far = _is_far()
+	if _far and (Engine.get_physics_frames() + _step_offset) % FAR_STEP != 0:
+		return
+	_swim_in_school(_pending)
+	_pending = 0.0
+
+
+## True when this fish is too far from the camera to be seen. With no camera, nothing is far.
+func _is_far() -> bool:
+	var frame := Engine.get_physics_frames()
+	if frame != _viewer_frame:
+		_viewer_frame = frame
+		var camera := get_viewport().get_camera_3d()
+		_has_viewer = camera != null
+		if _has_viewer:
+			_viewer_pos = camera.global_position
+	return _has_viewer and _pos.distance_squared_to(_viewer_pos) > FAR_DISTANCE * FAR_DISTANCE
 
 
 func _swim_circle(delta: float) -> void:
@@ -115,7 +148,7 @@ func _swim_in_school(delta: float) -> void:
 	var s := species
 	_refresh -= delta
 	if _refresh <= 0.0:
-		_refresh += NEIGHBOUR_REFRESH
+		_refresh = NEIGHBOUR_REFRESH * (FAR_STEP if _far else 1)
 		_find_neighbours()
 
 	var pos := global_position
@@ -218,7 +251,10 @@ func _rejoin_school() -> void:
 		velocity = nearest.velocity
 	else:
 		global_position = home
+	# It teleported: don't let physics interpolation draw it sliding there.
+	reset_physics_interpolation()
 	_pos = global_position
+	_pending = 0.0
 	_refresh = 0.0
 
 

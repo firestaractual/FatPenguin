@@ -4,6 +4,14 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-01: More fish, closer to the ice; fish value stays at 10
+
+- **Playtest:** there wasn't enough food. Trips came up empty.
+- **Cause:** schooling (below) clumped the same number of fish into fewer, farther spots. From the ice edge the nearest fish went from ~11 m to ~20 m away on average, and up to 47 m on the worst side, against ~20–25 m of underwater visibility.
+- **Change:** 12 schools instead of 8, one in each slice of the ring around the berg, so every side has one, and all of them 6–20 m off the ice edge. Bigger schools (silverfish 8–14, lanternfish 8–12, icefish 4–6) and 16 loose fish instead of 12. That's about 130 fish instead of 72. From the edge, the nearest fish is now ~13 m away on average (22 m at worst), and about 21 fish are within 25 m, three times as many as before. See TUNING, Fish.
+- **Why not make fish worth more:** fish value is load-bearing. The overfill threshold (two fish from a fresh start), fish spills, the chum cost and the food-pulse scarcity check are all counted in fish, so a bigger number would let one school fill you twice over and take the decision out of a trip. The problem was reaching food, not what it was worth. If trips still come up short, fish value is one number in `penguin_tuning_default.tres`, but those checks would need redoing.
+- **Cost:** fish more than 40 m from the camera, lost in the fog, now update every 4th physics frame. The ~130 fish cost about the same as the 72 did.
+
 ## 2026-10-01: Fish come in species and school with their own kind
 
 - **Change:** fish now come in three species based on real Antarctic forage fish (Antarctic silverfish, lanternfish, mackerel icefish), and they school by species. A fish is pulled toward fish of its own kind within school range (6 m), keeps a little personal space, matches their heading and stays near a home spot. It ignores every other species, so schools never mix, even when two kinds swim through each other. See GDD §4.11.

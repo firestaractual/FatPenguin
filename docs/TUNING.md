@@ -190,7 +190,7 @@ Each species is a resource in `tuning/fish/` (the class is `tuning/fish_species.
 | Value | Silverfish | Lanternfish | Icefish | Notes |
 |---|---|---|---|---|
 | Spawn weight (abundance) | 3 | 2 | 1 | Relative chance a school or loose fish is this species |
-| School size | 6–10 | 6–9 | 3–5 | |
+| School size | 8–14 | 8–12 | 4–6 | |
 | Spawn depth | 1–6 m | 4–8 m | 2–8 m | Below the surface |
 | Model size | ×1.0 | ×0.8 | ×1.4 | Looks only: the eat radius (0.6 m) is the same for all |
 | Cruise speed | 0.6 m/s | 0.8 m/s | 0.5 m/s | Each fish ±15%. A cruising penguin does 4 m/s, so anyone can catch any fish |
@@ -208,15 +208,25 @@ Each species is a resource in `tuning/fish/` (the class is `tuning/fish_species.
 | Fish value | +10 | +10 | +10 | Same for every species for now (GDD §11) |
 | Respawn after being eaten | 8 s | 8 s | 8 s | Comes back beside its school |
 
-**Movement toy spawning** (`levels/movement_toy/movement_toy.gd`): 8 schools (every species gets at least one, the rest by abundance), 12 loose fish, homes 36–70 m from the middle of the berg.
+**Movement toy spawning** (`levels/movement_toy/movement_toy.gd`): 12 schools, one in each slice of the ring around the berg (every species gets at least one, the rest by abundance), with homes 36–50 m from the middle of the berg, 6–20 m off the ice edge. 16 loose fish anywhere 36–70 m out. About 130 fish in all.
 
 **Check, do schools hold together?** Measured headless over 2 minutes: schools keep their size, the nearest school mate sits ~0.52 m away (personal space 0.5 m), and school mates swim almost exactly the same way (polarisation 0.99). The smoke test measures the widest fish of a 6-fish school **0.7 m** from its middle after 15 s. ✓
 
-**Check, do schools form and stay?** About 85% of the toy's fish (62 of 72) are in a school, up from about 40% (24 of 64) before schooling. A lone silverfish 4.5 m from a silverfish school joins it within 15 s, and its home spot ends up 1.3 m from the school's (smoke test). A lanternfish the same distance away never joins. Two schools of the same kind that wander within range merge. ✓
+**Check, is there food within reach?** Measured from points all around the ice edge, 2 m down. Underwater fog hides things past ~20–25 m.
+
+| Layout | Fish | Nearest fish (average) | Nearest fish (worst spot) | Fish within 25 m |
+|---|---|---|---|---|
+| Before schooling: 4 schools, 40 loose | 64 | 11 m | 23 m | 6 |
+| First schooling: 8 schools anywhere, 12 loose | 72 | 20 m | 47 m | 7 |
+| Now: 12 schools spread around the edge, 16 loose | 131 | 13 m | 22 m | 21 |
+
+The first schooling layout clumped the same food into fewer, farther spots, so some stretches of the edge had nothing in sight. Now every side of the berg has a school a short swim away, and three times as many fish are in reach. ✓ Fish value stays at +10 (DECISIONS, 2026-10-01).
+
+**Check, do schools form and stay?** About 90% of the toy's fish (117 of 131) start in a school, up from about 40% (24 of 64) before schooling, and loose fish keep joining (122 after 2 minutes). A lone silverfish 4.5 m from a silverfish school joins it within 15 s, and its home spot ends up 1.3 m from the school's (smoke test). A lanternfish the same distance away never joins. Two schools of the same kind that wander within range merge. ✓
 
 **Check, fish stay out of the ice:** a fish can roam up to ~8 m from its home while it joins a school, so homes start 36 m out from the middle of the 30 m berg. The closest a fish came in shallow water (above the berg's 3 m draft) was ~31 m. ✓
 
-**Check, cost:** ~7–8 µs per fish per physics frame on a desktop CPU (about 0.5 ms for 72 fish), against ~2 µs for the old circling fish. ⚠ Check on a phone.
+**Check, cost:** a schooling fish near the camera costs ~8 µs per physics frame on a desktop CPU. Fish more than 40 m from the camera (lost in the fog) take a step every 4th frame and look for school mates 4× less often, which cuts them to ~3–4 µs. With ~80% of the toy's fish that far away, 131 fish cost ~0.6 ms per frame, about what 72 cost before. ⚠ Check on a phone.
 
 ## Food pulses (multiplayer)
 

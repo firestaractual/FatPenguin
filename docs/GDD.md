@@ -209,7 +209,7 @@ Fish come in species, all based on real Antarctic forage fish. For now every spe
 
 - **Fish school with their own kind.** A fish is pulled toward fish of its own species within school range, keeps a little personal space and matches its school mates' heading. It ignores other species, so schools never mix, even when two kinds swim through each other.
 - **Schools stay together.** School mates share a home spot they roam around. A lone fish that drifts into range of its own kind joins up and stays, two schools of the same kind that meet merge into one, and an eaten fish comes back beside its school.
-- **Most fish spawn in schools,** with a few loose fish in between.
+- **Most fish spawn in schools,** with a few loose fish in between. Schools are spread around the iceberg, close to its edge, so every side has food within reach.
 - Schools are the building block for food pulses (§4.3): a pulse is a school, or several, rising into reach, and a bait ball is a school at its tightest.
 - [Open] Should species be worth different amounts (a big icefish worth more than a lanternfish)? Should schools react to penguins and predators by scattering or balling up? (§11)
 

@@ -13,15 +13,18 @@ const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 	preload("res://tuning/fish/lanternfish.tres"),
 	preload("res://tuning/fish/icefish.tres"),
 ]
-## Single-species schools placed as practice targets (a preview of food pulses).
-@export var schools := 8
+## Single-species schools placed as practice targets (a preview of food pulses). They're spread
+## evenly around the berg, so every edge has a school within reach.
+@export var schools := 12
 ## Fish on their own between the schools. Lone fish that drift within school range of their
 ## own kind join up and stay.
-@export var loose_fish := 12
+@export var loose_fish := 16
 @export var berg_radius := 30.0
 ## Fish homes sit this far from the middle of the berg (min, max). The inner edge leaves room
 ## for fish roaming out from their homes without swimming into the ice.
 @export var fish_ring := Vector2(36.0, 70.0)
+## Schools sit in the inner part of the ring, within an easy swim of the ice edge (min, max).
+@export var school_ring := Vector2(36.0, 50.0)
 ## A dummy knocked into the water pops back to its spot after this long.
 @export var dummy_respawn_seconds := 2.0
 
@@ -34,7 +37,9 @@ func _ready() -> void:
 	var container := $Fish
 	for s in schools:
 		var species := fish_species[s] if s < fish_species.size() else _pick_species(rng)
-		var centre := _random_spot(rng, species)
+		# One school per slice of the ring, at a random spot within its slice.
+		var angle := (s + rng.randf_range(0.15, 0.85)) / schools * TAU
+		var centre := _random_spot(rng, species, angle, school_ring)
 		var size := rng.randi_range(species.school_size.x, species.school_size.y) if species else 6
 		for i in size:
 			var jitter := Vector3(rng.randf_range(-1.5, 1.5), rng.randf_range(-0.8, 0.8), rng.randf_range(-1.5, 1.5))
@@ -44,7 +49,7 @@ func _ready() -> void:
 			fish.home = centre
 	for i in loose_fish:
 		var species := _pick_species(rng)
-		container.add_child(_make_fish(_random_spot(rng, species), species))
+		container.add_child(_make_fish(_random_spot(rng, species, rng.randf() * TAU, fish_ring), species))
 
 
 ## A species picked at random, weighted by abundance. Null if the level has none.
@@ -60,9 +65,8 @@ func _pick_species(rng: RandomNumberGenerator) -> FishSpecies:
 	return fish_species.back() if not fish_species.is_empty() else null
 
 
-func _random_spot(rng: RandomNumberGenerator, species: FishSpecies) -> Vector3:
-	var angle := rng.randf() * TAU
-	var dist := rng.randf_range(fish_ring.x, fish_ring.y)
+func _random_spot(rng: RandomNumberGenerator, species: FishSpecies, angle: float, ring: Vector2) -> Vector3:
+	var dist := rng.randf_range(ring.x, ring.y)
 	var depths := species.depth_range if species else Vector2(1.0, 8.0)
 	var depth := rng.randf_range(depths.x, depths.y)
 	return Vector3(cos(angle) * dist, -depth, sin(angle) * dist)
