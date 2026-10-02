@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="FishSpecies" format=3]
+[gd_resource type="Resource" script_class="FishSpecies" format=3 uid="uid://s8f50leyh2rl"]
 
-[ext_resource type="Script" path="res://tuning/fish_species.gd" id="1_fspec"]
+[ext_resource type="Script" uid="uid://cof4o5h6rr8as" path="res://tuning/fish_species.gd" id="1_fspec"]
 [ext_resource type="Material" path="res://art/materials/fish_lanternfish.tres" id="2_fmat"]
 
 [resource]
@@ -9,18 +9,10 @@ display_name = "Lanternfish"
 material = ExtResource("2_fmat")
 body_scale = 0.8
 swim_speed = 0.8
-speed_variation = 0.15
 max_steer = 1.8
 wander = 0.5
-school_range = 6.0
-cohesion = 0.5
 alignment = 1.2
 personal_space = 0.5
-separation = 3.0
-max_neighbours = 7
-roam_radius = 4.0
-home_pull = 0.3
-home_merge_rate = 0.1
 abundance = 2.0
 school_size = Vector2i(8, 12)
 depth_range = Vector2(4, 8)

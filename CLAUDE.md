@@ -4,12 +4,12 @@ Mobile 3D game in **Godot 4.7.2, GDScript, Mobile renderer**. The design lives i
 
 ## Ground rules
 
-- **Balance numbers live in one place:** `tuning/penguin_tuning.gd` (the class) and `tuning/penguin_tuning_default.tres` (the values), mirrored in `docs/TUNING.md`. Fish species work the same way: `tuning/fish_species.gd` (the class) and `tuning/fish/*.tres` (one per species). Don't hard-code tuning values in gameplay scripts.
+- **Balance numbers live in one place:** `tuning/penguin_tuning.gd` (the class) and `tuning/penguin_tuning_default.tres` (the values), mirrored in `docs/TUNING.md`. Fish species work the same way: `tuning/fish_species.gd` (the class) and `tuning/fish/*.tres` (one per species), and so do predators: `tuning/predator_tuning.gd` and `tuning/predators/*.tres`. Don't hard-code tuning values in gameplay scripts.
 - **Design changes get a log entry:** add a dated entry at the top of `docs/DECISIONS.md`, and update the status tags in `docs/GDD.md` (`[Locked]` / `[Proposed]` / `[Open]`).
 - **Naming:** "waddle" means the safe group of penguins on the ice. The slow on-ice gait is called **walk** in code (`State.WALK`, `walk_speed`) so the two don't get confused.
 - **Water line:** the water surface is `y = 0` (`Penguin.WATER_LEVEL`). Anything below is water.
 - **Penguin body:** a sphere collider that never rotates. Only the `Model` node turns and changes width, so physics stays simple and art can be swapped freely.
-- **Physics layers:** layer 1 is the world (ice, seafloor), layer 2 is penguins (`Penguin.WORLD_LAYER`, `Penguin.PENGUIN_LAYER`). Ground and ledge probes ray-cast against the world layer only, so penguins never mistake each other for ice.
+- **Physics layers:** layer 1 is the world (ice, seafloor), layer 2 is penguins (`Penguin.WORLD_LAYER`, `Penguin.PENGUIN_LAYER`), layer 3 is predators (`Predator.PREDATOR_LAYER`). Ground and ledge probes ray-cast against the world layer only, so penguins never mistake each other for ice. Predators collide with the world only; their catches are by distance, not collision.
 - **Bumps:** penguin-on-penguin hits are resolved by hand in `Penguin._bump()` after every `move_and_slide` (call `_move()`, not `move_and_slide()`, in movement states). Dummies are ordinary penguins with `player_controlled = false`.
 - **Input:** gameplay reads only the input actions (`move_*`, `action`). Touch controls feed those same actions through `Input.action_press`, so don't read touch events directly in gameplay code.
 - **Typing:** use static typing throughout (`var x := ...`, typed function signatures).

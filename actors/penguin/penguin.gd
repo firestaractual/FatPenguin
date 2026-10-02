@@ -16,7 +16,9 @@ extends CharacterBody3D
 ##
 ## Bumping (GDD §4.5): penguins are bumper cars. On its feet a penguin has grip, skids a short way
 ## when hit and teeters at the ice edge; on its belly it's a puck. Bumps never kill, they just move
-## you toward whatever does.
+## you toward whatever does. They also make noise, which draws predators (GDD §5.1).
+##
+## Predators (actors/predators) do the killing: a caught penguin is eaten and respawns on the ice.
 ##
 ## The body itself never rotates (sphere collider); only the Model node turns and stretches.
 
@@ -30,6 +32,7 @@ signal bumped(other: Penguin, closing_speed: float, hard: bool)
 signal spilled_fish(at: Vector3)
 signal teetered
 signal scrambled
+signal caught(by: Node3D)
 
 enum State { SWIM, AIR, WALK, SLIDE }
 
@@ -75,6 +78,8 @@ const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 var state: State = State.AIR
 var energy := 50.0
 var air := 25.0
+## How much attention this penguin has drawn lately, 0 to 1. Bumps make noise; it fades.
+var noise := 0.0
 
 var _yaw := 0.0
 var _pitch := 0.0
@@ -237,6 +242,15 @@ func get_speed() -> float:
 	return velocity.length()
 
 
+## A predator got you. In the movement toy you're eaten: a puff of feathers, a splash, and you're
+## back at your spawn point on the ice with starting energy, as if you'd pressed reset.
+func get_caught(by: Node3D) -> void:
+	_emit_puff(global_position, 8.0)
+	_emit_splash(6.0)
+	caught.emit(by)
+	reset()
+
+
 func reset() -> void:
 	global_position = _spawn_position
 	velocity = Vector3.ZERO
@@ -247,6 +261,7 @@ func reset() -> void:
 	_immune_time = 0.0
 	_spin_time = 0.0
 	_recent_bumps.clear()
+	noise = 0.0
 	energy = _starting_energy()
 	air = tuning.air_seconds
 	_set_state(State.AIR)
@@ -697,6 +712,7 @@ func _take_knock(dv: Vector3, is_bump: bool) -> void:
 ## Spin-outs, fish spills, immunity and effects. `toward` points at the other penguin.
 func _after_bump(other: Penguin, toward: Vector3, closing: float, hard: bool, dv: Vector3) -> void:
 	var was_immune := is_immune()
+	noise = minf(noise + (tuning.bump_noise_hard if hard else tuning.bump_noise_soft), 1.0)
 	if hard and not was_immune:
 		# Hit from the side (or hitting sideways): spin out.
 		if absf(get_facing().dot(toward)) < 0.6:
@@ -772,6 +788,7 @@ func _tick_timers(delta: float) -> void:
 	_hop_cooldown = maxf(_hop_cooldown - delta, 0.0)
 	_immune_time = maxf(_immune_time - delta, 0.0)
 	_spin_time = maxf(_spin_time - delta, 0.0)
+	noise = maxf(noise - delta / tuning.noise_fade_seconds, 0.0)
 	for other: Variant in _recent_bumps.keys():
 		if not is_instance_valid(other):
 			_recent_bumps.erase(other)

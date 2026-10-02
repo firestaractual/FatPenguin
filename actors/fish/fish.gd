@@ -258,16 +258,52 @@ func _rejoin_school() -> void:
 	_refresh = 0.0
 
 
+## Gone down someone's throat (a penguin's or a predator's). It respawns after respawn_seconds,
+## beside its school if it has one.
+func get_eaten() -> void:
+	if not visible:
+		return
+	if one_shot:
+		queue_free()
+		return
+	_set_active(false)
+	get_tree().create_timer(respawn_seconds).timeout.connect(_set_active.bind(true))
+
+
+## The nearest visible fish within max_distance that's swimming in a school (with at least two
+## school mates around it), or null. How a starving predator finds a meal.
+static func nearest_in_school(from: Vector3, max_distance: float) -> Fish:
+	var best: Fish = null
+	var best_sq := max_distance * max_distance
+	for mates: Array in _by_species.values():
+		for fish: Fish in mates:
+			if not fish.visible or fish._neighbours.size() < 2:
+				continue
+			var dist_sq := from.distance_squared_to(fish._pos)
+			if dist_sq < best_sq:
+				best_sq = dist_sq
+				best = fish
+	return best
+
+
+## A random visible fish swimming in a school within `radius` of `from`, or null.
+## Predators use it to swing their patrols past schools.
+static func random_in_school_near(from: Vector3, radius: float) -> Fish:
+	var found: Array[Fish] = []
+	var radius_sq := radius * radius
+	for mates: Array in _by_species.values():
+		for fish: Fish in mates:
+			if fish.visible and fish._neighbours.size() >= 2 and from.distance_squared_to(fish._pos) <= radius_sq:
+				found.append(fish)
+	return found.pick_random() if not found.is_empty() else null
+
+
 func _on_body_entered(body: Node3D) -> void:
 	if body == ignore_body and _age < ignore_seconds:
 		return
 	if body is Penguin and visible:
 		(body as Penguin).eat_fish()
-		if one_shot:
-			queue_free()
-			return
-		_set_active(false)
-		get_tree().create_timer(respawn_seconds).timeout.connect(_set_active.bind(true))
+		get_eaten()
 
 
 func _set_active(active: bool) -> void:

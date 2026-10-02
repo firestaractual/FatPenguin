@@ -37,6 +37,8 @@ Each prototype answers one question. Don't move on until the current one's answe
 
 ## Prototype 1: Energy loop + leopard seal
 
+**Status: started early.** The leopard seal is in the movement toy: patrol, targeting rule, visible lock-on, lunge warning with a strike line, sated state, plus hunger (starving seals eat fish). Bump noise is built. Still to do: the energy loop, food pulses, the waddle, breathing holes, chum, exhaustion and a goal level.
+
 **Question:** does deciding when to leave the waddle create real tension?
 
 **In scope**

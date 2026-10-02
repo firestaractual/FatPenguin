@@ -4,6 +4,18 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-01: Leopard seals hunt the movement toy; a catch means you're eaten
+
+- **Change:** the first predator from Prototype 1, the leopard seal, is in the movement toy (two of them). It patrols a loop 4 m off the ice edge, swinging past schools, and hunts the most tempting penguin it can see using the targeting rule (GDD §5.1: size, noise and closeness, switching only for a 25% better target). See GDD §5.3 and TUNING, Predators.
+- **What it can see:** penguins in the water within 18 m, but penguins out of the water only within 6 m (the edge ambush), and never through ice. Up on the plateau you're out of reach.
+- **Chase and lunge:** it chases at 5.5 m/s, faster than a cruising penguin (4–4.6) and slower than a boost (9–11). A thin penguin (120 °/s) out-turns it (75 °/s); a stuffed one (66 °/s) can't. In lunge range it lines up a strike: for 0.6 s the lock-on ring flashes and a line marks exactly where the lunge will go, and the seal holds off at 3 m instead of closing in. Then it dashes along the line, catching anything near its jaws. Turning off the line or boosting dodges it; doing nothing gets you caught. A lunge reaches about a metre onto the ice, so standing right at the edge is dangerous and 4 m in is safe.
+- **Hunger:** a seal gets hungrier all the time. It hunts penguins and ignores fish until it's starving; a starving seal goes to the nearest school and eats fish until it's fed, though it still lunges at a penguin that swims right up to it. That's the readable window to slip past. After eating a penguin it's sated (slow and harmless) for 8 s.
+- **A catch means you're eaten** (in the movement toy): a puff of feathers, a splash, and you're back at your spawn point with starting energy. This settles GDD §11's "single-player catch" question for the toy only; the campaign's "fat is armor" rule (§8) stays proposed.
+- **Bump noise is built** now that something listens: 0.4 for a soft bump, 1.0 for a hard one, fading over 2 s. A brawl near a seal draws it.
+- **Why the warning works this way:** a first version aimed the lunge at the end of the warning and kept closing in during it. In headless trials no reaction could dodge that, which breaks "every death should feel like I misjudged that." Locking the strike line at the start of the warning and holding off fixed it: with a 0.2 s reaction, doing nothing was caught every time and turning or boosting escaped every time. React late (0.45 s) and only a boost still works.
+- **Not yet:** breathing holes (no holes yet), bubble trails, chum, spilled fish from eaten penguins, and real seal art.
+- Proposed. Numbers in TUNING (Predators).
+
 ## 2026-10-01: More fish, closer to the ice; fish value stays at 10
 
 - **Playtest:** there wasn't enough food. Trips came up empty.

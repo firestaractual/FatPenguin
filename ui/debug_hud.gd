@@ -15,7 +15,8 @@ func _ready() -> void:
 	var touch := DisplayServer.is_touchscreen_available()
 	_hint_label.text = "Left thumb: steer (pull back mid-slide to brake)   Right thumb: boost / belly-slide (tap again to push)" if touch else \
 		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   S: brake a slide   R: reset\n" + \
-		"Slide into the blue dummies to bump them; walk into steps to hop.   Q / E: energy -/+   F2: infinite energy   F1: debug"
+		"Slide into the blue dummies to bump them; walk into steps to hop.   Q / E: energy -/+   F2: infinite energy   F1: debug\n" + \
+		"Leopard seals hunt the water. An orange ring means one has locked on; when it flashes, turn off the line or boost."
 
 
 func _process(_delta: float) -> void:
@@ -43,7 +44,28 @@ func _process(_delta: float) -> void:
 			_penguin.hop_height(),
 			_penguin.air,
 			Engine.get_frames_per_second(),
-		]
+		] + _seal_line()
+
+
+## The nearest seal: what it's doing and how hungry it is.
+func _seal_line() -> String:
+	var nearest: Predator = null
+	var best := INF
+	for node in get_tree().get_nodes_in_group(&"predators"):
+		var seal := node as Predator
+		var dist := seal.global_position.distance_to(_penguin.global_position)
+		if dist < best:
+			best = dist
+			nearest = seal
+	if nearest == null:
+		return ""
+	return "\nseal    %s  %.0f m  hunger %.0f%s%s" % [
+		Predator.State.keys()[nearest.state],
+		best,
+		nearest.hunger,
+		"  (starving)" if nearest.is_starving() else "",
+		"  [hunting you]" if nearest.is_hunting(_penguin) else "",
+	]
 
 
 func _status() -> String:

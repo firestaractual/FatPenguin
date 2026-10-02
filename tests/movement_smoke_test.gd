@@ -2,7 +2,7 @@ extends SceneTree
 ## Headless smoke test for the Prototype 0 movement toy.
 ## Drives the penguin with simulated input and checks each movement verb still works,
 ## then checks the plateau (slide down chutes, hop up steps), bumping with dummy penguins,
-## and fish schooling with their own species.
+## fish schooling with their own species, and leopard seals hunting.
 ##
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --script res://tests/movement_smoke_test.gd
@@ -10,6 +10,7 @@ extends SceneTree
 
 const LEVEL := "res://levels/movement_toy/movement_toy.tscn"
 const PENGUIN_SCENE := "res://actors/penguin/penguin.tscn"
+const SEAL_SCENE := "res://actors/predators/leopard_seal.tscn"
 ## Open ice on the south-east of the berg, clear of the plateau, ramp and level dummies.
 const BUMP_LANE_Z := 10.0
 
@@ -35,6 +36,11 @@ func _run() -> void:
 	# energy or speed check. They stay in the level but can't be eaten during this test.
 	for fish: Fish in level.get_node("Fish").get_children():
 		fish.monitoring = false
+	# The level's seals would hunt the test penguin. The predator checks bring their own.
+	var level_seals := level.get_node("Predators").get_children()
+	_check(level_seals.size() > 0, "the level has leopard seals patrolling it (%d)" % level_seals.size())
+	for seal in level_seals:
+		seal.queue_free()
 
 	await _test_lands_on_ice()
 	await _test_slide_off_edge_into_water()
@@ -52,6 +58,7 @@ func _run() -> void:
 	await _test_bump_knockback()
 	await _test_teeter_and_scramble()
 	await _test_fish_schools()
+	await _test_predators()
 
 	print("\nStates seen: ", " > ".join(_states_seen))
 	if _failures.is_empty():
@@ -337,8 +344,11 @@ func _test_bump_knockback() -> void:
 	_launch_slide(hitter, Vector3.RIGHT, 5.0)
 	var hit := await _wait_for_bump(target, 120)
 	_check(hit and target.is_immune(), "a slide into a penguin bumps it, and it's briefly immune")
+	_check(target.noise > 0.3 and hitter.noise > 0.3, "a bump makes noise that draws predators (%.1f)" % target.noise)
 	var moved := await _wait_until_still(target, start)
 	_check(moved > 0.5 and moved < 1.6, "thin into thin standing: knocked %.2f m (feet grip)" % moved)
+	await _frames(int(target.tuning.noise_fade_seconds * 60.0) + 10)
+	_check(target.noise == 0.0, "and the noise fades")
 	target.queue_free()
 	hitter.queue_free()
 	await _frames(2)
@@ -466,7 +476,188 @@ func _test_fish_schools() -> void:
 	stranger.queue_free()
 
 
+func _test_predators() -> void:
+	# Out of the way: the player waits on the plateau, out of reach, and the level's dummies go.
+	await _place_on_ice(_penguin, Vector3(0.0, 3.0, -8.0), 0.0, 50.0)
+	for dummy in _level.get_node("Dummies").get_children():
+		dummy.queue_free()
+	await _frames(2)
+	var berg_radius: float = _level.get(&"berg_radius")
+
+	# Patrol: around the berg and past the schools, in the water and never into the ice.
+	var seal := _spawn_seal(Vector3(berg_radius + 4.0, -2.5, 0.0))
+	var last := 0.0
+	var swept := 0.0
+	var closest := INF
+	var highest := -INF
+	for i in 30 * 60:
+		await physics_frame
+		var at := seal.global_position
+		var angle := atan2(at.z, at.x)
+		swept += absf(wrapf(angle - last, -PI, PI))
+		last = angle
+		highest = maxf(highest, at.y)
+		if at.y > -3.2:
+			closest = minf(closest, Vector2(at.x, at.z).length())
+	_check(rad_to_deg(swept) > 45.0, "a seal on patrol swims around the berg (%.0f° in 30 s)" % rad_to_deg(swept))
+	_check(highest < 0.0 and closest > berg_radius, "and stays in the water, clear of the ice (top y=%.2f, closest %.1f m out)" % [highest, closest])
+	seal.queue_free()
+
+	# Targeting: of two penguins in sight, it locks on to the more tempting, fatter one.
+	var spot := Vector3(0.0, -3.0, -110.0)
+	seal = _spawn_seal(spot)
+	var thin := _spawn_bait(spot + Vector3(-10.0, 1.0, 0.0), 0.0)
+	var fat := _spawn_bait(spot + Vector3(10.0, 1.0, 0.0), 100.0)
+	var events := {"warn": -1, "lunge": -1, "caught": null}
+	seal.state_changed.connect(func(s: Predator.State) -> void:
+		if s == Predator.State.WARN:
+			events["warn"] = Engine.get_physics_frames()
+		elif s == Predator.State.LUNGE:
+			events["lunge"] = Engine.get_physics_frames())
+	seal.caught_penguin.connect(func(p: Penguin) -> void: events["caught"] = p)
+	await _frames(10)
+	_check(seal.target == fat and seal.state == Predator.State.CHASE, "a seal locks on to the most tempting penguin in sight: the fat one")
+	for i in 600:
+		await physics_frame
+		if events["caught"] != null:
+			break
+	var warning := float(events["lunge"] - events["warn"]) / 60.0
+	_check(events["warn"] >= 0 and absf(warning - seal.tuning.lunge_warning) < 0.05, "it warns for %.2f s before it lunges" % warning)
+	_check(events["caught"] == fat, "and the lunge catches the fat penguin")
+	# Sated: slow and harmless. The thin penguin right beside it is safe.
+	thin.global_position = seal.global_position + Vector3(2.0, 0.0, 0.0)
+	await _frames(120)
+	_check(seal.state == Predator.State.SATED and events["caught"] == fat, "a seal that has just eaten is sated and leaves a penguin beside it alone")
+	seal.queue_free()
+	thin.queue_free()
+	fat.queue_free()
+
+	# Caught while swimming: the player is eaten and respawns on the ice.
+	var spawn: Vector3 = _penguin.get(&"_spawn_position")
+	_place_swimming(spot + Vector3(0.0, 1.0, -8.0), 0.0, 0.0)
+	seal = _spawn_seal(spot)
+	var eaten := [false]
+	_penguin.caught.connect(func(_by: Node3D) -> void: eaten[0] = true, CONNECT_ONE_SHOT)
+	for i in 900:
+		await physics_frame
+		if eaten[0]:
+			break
+	_check(eaten[0] and _penguin.global_position.distance_to(spawn) < 1.0 and is_equal_approx(_penguin.energy, _penguin.tuning.starting_energy),
+		"a seal catches a penguin swimming away, and it's eaten: back on the ice with starting energy")
+	seal.queue_free()
+
+	# The warning is a fair chance: turn off the strike line and the lunge misses.
+	_place_swimming(Vector3(0.0, -1.0, 100.0), PI, 0.0)
+	seal = _spawn_seal(Vector3(0.0, -2.0, 94.0))
+	var dodge := {"warn": -1, "lunged": false, "caught": false}
+	seal.state_changed.connect(func(s: Predator.State) -> void:
+		if s == Predator.State.WARN and dodge["warn"] < 0:
+			dodge["warn"] = Engine.get_physics_frames())
+	seal.lunged.connect(func(_at: Vector3) -> void: dodge["lunged"] = true)
+	seal.caught_penguin.connect(func(_p: Penguin) -> void: dodge["caught"] = true)
+	for i in 900:
+		await physics_frame
+		if dodge["warn"] >= 0 and Engine.get_physics_frames() == dodge["warn"] + 12:
+			Input.action_press(&"move_left") # a 0.2 s reaction
+		if dodge["caught"] or (dodge["lunged"] and seal.state == Predator.State.RECOVER):
+			break
+	Input.action_release(&"move_left")
+	_check(dodge["lunged"] and not dodge["caught"], "turning off the strike line during the warning dodges the lunge")
+	seal.queue_free()
+	await _place_on_ice(_penguin, Vector3(0.0, 3.0, -8.0), 0.0, 50.0)
+
+	# Starving: it goes to a school and eats fish, leaving a fat penguin 10 m away alone.
+	# (A big silverfish school, so one school is enough to fill it up.)
+	var school: Fish = null
+	for fish: Fish in _level.get_node("Fish").get_children():
+		if fish.species.display_name == "Antarctic silverfish" and (fish.get(&"_neighbours") as Array).size() >= 6:
+			school = fish
+			break
+	var home := school.home
+	var out := Vector3(home.x, 0.0, home.z).normalized()
+	seal = _spawn_seal(Vector3(home.x, -2.5, home.z) + out * 8.0)
+	seal.hunger = 90.0
+	var bait := _spawn_bait(Vector3(home.x, -2.0, home.z) + out * 18.0, 100.0)
+	var meals := [0]
+	var chased := [false]
+	var bait_id := bait.get_instance_id()
+	seal.ate_fish.connect(func() -> void: meals[0] += 1)
+	seal.locked_on.connect(func(p: Penguin) -> void: chased[0] = chased[0] or p.get_instance_id() == bait_id)
+	for i in 900:
+		await physics_frame
+		if meals[0] > 0 and seal.state != Predator.State.FEED:
+			break
+	_check(meals[0] > 0 and seal.hunger <= seal.tuning.fed_hunger, "a starving seal eats from a school (%d fish, hunger down to %.0f)" % [meals[0], seal.hunger])
+	_check(not chased[0], "and leaves a fat penguin 10 m away alone while it feeds")
+	bait.queue_free()
+
+	# Starving, it still lunges at a penguin that swims right up to it.
+	seal.hunger = 90.0
+	bait = _spawn_bait(seal.global_position + Vector3(0.0, 0.0, 3.0), 0.0)
+	var lunged := [false]
+	seal.lunged.connect(func(_at: Vector3) -> void: lunged[0] = true)
+	for i in 120:
+		await physics_frame
+		if lunged[0]:
+			break
+	_check(lunged[0], "a starving seal still lunges at a penguin that comes within lunge range")
+	seal.queue_free()
+	bait.queue_free()
+
+	# Not starving, it never eats fish, even swimming through a school.
+	seal = _spawn_seal(home)
+	meals[0] = 0
+	seal.ate_fish.connect(func() -> void: meals[0] += 1)
+	await _frames(5 * 60)
+	_check(meals[0] == 0, "a seal that isn't starving never eats fish")
+	seal.queue_free()
+
+	# The ice edge: a penguin standing right at it gets grabbed from the water...
+	var edge := await _spawn_standing(Vector3(-berg_radius + 0.7, 1.0, 0.0), 0.0)
+	seal = _spawn_seal(Vector3(-berg_radius - 4.0, -1.0, 0.0))
+	var grabbed := [null]
+	seal.caught_penguin.connect(func(p: Penguin) -> void: grabbed[0] = p)
+	for i in 300:
+		await physics_frame
+		if grabbed[0] != null:
+			break
+	_check(grabbed[0] == edge, "a penguin standing at the ice edge gets grabbed from the water")
+	seal.queue_free()
+	edge.queue_free()
+	# ...but 4 m in from the edge it can't reach you.
+	var inland := await _spawn_standing(Vector3(-berg_radius + 4.0, 1.0, 0.0), 0.0)
+	seal = _spawn_seal(Vector3(-berg_radius - 1.5, -0.5, 0.0))
+	var lunges := [0]
+	seal.lunged.connect(func(_at: Vector3) -> void: lunges[0] += 1)
+	await _frames(8 * 60)
+	_check(lunges[0] == 0 and inland.global_position.distance_to(Vector3(-berg_radius + 4.0, inland.global_position.y, 0.0)) < 0.5,
+		"4 m in from the edge, a seal can't reach you (lunges=%d)" % lunges[0])
+	seal.queue_free()
+	inland.queue_free()
+
+
 # --- Helpers ----------------------------------------------------------------
+
+func _spawn_seal(at: Vector3) -> Predator:
+	var seal := load(SEAL_SCENE).instantiate() as Predator
+	seal.ice_radius = _level.get(&"berg_radius")
+	seal.position = at
+	_level.add_child(seal)
+	seal.hunger = 0.0
+	return seal
+
+
+## A penguin floating still in the water: bait that doesn't swim off.
+func _spawn_bait(at: Vector3, with_energy: float) -> Penguin:
+	var p := load(PENGUIN_SCENE).instantiate() as Penguin
+	p.player_controlled = false
+	p.infinite_energy = true
+	p.start_energy = with_energy
+	p.position = at
+	_level.add_child(p)
+	p.set_physics_process(false)
+	return p
+
 
 func _spawn_fish(species: FishSpecies, at: Vector3) -> Fish:
 	var fish := load("res://actors/fish/fish.tscn").instantiate() as Fish

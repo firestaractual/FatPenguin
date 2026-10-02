@@ -125,6 +125,11 @@ extends Resource
 @export var knock_immunity_seconds := 0.75
 ## Knocked to the ice edge on your feet, you wobble this long before falling in.
 @export var teeter_seconds := 0.6
+## Every bump makes noise that draws predators: added to both penguins' noise (0 to 1).
+@export var bump_noise_soft := 0.4
+@export var bump_noise_hard := 1.0
+## Noise fades from full to nothing over this long (s).
+@export var noise_fade_seconds := 2.0
 
 @export_group("Air & gravity")
 @export var air_seconds := 25.0

@@ -1,0 +1,87 @@
+class_name PredatorTuning
+extends Resource
+## One predator's balance numbers. Mirrors the Predators section of docs/TUNING.md.
+## The leopard seal lives in res://tuning/predators/leopard_seal.tres. Edit it in the inspector,
+## then copy the winners back into TUNING.md.
+##
+## Hunger runs from 0 (just ate) to 100. A predator hunts penguins unless it's starving; a
+## starving one goes to a school and eats fish instead (it still lunges at a penguin that
+## comes close).
+
+@export var display_name := "Leopard seal"
+
+@export_group("Swimming")
+@export var patrol_speed := 2.5
+@export var chase_speed := 5.5
+## Sluggish after eating a penguin.
+@export var sated_speed := 1.5
+## Getting its breath back after a lunge.
+@export var recover_speed := 2.0
+## Speeding up and slowing down (m/s²).
+@export var acceleration := 4.0
+## A thin penguin (120 °/s) can out-turn it; a stuffed one (66 °/s) can't.
+@export var turn_rate_deg := 75.0
+## Patrol depth below the surface (min, max).
+@export var patrol_depth := Vector2(1.5, 3.5)
+
+@export_group("Patrol")
+## The patrol loop runs this far out from the ice edge (m).
+@export var patrol_offset := 4.0
+## Share of patrol legs that swing past a school instead of following the ice edge.
+@export var school_visit_chance := 0.4
+## Only schools this close are on the way (m).
+@export var school_visit_range := 30.0
+
+@export_group("Hunting")
+## Penguins in the water are noticed this far away (m). Underwater fog hides things past ~20 m.
+@export var detect_range := 18.0
+## Penguins out of the water (on the ice, or in the air) are only noticed this close (m):
+## the ambush at the ice edge.
+@export var edge_detect_range := 6.0
+## A chase is given up beyond this distance (m)...
+@export var lose_range := 25.0
+## ...or after this long without a catch (s).
+@export var chase_give_up_seconds := 12.0
+## Ignores a penguin it gave up on for this long (s).
+@export var give_up_ignore_seconds := 4.0
+## Targeting score (GDD §5.1): weights for body size, noise and closeness, each 0 to 1.
+@export var size_weight := 0.5
+@export var noise_weight := 0.3
+@export var closeness_weight := 0.2
+## A new target has to score this many times higher to steal the lock-on.
+@export var switch_threshold := 1.25
+
+@export_group("Lunge")
+## Starts the lunge warning this close to its target (m).
+@export var lunge_range := 4.0
+## The warning before every lunge (s): the lock-on ring flashes and a line marks the lunge.
+@export var lunge_warning := 0.6
+## During the warning it stops closing in at this distance and just shadows its target (m).
+@export var warn_hold_distance := 3.0
+@export var lunge_speed := 11.0
+@export var lunge_seconds := 0.45
+## No lunging again for this long afterwards (s).
+@export var lunge_cooldown := 3.0
+## A lunge catches any penguin this close to the predator's jaws (m).
+@export var catch_radius := 1.2
+## How far a lunge can rear up out of the water (m above the surface), to grab penguins
+## standing right at the ice edge.
+@export var lunge_rise := 0.6
+
+@export_group("Hunger")
+## Per second.
+@export var hunger_rate := 1.0
+## Starting hunger is random in this range, so predators don't all get hungry at once.
+@export var start_hunger := Vector2(10.0, 40.0)
+## Hungrier than this, it's starving: it goes off to eat fish from a school.
+@export var starving_hunger := 70.0
+## A starving predator eats fish until its hunger is down to this.
+@export var fed_hunger := 40.0
+## Each fish takes this much hunger away.
+@export var fish_hunger := 8.0
+## Snaps up a fish this close (m).
+@export var fish_bite_radius := 1.0
+## Looks for schools this far away when starving (m).
+@export var school_search_range := 80.0
+## Slow and harmless for this long after eating a penguin (s). Its hunger drops to 0.
+@export var sated_seconds := 8.0

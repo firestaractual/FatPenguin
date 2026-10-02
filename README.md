@@ -6,7 +6,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 ## Status
 
-**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, slide down chutes, hop up steps, bump other penguins, eat fish and get fat. There are no predators or goals yet, by design. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, slide down chutes, hop up steps, bump other penguins, eat fish and get fat. Two leopard seals (the first piece of Prototype 1) hunt the water. There are no goals yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - **Engine:** Godot 4.7.2 (standard build), GDScript
 - **Renderer:** Mobile
@@ -37,21 +37,24 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 - Run low and you get thin and weak, but never quite stuck: the cold can't take you below the energy floor, and if you spend below it you get your breath back in a few seconds. You can also climb out of the water without boosting using the low ramp on the east side of the iceberg.
 - Try the three floes (easy, medium and hard): each sits higher above the water.
 - **The plateau** in the middle of the iceberg: walk into the small east steps to hop up (anyone can), or the big north steps (thin penguins only; press Q to slim down). Slide back down the gentle south chute or the steep west one. The south chute will shoot you into the sea unless you dig in (pull back) at the bottom.
+- **Leopard seals:** two patrol the water around the berg. An orange ring around you means one has locked on. When the ring flashes and a line appears, that line is where it's about to lunge: turn off it or boost. If you're caught you're eaten, and you start again on the ice. Seals go for the fattest penguin they can see, and noisy bumps draw them. Don't stand right at the ice edge: a lunge reaches about a metre onto the ice. A starving seal goes off to eat from a school, which is your chance to slip past (F1 shows the nearest seal's state and hunger).
 - **Fish schools:** fish come in three species, and each schools only with its own kind: silver Antarctic silverfish in big tight schools, small dark lanternfish deeper down, and big pale icefish in loose little groups. Swim through a school to grab several in one pass. An eaten fish comes back beside its school.
 - **Bumping:** belly-slide into the blue dummy penguins. A thin one standing skids about a metre; one lying on its belly flies. Get stuffed (E) and you hit like a bowling ball; slide into the fat dummy while thin and you bounce off, but knock a fish loose. The dummy near the south-west edge teeters before it falls in. Get knocked to an edge yourself and pull the stick back to scramble to safety (costs a little energy).
 
 ## Tuning
 
-Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, and each fish species is in **`tuning/fish/`**. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
+Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, each fish species is in **`tuning/fish/`**, and the leopard seal is in **`tuning/predators/leopard_seal.tres`**. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
 
 ## Project layout
 
 ```
 actors/penguin/     Penguin controller (penguin.gd) + placeholder model scene
 actors/fish/        Fish pickup (schools with its own species)
+actors/predators/   Leopard seal (predator.gd) + placeholder model
 camera/             Follow camera (also switches on the underwater fog)
 levels/movement_toy Prototype 0 test level (iceberg + plateau, ramp, floes, fish, dummy penguins)
-tuning/             PenguinTuning resource class + default values; FishSpecies class + species in tuning/fish/
+tuning/             PenguinTuning resource class + default values; FishSpecies class + species in tuning/fish/;
+                    PredatorTuning class + the leopard seal in tuning/predators/
 ui/                 Debug HUD (air bar, numbers) and touch controls
 art/materials/      Placeholder materials
 tests/              Headless smoke test

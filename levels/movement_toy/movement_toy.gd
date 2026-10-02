@@ -1,9 +1,10 @@
 extends Node3D
 ## Prototype 0 test level: an iceberg with a plateau on top (chutes to slide down, steps to hop up),
-## a few floes, a low ramp out of the water, fish to eat, and dummy penguins to bump.
-## No goals, no predators. The only question: is moving around fun?
+## a few floes, a low ramp out of the water, fish to eat, dummy penguins to bump, and leopard
+## seals patrolling the water (the first piece of Prototype 1). No goals yet.
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
+const SEAL_SCENE := preload("res://actors/predators/leopard_seal.tscn")
 
 @export var fish_seed := 7
 ## The kinds of fish in the level. Each gets at least one school; the rest are picked by
@@ -27,6 +28,9 @@ const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 @export var school_ring := Vector2(36.0, 50.0)
 ## A dummy knocked into the water pops back to its spot after this long.
 @export var dummy_respawn_seconds := 2.0
+## Leopard seals patrolling the water around the berg and its schools. They start on the far
+## side from the player's spawn.
+@export var seals := 2
 
 var _wet_time := {}
 
@@ -50,6 +54,22 @@ func _ready() -> void:
 	for i in loose_fish:
 		var species := _pick_species(rng)
 		container.add_child(_make_fish(_random_spot(rng, species, rng.randf() * TAU, fish_ring), species))
+	_spawn_seals()
+
+
+func _spawn_seals() -> void:
+	var container := Node3D.new()
+	container.name = "Predators"
+	add_child(container)
+	for i in seals:
+		var seal := SEAL_SCENE.instantiate() as Predator
+		seal.patrol_centre = Vector3.ZERO
+		seal.ice_radius = berg_radius
+		# Spread around the north side; the player starts on the south edge.
+		var angle := -PI / 2.0 + (i - (seals - 1) / 2.0) * TAU / maxf(seals, 3.0)
+		var radius := berg_radius + seal.tuning.patrol_offset
+		seal.position = Vector3(cos(angle) * radius, -2.5, sin(angle) * radius)
+		container.add_child(seal)
 
 
 ## A species picked at random, weighted by abundance. Null if the level has none.

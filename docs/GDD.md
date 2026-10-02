@@ -220,18 +220,20 @@ Fish come in species, all based on real Antarctic forage fish. For now every spe
 - Predators chase the **most tempting prey nearby**, scored on body size + noise + distance. Bumps count as noise (§4.5).
 - The lock-on is clearly visible: the predator's shadow and eye turn toward the target, and a ring pulses around it.
 - To avoid flickering between targets, a predator only switches when the new target is clearly more tempting.
+- Predators only go after what they can see: penguins in the water within sight range, penguins out of the water only right at the edge, and never through ice.
 - Core idea: **you only need to outswim the other penguin, not the predator.**
 
 ### 5.2 Predator greed [Locked]
 
 - A predator that eats (a penguin or chum) is **sated and sluggish** for a short time.
+- **Hunger** [Proposed]: predators get hungrier over time. A predator hunts penguins and ignores fish until it's **starving**; then it goes to the nearest school and eats fish until it's fed, though it still lunges at a penguin that swims right up to it. A starving predator busy at a school is a window to slip past.
 - In multiplayer, that gives survivors a breather after each elimination, plus a risky chance to grab the fish the eaten penguin spilled.
 
 ### 5.3 Roster
 
 | Predator | Behavior | Warning signs |
 |---|---|---|
-| **Leopard seal** [Proposed] | Waits in ambush at ice edges and breathing holes, exactly where penguins must surface. Short, fast lunges. | Shadow under the ice edge, a trail of bubbles |
+| **Leopard seal** [Proposed] | Patrols the ice edges and the schools, and waits in ambush at ice edges and breathing holes, exactly where penguins must surface. Chases faster than a cruising penguin but slower than a boost, and turns wider than a thin one. Short, fast lunges along a marked line; a lunge reaches a little way onto the ice. In the movement toy since Prototype 0. | Shadow under the ice edge, a trail of bubbles, then the lock-on ring; before a lunge the ring flashes and a **strike line** shows where it will go |
 | **Orca pod** [Proposed] | Doesn't chase in open water. Lines up and makes waves that wash penguins off the ice. Lunges across the floe in the kill screen. | Fins lining up, the water swelling |
 
 ### 5.4 Kill screen [Locked]
@@ -312,7 +314,7 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 ## 11. Open questions
 
 1. **Multiplayer elimination:** does an eaten penguin requeue, or come back as a seal?
-2. **Single-player catch:** does it cost energy or end the level?
+2. **Single-player catch:** does it cost energy or end the level? (In the movement toy, a catch means you're eaten and respawn; DECISIONS, 2026-10-01.)
 3. **Coop win condition.**
 4. **Meta loop for D7 retention:** campaign progress alone probably isn't enough. One candidate is **species as unlocks with different stats**, all based on real penguins: Adélie (feisty, balanced), Gentoo (the fastest swimmer), Emperor (big belly, slow turns), Chinstrap, and so on.
 5. **Hero species / art look:** which penguin is on the logo and is the default character?
@@ -336,6 +338,8 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | **Chum** | A fish spat up to lure or distract a predator |
 | **Sated** | A predator's slow, harmless state right after eating |
 | **Lock-on** | A predator's visible choice of target |
+| **Strike line** | The line that marks exactly where a predator's lunge will go, shown during the lunge warning |
+| **Starving** | A predator hungry enough to eat fish from a school instead of hunting penguins |
 | **Bump** | Sliding or boosting into another penguin fast enough to knock it back |
 | **Hard bump** | A bump fast enough to spin a penguin out or knock a fish loose |
 | **Flop** | Diving onto your belly to start a slide; costs a little energy |

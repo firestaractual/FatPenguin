@@ -1,0 +1,74 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://actors/predators/predator.gd" id="1_pred"]
+[ext_resource type="Resource" path="res://tuning/predators/leopard_seal.tres" id="2_tune"]
+[ext_resource type="Material" path="res://art/materials/seal.tres" id="3_seal"]
+[ext_resource type="Material" path="res://art/materials/seal_pale.tres" id="4_pale"]
+[ext_resource type="Material" path="res://art/materials/danger.tres" id="5_dngr"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_seal"]
+radius = 0.6
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+material = ExtResource("3_seal")
+radius = 0.42
+height = 2.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+material = ExtResource("4_pale")
+radius = 0.34
+height = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_flipper"]
+material = ExtResource("3_seal")
+size = Vector3(0.6, 0.05, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tail"]
+material = ExtResource("3_seal")
+size = Vector3(0.55, 0.05, 0.3)
+
+[sub_resource type="TorusMesh" id="TorusMesh_ring"]
+material = ExtResource("5_dngr")
+inner_radius = 0.65
+outer_radius = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_line"]
+material = ExtResource("5_dngr")
+size = Vector3(0.08, 0.04, 1)
+
+[node name="LeopardSeal" type="CharacterBody3D" unique_id=1873410012]
+script = ExtResource("1_pred")
+tuning = ExtResource("2_tune")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1873410013]
+shape = SubResource("SphereShape3D_seal")
+
+[node name="Model" type="Node3D" parent="." unique_id=1873410014]
+
+[node name="Body" type="MeshInstance3D" parent="Model" unique_id=1873410015]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0.2)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Head" type="MeshInstance3D" parent="Model" unique_id=1873410016]
+transform = Transform3D(1.1, 0, 0, 0, 0.85, 0, 0, 0, 1.3, 0, 0.05, -1.25)
+mesh = SubResource("SphereMesh_head")
+
+[node name="FlipperL" type="MeshInstance3D" parent="Model" unique_id=1873410017]
+transform = Transform3D(0.9659258, -0.25881904, 0, 0.25881904, 0.9659258, 0, 0, 0, 1, -0.55, -0.2, -0.45)
+mesh = SubResource("BoxMesh_flipper")
+
+[node name="FlipperR" type="MeshInstance3D" parent="Model" unique_id=1873410018]
+transform = Transform3D(0.9659258, 0.25881904, 0, -0.25881904, 0.9659258, 0, 0, 0, 1, 0.55, -0.2, -0.45)
+mesh = SubResource("BoxMesh_flipper")
+
+[node name="Tail" type="MeshInstance3D" parent="Model" unique_id=1873410019]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.55)
+mesh = SubResource("BoxMesh_tail")
+
+[node name="LockOnRing" type="MeshInstance3D" parent="." unique_id=1873410020]
+cast_shadow = 0
+mesh = SubResource("TorusMesh_ring")
+
+[node name="LungeLine" type="MeshInstance3D" parent="." unique_id=1873410021]
+cast_shadow = 0
+mesh = SubResource("BoxMesh_line")

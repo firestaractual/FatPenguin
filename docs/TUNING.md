@@ -6,7 +6,7 @@ Last updated: 2026-10-01
 
 **The live copy is in Godot:** `tuning/penguin_tuning_default.tres` (the class is `tuning/penguin_tuning.gd`). Edit the values in the Inspector, then copy the ones that work back here.
 
-**In the game so far (Prototype 0):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump noise and credit, which need predators), air, and fish schooling. Waddle drain, the other action costs, food pulses, predators, rounds and campaign values arrive with later prototypes.
+**In the game so far (Prototype 0, plus the leopard seal from Prototype 1):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump credit), bump noise, air, fish schooling, and the leopard seal. Waddle drain, the other action costs, food pulses, orcas, rounds and campaign values arrive with later prototypes.
 
 Units: energy runs from 0 (empty) to 100 (full). Time is in seconds, distance in meters.
 
@@ -134,7 +134,7 @@ Knockback follows a simple collision: the target's push-off speed is (1 + bounci
 | Knockback immunity | 0.75 s | After any bump. No juggling |
 | Teeter window | 0.6 s | Penguins on their feet only; belly-sliders go straight in |
 | Fish spill | 1 fish per hard bump | Only from penguins above the overfill threshold (70) |
-| Bump noise | 0.4 soft, 1.0 hard | Added to both penguins' noise score; fades over 2 s. Not built yet (no predators) |
+| Bump noise | 0.4 soft, 1.0 hard | Added to both penguins' noise score (capped at 1); fades over 2 s. Predators count it when picking a target |
 | Credit window | 5 s | A predator catch this soon after a bump credits the bumper. Not built yet |
 
 **Check, how far does a bump send you?** A full-speed slide (a 7.5 m/s flop) into a penguin that isn't moving, on ice:
@@ -254,6 +254,45 @@ Fish counts scale with the number of players.
 | Leopard seal lunge cooldown | 3 s | |
 | Orca wave warning (fins lining up) | 2.0 s | |
 | Orca wave reach (from the ice edge inward) | 3 m | |
+
+### Leopard seal (in the movement toy)
+
+The live values are in `tuning/predators/leopard_seal.tres` (the class is `tuning/predator_tuning.gd`). The movement toy has two seals.
+
+| Value | Start | Notes |
+|---|---|---|
+| Patrol speed | 2.5 m/s | |
+| Chase speed | 5.5 m/s | Faster than a cruising penguin (4.0 thin, 4.6 stuffed), slower than a boost (9–11) |
+| Sated speed | 1.5 m/s | |
+| Speed after a lunge | 2.0 m/s | Until the lunge cooldown ends |
+| Acceleration | 4 m/s² | |
+| Turn rate | 75 °/s | A thin penguin (120 °/s) out-turns it; a stuffed one (66 °/s) can't |
+| Patrol loop | 4 m off the ice edge, 1.5–3.5 m deep | 40% of legs swing past a school within 30 m |
+| Sees penguins in the water | 18 m | Underwater fog hides things past ~20 m |
+| Sees penguins out of the water | 6 m | The edge ambush. Never through ice; never up on the plateau |
+| Gives up a chase | Beyond 25 m, or after 12 s | Then ignores that penguin for 4 s |
+| Lunge warning | 0.6 s | Ring flashes; the strike line shows where the lunge will go. It stops closing in at 3 m |
+| Lunge | 11 m/s for 0.45 s (~5 m) | Straight along the strike line |
+| Catch reach | 1.2 m from the jaws | The jaws are 1 m ahead of the body; the lunge can rear 0.6 m out of the water |
+| Hunger | +1 /s, starts at 10–40 | Out of 100 |
+| Starving at | 70 | Goes to the nearest school (within 80 m) and eats fish |
+| Fed at | 40 | Each fish takes 8 off. About 4 fish |
+| Sated after eating a penguin | 8 s | Hunger drops to 0 |
+
+**Check, can you get away?** A penguin cruising in a straight line gets caught: the smoke test sees a seal run down a penguin from 8 m behind. Boosting outruns it for a moment, and a thin penguin can out-turn it.
+
+**Check, is the warning fair?** Headless trials with a seal chasing a penguin from behind, 4 runs each at energy 10, 50 and 100:
+
+| Reaction (into the 0.6 s warning) | Do nothing | Turn | Boost |
+|---|---|---|---|
+| 0.2 s | caught 12/12 | escaped 12/12 | escaped 12/12 |
+| 0.45 s | caught 12/12 | caught 12/12 | escaped 12/12 |
+
+So spotting the warning early lets you turn away for free; spotting it late costs a boost (8 energy and a bubble trail). ✓ The smoke test checks that a 0.2 s turn dodges.
+
+**Check, the ice edge:** the lunge reaches about 1 m onto the ice. A penguin standing at the edge gets grabbed; 4 m in, the seal can't even start a lunge (smoke test). ✓
+
+**Check, how often a seal goes off to feed:** with no catches, a seal starts starving 30–60 s into the toy and then about every 30 s, and one school (about 4 fish) feeds it. In a 2-minute headless run, each of the two seals went feeding three times, and they ate 25 fish between them, out of ~130. ✓
 
 ## Multiplayer round
 
