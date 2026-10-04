@@ -1,8 +1,9 @@
 extends Node3D
 ## Prototype 0 test level: an iceberg with a plateau on top (chutes to slide down, steps to hop up),
 ## a few floes, a low ramp out of the water, fish to eat, dummy penguins to bump, and predators:
-## leopard seals hunting the water and an orca pod that washes penguins off the ice edge and tips
-## floes (early pieces of Prototypes 1 and 2). No goals yet.
+## leopard seals hunting the water and lying in wait under the ice edge, and an orca pod that
+## washes penguins off the ice edge, tips floes and traps penguins in the water (early pieces of
+## Prototypes 1 and 2). No goals yet.
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 

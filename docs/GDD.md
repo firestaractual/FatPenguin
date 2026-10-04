@@ -127,6 +127,7 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 - **Pulses:** shove rivals off the bait ball, block them from a fish, or knock fish loose from whoever ate first.
 - **Predators:** knock a rival toward a predator's lock-on, or spin them out just as a seal lunges. A fat rival knocked toward a predator becomes the most tempting target nearby.
 - **Orca waves and rams:** waves push everyone across the ice and rams tip it (§5.3); a bump during either stacks with it.
+- **Orca traps in the water:** bump a rival out past the cut-off's wall, or into the middle of a carousel (§5.3).
 - **Slopes and drops:** a slide down a chute (§4.10) arrives fast enough for a hard bump, and a plateau's sheer edges are ring-outs onto the ice below: a fall and a long way round, not a swim.
 - **The waddle:** the edge is where bumps happen; the middle is a shoving match.
 - **Kill screen:** sumo on a shrinking floe. A short shove is enough to put someone on a lunge line during its 1-second warning, but a slide that misses has to brake hard or it ends in the water.
@@ -221,6 +222,7 @@ Fish come in species, all based on real Antarctic forage fish. For now every spe
 - The lock-on is clearly visible: the predator's shadow and eye turn toward the target, and a ring pulses around it.
 - To avoid flickering between targets, a predator only switches when the new target is clearly more tempting.
 - Predators only go after what they can see: penguins in the water within sight range, penguins out of the water only right at the edge, and never through ice.
+- Lying in ambush and trapping use the same rule. A seal picks where to wait by the most tempting penguin standing near an edge, and an orca pod picks whom to trap the same way.
 - Core idea: **you only need to outswim the other penguin, not the predator.**
 
 ### 5.2 Predator greed [Locked]
@@ -233,8 +235,8 @@ Fish come in species, all based on real Antarctic forage fish. For now every spe
 
 | Predator | Behavior | Warning signs |
 |---|---|---|
-| **Leopard seal** [Proposed] | Patrols the ice edges and the schools, and waits in ambush at ice edges and breathing holes, exactly where penguins must surface. Chases faster than a cruising penguin but slower than a boost, and turns wider than a thin one. Short, fast lunges along a marked line; a lunge reaches a little way onto the ice. In the movement toy since Prototype 0. | Shadow under the ice edge, a trail of bubbles, then the lock-on ring; before a lunge the ring flashes and a **strike line** shows where it will go |
-| **Orca pod** [Proposed] | Doesn't chase in open water: swims in formation and only goes after a penguin that comes right up to it. Two group attacks, then it hunts whoever went in. The **wave:** lines up side by side off an ice edge where a penguin stands, charges, and breaks a wave that washes penguins near the edge into the water. The **ram:** gathers deep under the ice and rams it from below, so the ice tips toward the pod. A small floe tips steeply and everyone on it slides off the low side unless they dig in and hold on; the big berg only rocks, but the jolt shoves penguins near the rammed edge toward the water. Lunges across the floe in the kill screen (not built yet). In the movement toy since Prototype 0. | Wave: fins lining up, the water swelling, then the **danger zone** marked on the ice. Ram: dark shadows gathering under the ice edge, the water bulging, then the danger zone (the whole floe, or a strip of the berg's edge) |
+| **Leopard seal** [Proposed] | Patrols the ice edges and the schools. Chases faster than a cruising penguin but slower than a boost, and turns wider than a thin one. Short, fast lunges along a marked line; a lunge reaches a little way onto the ice. **Edge ambush:** lies in wait under the ice edge nearest a penguin standing by it, exactly where it would go in or come back out (and at breathing holes, once there are any). It holds still and lets swimmers come to it, and strikes anyone who comes close in the water with a quicker lunge. Go in somewhere else, or launch out fast. In the movement toy since Prototype 0. | Shadow under the ice edge, a trail of bubbles, then the lock-on ring; before a lunge the ring flashes and a **strike line** shows where it will go. From an ambush the strike line comes quicker, so the shadow is the warning that counts |
+| **Orca pod** [Proposed] | Doesn't chase: it **traps**. It swims in formation, and an orca on its own only goes after a penguin that comes right up to it. Its group attacks play by where you are, and chain into one trap with no rest in between. On the ice: the **wave** (lines up side by side off an ice edge where a penguin stands, charges, and breaks a wave that washes penguins near the edge into the water) and the **ram** (gathers deep under the ice and rams it from below, so the ice tips toward the pod: a small floe tips steeply and everyone on it slides off the low side unless they dig in; the big berg only rocks, but the jolt shoves penguins near the rammed edge toward the water). In the water near the ice: the **cut-off** (a wall of fins forms between you and home and pushes you out to sea; slip through it and you're lunged at). Out in open water: the **carousel** (the pod circles you, blows a wall of bubbles that keeps you in and up at the surface, squeezes the ring, tail-slaps the middle to stun you, and lunges through it). So a wave knocks you in, the cut-off keeps you from getting back, and the carousel finishes you. Lunges across the floe in the kill screen (not built yet). In the movement toy since Prototype 0. | Wave: fins lining up, the water swelling, then the **danger zone** marked on the ice. Ram: dark shadows gathering under the ice edge, the water bulging, then the danger zone (the whole floe, or a strip of the berg's edge). Cut-off: fins racing to get between you and the ice, then the line you mustn't cross marked on the water. Carousel: dark shapes spreading round you, the **bubble wall**, then the slap zone marked on the water |
 
 ### 5.4 Kill screen [Locked]
 
@@ -300,8 +302,10 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | Mechanic | Real behavior |
 |---|---|
 | Bubble boost and launching onto ice | Emperor penguins release air from their feathers to speed up and launch out of the water onto ice |
-| Leopard-seal ambush | Leopard seals patrol ice edges where penguins get in and out of the water |
+| Leopard-seal ambush | Leopard seals patrol and lie in wait at ice edges where penguins get in and out of the water |
 | Orca waves | Antarctic orcas swim side by side to make waves that wash seals off floating ice |
+| Orca carousel | Norwegian orcas herd herring into a tight ball near the surface by circling it, blowing bubbles and flashing their white bellies, then stun the fish with tail slaps |
+| Orca cut-off | Orcas hunt as a team, cutting off their prey's escape and herding it away from safety |
 | Kill-screen lunges | Orcas in Patagonia deliberately beach themselves to grab sea lions, and leopard seals lunge at ice edges |
 | Bumping | Adélie penguins bunch up at the ice edge until one goes in or gets jostled in, and penguins settle fights by shoving and beating each other with their flippers |
 | Hopping ledges and gaps | Penguins hop up rocks and ice ledges and across cracks; rockhopper penguins are named for it |
@@ -343,7 +347,13 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | **Pod** | A group of predators that swim and attack together (orcas) |
 | **Wave** | An orca pod's attack: it charges an ice edge and washes penguins near it into the water |
 | **Ram** | An orca pod's attack: it rams the ice from below and tips it, so penguins slide off a floe or get jolted off the berg's edge |
-| **Danger zone** | The ice a coming wave or ram will hit, marked in the danger colour |
+| **Cut-off** | An orca pod's attack: a wall of fins between a swimming penguin and the ice, pushing it out to sea |
+| **Carousel** | An orca pod's attack: it rings a penguin in open water, squeezes, tail-slaps and lunges |
+| **Bubble wall** | The ring of bubbles in a carousel: it stops you swimming out (a boost breaks through) and lifts you to the surface |
+| **Trap** | A pod's attacks played one after another with no rest: wave or ram, then cut-off, then carousel |
+| **Ambush** | A leopard seal lying in wait under the ice edge where a penguin would go in or come out |
+| **Stunned** | Hit by an orca's tail slap: no boost, slow turns and slow swimming for a moment |
+| **Danger zone** | The ice or water a coming attack will hit, marked in the danger colour |
 | **Bump** | Sliding or boosting into another penguin fast enough to knock it back |
 | **Hard bump** | A bump fast enough to spin a penguin out or knock a fish loose |
 | **Flop** | Diving onto your belly to start a slide; costs a little energy |

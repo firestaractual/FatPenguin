@@ -1,5 +1,5 @@
 class_name RamAttack
-extends PodAttack
+extends EdgeAttack
 ## The ram (numbers in RamAttackTuning). The pod gathers deep under an ice edge where a penguin
 ## stands, rushes up and rams it, and the ice tips toward the pod (TippableIce). A small floe tips
 ## steeply: everyone on it slips onto their belly and slides off into the water, unless they dig
@@ -45,18 +45,18 @@ func begin_warning() -> void:
 	pod.add_child(_bulge)
 
 
-func update_warning(progress: float, _line_centre: Vector3) -> void:
+func update_warning(progress: float) -> void:
 	_bulge.shape(impact + out * 1.5, -out, _bulge_width(), lerpf(0.05, 0.35, progress))
 	if progress >= settings.zone_shows_at:
 		_show_zone()
 
 
-func update_charge(progress: float, _line_centre: Vector3) -> void:
+func update_charge_progress(progress: float) -> void:
 	_bulge.shape(impact + out * 1.5, -out, _bulge_width(), lerpf(0.35, 0.8, progress))
 
 
 ## Rams: the ice tips toward the pod, and penguins on it near the rammed spot are jolted.
-func strike(_line_centre: Vector3) -> Array[Penguin]:
+func strike() -> Array[Penguin]:
 	var t := _t()
 	var jolted: Array[Penguin] = []
 	if is_instance_valid(_ice):

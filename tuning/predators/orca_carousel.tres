@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CarouselAttackTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/carousel_attack_tuning.gd" id="1_carousel"]
+
+[resource]
+script = ExtResource("1_carousel")
+display_name = "Carousel"
+scan_range = 30.0
+warning_seconds = 5.0
+zone_shows_at = 0.6
+hunt_seconds = 4.0

@@ -107,6 +107,7 @@ var _hop_cooldown := 0.0
 var _immune_time := 0.0
 var _spin_time := 0.0
 var _spin_angle := 0.0
+var _stun_time := 0.0
 var _teeter_time := 0.0
 var _teeter_dir := Vector3.ZERO
 var _recent_bumps := {}
@@ -212,6 +213,11 @@ func is_spun_out() -> bool:
 	return _spin_time > 0.0
 
 
+## Dazed by a tail slap (stun()): no boost, slow turns, slow swimming.
+func is_stunned() -> bool:
+	return _stun_time > 0.0
+
+
 func is_immune() -> bool:
 	return _immune_time > 0.0
 
@@ -249,6 +255,19 @@ func push(dv: Vector3) -> void:
 	_take_knock(dv * _knock_share(), true)
 
 
+## Stunned for `seconds` (an orca's tail slap): you can't boost, and you turn and swim slowly
+## (stun_turn_mult, stun_speed_mult). A longer stun replaces a shorter one.
+func stun(seconds: float) -> void:
+	_stun_time = maxf(_stun_time, seconds)
+
+
+## A current in the water (an orca pod's bubble wall): adds `dv` to your drift. Unlike push(),
+## it isn't a bump, and it only works while you're swimming.
+func drift(dv: Vector3) -> void:
+	if state == State.SWIM:
+		_knock += dv
+
+
 ## A predator got you. In the movement toy you're eaten: a puff of feathers, a splash, and you're
 ## back at your spawn point on the ice with starting energy, as if you'd pressed reset.
 func get_caught(by: Node3D) -> void:
@@ -267,6 +286,8 @@ func reset() -> void:
 	_boost_time = 0.0
 	_immune_time = 0.0
 	_spin_time = 0.0
+	_stun_time = 0.0
+	_knock = Vector3.ZERO
 	_recent_bumps.clear()
 	noise = 0.0
 	energy = _starting_energy()
@@ -279,6 +300,8 @@ func reset() -> void:
 
 func _swim(delta: float, input: Vector2) -> void:
 	var turn := deg_to_rad(tuning.swim_turn_rate_deg) * _turn_mult()
+	if _stun_time > 0.0:
+		turn *= tuning.stun_turn_mult
 	_yaw -= input.x * turn * delta
 
 	var pitch_input := -input.y if tuning.invert_pitch else input.y
@@ -299,6 +322,8 @@ func _swim(delta: float, input: Vector2) -> void:
 		_try_boost()
 
 	var cruise := tuning.swim_cruise_speed * _fat(tuning.fat_cruise_speed_mult)
+	if _stun_time > 0.0:
+		cruise *= tuning.stun_speed_mult
 	if _boost_time > 0.0:
 		_boost_time -= delta
 	elif _speed > cruise:
@@ -489,6 +514,9 @@ func _teeter(delta: float, input: Vector2) -> void:
 
 func _try_boost() -> void:
 	if _boost_cooldown > 0.0 or air <= 0.0:
+		return
+	if _stun_time > 0.0:
+		boost_denied.emit()
 		return
 	if not infinite_energy and energy < tuning.boost_energy_cost:
 		boost_denied.emit()
@@ -795,6 +823,7 @@ func _tick_timers(delta: float) -> void:
 	_hop_cooldown = maxf(_hop_cooldown - delta, 0.0)
 	_immune_time = maxf(_immune_time - delta, 0.0)
 	_spin_time = maxf(_spin_time - delta, 0.0)
+	_stun_time = maxf(_stun_time - delta, 0.0)
 	noise = maxf(noise - delta / tuning.noise_fade_seconds, 0.0)
 	for other: Variant in _recent_bumps.keys():
 		if not is_instance_valid(other):
@@ -855,6 +884,10 @@ func _update_body(delta: float) -> void:
 		target = Basis(Vector3.UP, _spin_angle) * target
 	else:
 		_spin_angle = 0.0
+	if _stun_time > 0.0:
+		# Dazed: a slow, woozy roll from side to side.
+		var roll := 0.5 * sin(Time.get_ticks_msec() * 0.012)
+		target = target * Basis(Vector3.UP, roll)
 	var current := _model.basis.get_rotation_quaternion()
 	var rot := current.slerp(target.get_rotation_quaternion(), clampf(12.0 * delta, 0.0, 1.0))
 	var width := _fat(tuning.fat_body_width_mult)

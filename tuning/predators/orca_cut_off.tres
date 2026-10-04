@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="CutOffAttackTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/cut_off_attack_tuning.gd" id="1_cutoff"]
+[ext_resource type="Resource" path="res://tuning/predators/orca_carousel.tres" id="3_carousel"]
+
+[resource]
+script = ExtResource("1_cutoff")
+display_name = "Cut-off"
+scan_range = 30.0
+chains_into = Array[Resource]([ExtResource("3_carousel")])
+warning_seconds = 5.0
+zone_shows_at = 0.3
+hunt_seconds = 4.0

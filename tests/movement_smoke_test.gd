@@ -2,7 +2,8 @@ extends SceneTree
 ## Headless smoke test for the Prototype 0 movement toy.
 ## Drives the penguin with simulated input and checks each movement verb still works,
 ## then checks the plateau (slide down chutes, hop up steps), bumping with dummy penguins,
-## fish schooling with their own species, leopard seals hunting, and an orca pod's wave and ram.
+## fish schooling with their own species, leopard seals hunting and lying in ambush, and an orca
+## pod's attacks: the wave, the ram, the cut-off and the carousel, and how they chain into a trap.
 ##
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --script res://tests/movement_smoke_test.gd
@@ -11,6 +12,7 @@ extends SceneTree
 const LEVEL := "res://levels/movement_toy/movement_toy.tscn"
 const PENGUIN_SCENE := "res://actors/penguin/penguin.tscn"
 const SEAL_SCENE := "res://actors/predators/leopard_seal.tscn"
+const ORCA_POD_SPAWN := "res://levels/movement_toy/predators/orca_pod.tres"
 ## Open ice on the south-east of the berg, clear of the plateau, ramp and level dummies.
 const BUMP_LANE_Z := 10.0
 
@@ -63,8 +65,12 @@ func _run() -> void:
 	await _test_teeter_and_scramble()
 	await _test_fish_schools()
 	await _test_predators()
+	await _test_seal_ambush()
 	await _test_orcas()
 	await _test_orca_ram()
+	await _test_orca_cut_off()
+	await _test_orca_carousel()
+	await _test_orca_trap()
 
 	print("\nStates seen: ", " > ".join(_states_seen))
 	if _failures.is_empty():
@@ -643,6 +649,128 @@ func _test_predators() -> void:
 	inland.queue_free()
 
 
+func _test_seal_ambush() -> void:
+	var berg_radius: float = _level.get(&"berg_radius")
+	var world: World3D = (_level as Node3D).get_world_3d()
+	# A penguin standing 3 m in from the west edge, and a seal that always lies in wait at the end
+	# of a patrol leg when there's someone to wait for.
+	var waiting := await _spawn_standing(Vector3(-berg_radius + 3.0, 1.0, 0.0), 60.0)
+	var seal := _spawn_seal(Vector3(-berg_radius - 4.0, -2.5, -25.0))
+	var t := seal.tuning.duplicate() as PredatorTuning
+	t.ambush_chance = 1.0
+	seal.tuning = t
+	var ambushed := false
+	for i in 25 * 60:
+		await physics_frame
+		if seal.state == Predator.State.AMBUSH:
+			ambushed = true
+			break
+	var spot := _ambush_spot_for(world, waiting, t)
+	var settled := await _wait_settled(seal, spot, 20 * 60)
+	_check(ambushed and settled, "a seal lies in wait under the ice edge nearest a penguin standing by it, still, %.1f m down" % -seal.global_position.y)
+
+	# It follows along the edge as the penguin walks.
+	var along := deg_to_rad(30.0)
+	waiting.global_position = Vector3(-cos(along), 0.0, sin(along)) * (berg_radius - 3.0) + Vector3.UP * 1.5
+	await _wait_for(waiting, Penguin.State.WALK, 60)
+	await _frames(10)
+	spot = _ambush_spot_for(world, waiting, t)
+	_check(await _wait_settled(seal, spot, 12 * 60), "it moves along the edge when the penguin does")
+
+	# The penguin goes in right where the seal waits: a quick lunge, and it's caught.
+	var events := {"warn": -1, "lunge": -1}
+	seal.state_changed.connect(func(s: Predator.State) -> void:
+		if s == Predator.State.WARN and events["warn"] < 0:
+			events["warn"] = Engine.get_physics_frames()
+		elif s == Predator.State.LUNGE and events["lunge"] < 0:
+			events["lunge"] = Engine.get_physics_frames())
+	var caught := [false]
+	waiting.caught.connect(func(_by: Node3D) -> void: caught[0] = true)
+	var edge := IceEdges.nearest_edge(world, waiting.global_position, t.ambush_edge_reach)
+	var start := Engine.get_physics_frames()
+	_put_in_water(waiting, (edge["point"] as Vector3) + (edge["out"] as Vector3) * 1.0)
+	for i in 3 * 60:
+		await physics_frame
+		if caught[0]:
+			break
+	var reacted := float(events["warn"] - start) / 60.0
+	var warning := float(events["lunge"] - events["warn"]) / 60.0
+	_check(events["warn"] >= 0 and reacted < 0.5 and absf(warning - t.ambush_warning) < 0.05,
+		"a penguin going into the water there gets a lunge %.2f s later, after a short %.2f s warning" % [reacted, warning])
+	_check(caught[0], "and is caught")
+	seal.queue_free()
+	await _frames(2)
+
+	# Nobody near the edge any more: it gives up waiting.
+	waiting.reset()
+	await _wait_for(waiting, Penguin.State.WALK, 60)
+	seal = _spawn_seal(Vector3(-berg_radius - 4.0, -2.5, -10.0))
+	seal.tuning = t
+	_check(seal.call(&"_start_ambush"), "(a second seal lies in wait for it)")
+	await _wait_settled(seal, _ambush_spot_for(world, waiting, t), 15 * 60)
+	waiting.global_position = Vector3(-10.0, 1.5, 15.0)
+	var gave_up := false
+	for i in 4 * 60:
+		await physics_frame
+		if seal.state != Predator.State.AMBUSH:
+			gave_up = true
+			break
+	_check(gave_up and seal.state == Predator.State.PATROL, "with nobody near that edge any more, it gives up waiting")
+
+	# Going in somewhere else gives you a head start: no lunge straight away.
+	waiting.global_position = Vector3(-berg_radius + 3.0, 1.5, 0.0)
+	await _wait_for(waiting, Penguin.State.WALK, 60)
+	seal.call(&"_start_ambush")
+	await _wait_settled(seal, _ambush_spot_for(world, waiting, t), 15 * 60)
+	var away := deg_to_rad(35.0)
+	var far_spot := Vector3(-cos(away), 0.0, -sin(away)) * (berg_radius + 1.0)
+	var lunged := [false]
+	seal.state_changed.connect(func(s: Predator.State) -> void: lunged[0] = lunged[0] or s == Predator.State.WARN)
+	_put_in_water(waiting, far_spot)
+	await _frames(60)
+	_check(not lunged[0] and seal.global_position.distance_to(waiting.global_position) > t.ambush_strike_range,
+		"a penguin going in %.0f m along the edge from the seal gets a head start" % seal.global_position.distance_to(far_spot))
+	seal.queue_free()
+	await _frames(2)
+
+	# Coming home past a seal lying in wait: boost and launch from 6.5 m out (before you're close
+	# enough for it to strike) and you get past it.
+	waiting.reset()
+	await _wait_for(waiting, Penguin.State.WALK, 60)
+	seal = _spawn_seal(Vector3(-berg_radius - 4.0, -2.5, -6.0))
+	seal.tuning = t
+	seal.call(&"_start_ambush")
+	spot = _ambush_spot_for(world, waiting, t)
+	await _wait_settled(seal, spot, 15 * 60)
+	var inward := -Vector3(spot.x, 0.0, spot.z).normalized()
+	var from := spot - inward * 12.0
+	from.y = -0.6
+	var coming := _spawn_swimmer(from, atan2(-inward.x, -inward.z))
+	coming.set(&"_speed", coming.tuning.swim_cruise_speed)
+	var got_coming := [false]
+	coming.caught.connect(func(_by: Node3D) -> void: got_coming[0] = true)
+	var launched := false
+	var made_it := false
+	for i in 8 * 60:
+		if coming.state == Penguin.State.SWIM:
+			coming.set(&"_yaw", atan2(-inward.x, -inward.z))
+			if not launched and Vector2(coming.global_position.x, coming.global_position.z).length() < berg_radius + 6.5:
+				coming.set(&"_pitch", deg_to_rad(40.0))
+				coming.call(&"_try_boost")
+				launched = true
+		await physics_frame
+		if got_coming[0]:
+			break
+		if coming.state in [Penguin.State.WALK, Penguin.State.SLIDE] and coming.global_position.y > 0.5:
+			made_it = true
+			break
+	_check(made_it and not got_coming[0], "a penguin that boosts and launches out from 6.5 m away gets past a seal lying in wait")
+	seal.queue_free()
+	coming.queue_free()
+	waiting.queue_free()
+	await _frames(2)
+
+
 func _test_orcas() -> void:
 	var berg_radius: float = _level.get(&"berg_radius")
 	# A spawn entry puts three orcas in a pod, on their patrol loop west of the berg.
@@ -700,7 +828,7 @@ func _test_orcas() -> void:
 		await physics_frame
 		if pod.phase == PredatorPod.Phase.WARN and pod.get(&"_phase_time") > t.warning_seconds * 0.8:
 			var at_surface := 0
-			for member: Predator in pod.get(&"_attackers"):
+			for member: Predator in pod.attack.attackers:
 				if member.global_position.y > -t.surface_depth - 0.4:
 					at_surface += 1
 			wave["surfaced"] = wave["surfaced"] and at_surface >= t.min_attackers
@@ -748,7 +876,7 @@ func _test_orca_ram() -> void:
 	for i in 40 * 60:
 		await physics_frame
 		if pod.phase == PredatorPod.Phase.WARN:
-			for member: Predator in pod.get(&"_attackers"):
+			for member: Predator in pod.attack.attackers:
 				deepest = minf(deepest, member.global_position.y)
 		tilt = maxf(tilt, floe_ice.tilt_degrees())
 		if rammed["hit"] >= 0 and on_floe.state == Penguin.State.SWIM:
@@ -826,6 +954,248 @@ func _test_orca_ram() -> void:
 	await _frames(2)
 
 
+func _test_orca_cut_off() -> void:
+	var berg_radius: float = _level.get(&"berg_radius")
+	var entry: PredatorSpawn = (load(ORCA_POD_SPAWN) as PredatorSpawn).duplicate()
+	entry.start_angle_deg = -50.0
+	var off_south := Vector3(0.0, -0.1, -berg_radius - 8.0)
+
+	# Floating 8 m off the south edge: a wall of fins forms between it and the ice, closes in, and
+	# when the warning runs out the nearest orca lunges.
+	var floater := _spawn_bait(off_south, 50.0)
+	floater.call(&"_set_state", Penguin.State.SWIM)
+	var spawner := _spawn_pods()
+	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var cut := _only_attack(pod, "Cut-off") as CutOffAttack
+	var t := cut.settings as CutOffAttackTuning
+	pod.set(&"_cooldown", 0.0)
+	var ev := {"coming": -1, "hit": -1, "between": true, "fins": true, "lunge": false, "looked": false}
+	pod.attack_coming.connect(func(_a: PodAttack) -> void: ev["coming"] = Engine.get_physics_frames())
+	pod.attack_hit.connect(func(_a: PodAttack, _hit: Array[Penguin]) -> void: ev["hit"] = Engine.get_physics_frames())
+	for i in 40 * 60:
+		await physics_frame
+		if pod.phase == PredatorPod.Phase.WARN and pod.get(&"_phase_time") >= 2.0 and not ev["looked"]:
+			ev["looked"] = true
+			for member in cut.attackers:
+				var rel := member.global_position - floater.global_position
+				ev["between"] = ev["between"] and Vector3(rel.x, 0.0, rel.z).dot(cut.home) > 2.0
+				ev["fins"] = ev["fins"] and member.global_position.y > -t.wall_depth - 0.6
+		if ev["hit"] >= 0:
+			for member in pod.members():
+				ev["lunge"] = ev["lunge"] or (member.target == floater and member.state in [Predator.State.CHASE, Predator.State.WARN])
+			break
+	var warning := float(ev["hit"] - ev["coming"]) / 60.0
+	_check(ev["looked"] and ev["between"] and ev["fins"], "orcas cut off a penguin 8 m off the ice: a wall of fins forms between it and home")
+	_check(ev["hit"] >= 0 and warning >= t.warning_seconds - 0.05, "the wall closes in for %.1f s (a penguin holding still isn't lunged at early)" % warning)
+	_check(ev["lunge"], "then the nearest orca goes for it, with the usual lunge warning")
+	spawner.queue_free()
+	floater.queue_free()
+	await _frames(2)
+
+	# Racing home as soon as the fins head for the gap: it gets back to the ice first and the
+	# attack is called off.
+	var racer := _spawn_swimmer(off_south, PI) # facing north, toward the berg
+	spawner = _spawn_pods()
+	pod = spawner.spawn(entry)[0] as PredatorPod
+	_only_attack(pod, "Cut-off")
+	pod.set(&"_cooldown", 0.0)
+	var called_off := [false]
+	pod.attack_called_off.connect(func(_a: PodAttack) -> void: called_off[0] = true)
+	var raced := false
+	for i in 30 * 60:
+		raced = raced or pod.phase != PredatorPod.Phase.PATROL
+		if not raced:
+			racer.set(&"_speed", 0.0) # waits until the pod moves
+		await physics_frame
+		if called_off[0]:
+			break
+	_check(called_off[0] and racer.state == Penguin.State.SWIM, "a penguin that races the fins back to the ice gets away (the cut-off is called off)")
+	spawner.queue_free()
+	racer.queue_free()
+	await _frames(2)
+
+
+func _test_orca_carousel() -> void:
+	var entry: PredatorSpawn = (load(ORCA_POD_SPAWN) as PredatorSpawn).duplicate()
+	entry.start_angle_deg = -90.0
+	var open_water := Vector3(0.0, -0.1, -62.0)
+
+	# Floating still out in open water: the pod rings it in, blows a wall of bubbles and squeezes,
+	# then one tail-slaps the middle and another lunges.
+	var floater := _spawn_bait(open_water, 50.0)
+	floater.call(&"_set_state", Penguin.State.SWIM)
+	var spawner := _spawn_pods()
+	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var ring := _only_attack(pod, "Carousel") as CarouselAttack
+	var t := ring.settings as CarouselAttackTuning
+	pod.set(&"_cooldown", 0.0)
+	var ev := {"ringed": true, "looked": false, "zone": -1, "hit": -1, "stunned": [], "lunge": false}
+	pod.attack_hit.connect(func(_a: PodAttack, hit: Array[Penguin]) -> void:
+		ev["hit"] = Engine.get_physics_frames()
+		ev["stunned"] = hit)
+	for i in 40 * 60:
+		await physics_frame
+		# By the end of the squeeze they're circling tight around it.
+		if pod.phase == PredatorPod.Phase.CHARGE and not ev["looked"]:
+			ev["looked"] = true
+			for member in ring.attackers:
+				var r := Vector2(member.global_position.x - ring.centre.x, member.global_position.z - ring.centre.z).length()
+				ev["ringed"] = ev["ringed"] and absf(r - ring.radius) < 2.0
+		if ev["zone"] < 0 and _marker_shown(pod, "DangerRing"):
+			ev["zone"] = Engine.get_physics_frames()
+		if ev["hit"] >= 0:
+			for member in pod.members():
+				ev["lunge"] = ev["lunge"] or (member.target == floater and member.state in [Predator.State.CHASE, Predator.State.WARN])
+			break
+	var zone_up := float(ev["hit"] - ev["zone"]) / 60.0
+	_check(ev["hit"] >= 0 and ev["looked"] and ev["ringed"], "orcas ring in a penguin out in open water and squeeze the ring")
+	_check(ev["zone"] >= 0 and zone_up >= 1.5, "the slap zone is marked %.1f s before the tail slap" % zone_up)
+	_check((ev["stunned"] as Array).has(floater) and floater.is_stunned(), "the tail slap stuns the penguin in the middle")
+	var speed := floater.get(&"_speed") as float
+	floater.call(&"_try_boost")
+	_check(is_equal_approx(floater.get(&"_speed") as float, speed), "stunned, it can't boost")
+	_check(ev["lunge"], "and another orca lunges at it")
+	spawner.queue_free()
+	floater.queue_free()
+	await _frames(2)
+
+	# Swimming out (and diving) once the bubbles are up: held in, and lifted to the surface.
+	var swimmer := _spawn_swimmer(open_water, 0.0)
+	spawner = _spawn_pods()
+	pod = spawner.spawn(entry)[0] as PredatorPod
+	ring = _only_attack(pod, "Carousel") as CarouselAttack
+	pod.set(&"_cooldown", 0.0)
+	var worst := 0.0
+	var deepest := 0.0
+	for i in 40 * 60:
+		if pod.phase in [PredatorPod.Phase.PATROL, PredatorPod.Phase.LINE_UP]:
+			swimmer.set(&"_speed", 0.0)
+		elif pod.phase == PredatorPod.Phase.WARN:
+			var outward := Vector3(swimmer.global_position.x - ring.centre.x, 0.0, swimmer.global_position.z - ring.centre.z)
+			if outward.length() > 0.1:
+				swimmer.set(&"_yaw", atan2(-outward.x, -outward.z))
+			swimmer.set(&"_pitch", deg_to_rad(-40.0))
+			if pod.get(&"_phase_time") > 1.0:
+				var r := Vector2(outward.x, outward.z).length()
+				worst = maxf(worst, r - ring.radius)
+				deepest = maxf(deepest, -swimmer.global_position.y)
+		await physics_frame
+		if pod.phase == PredatorPod.Phase.CHARGE:
+			break
+	_check(pod.phase == PredatorPod.Phase.CHARGE and worst <= t.wall_thickness, "the bubble wall holds in a penguin swimming out (%.1f m past the ring at most)" % worst)
+	_check(deepest <= t.lift_depth + 0.4, "and lifts one trying to dive under it (%.1f m down at most)" % deepest)
+	spawner.queue_free()
+	swimmer.queue_free()
+	await _frames(2)
+
+	# A boost straight out early on breaks through the bubbles: the carousel is called off.
+	swimmer = _spawn_swimmer(open_water, 0.0)
+	spawner = _spawn_pods()
+	pod = spawner.spawn(entry)[0] as PredatorPod
+	ring = _only_attack(pod, "Carousel") as CarouselAttack
+	pod.set(&"_cooldown", 0.0)
+	var called_off := [false]
+	pod.attack_called_off.connect(func(_a: PodAttack) -> void: called_off[0] = true)
+	var boosted := false
+	for i in 40 * 60:
+		if pod.phase in [PredatorPod.Phase.PATROL, PredatorPod.Phase.LINE_UP]:
+			swimmer.set(&"_speed", 0.0)
+		elif pod.phase == PredatorPod.Phase.WARN:
+			var outward := Vector3(swimmer.global_position.x - ring.centre.x, 0.0, swimmer.global_position.z - ring.centre.z)
+			if outward.length() > 0.1:
+				swimmer.set(&"_yaw", atan2(-outward.x, -outward.z))
+			if not boosted and pod.get(&"_phase_time") > 0.5:
+				swimmer.call(&"_try_boost")
+				boosted = true
+		await physics_frame
+		if called_off[0] or pod.phase == PredatorPod.Phase.HUNT:
+			break
+	_check(called_off[0], "a boost straight out, early, breaks through the bubbles")
+	spawner.queue_free()
+	swimmer.queue_free()
+	await _frames(2)
+
+
+func _test_orca_trap() -> void:
+	var berg_radius: float = _level.get(&"berg_radius")
+	var entry: PredatorSpawn = (load(ORCA_POD_SPAWN) as PredatorSpawn).duplicate()
+
+	# The cut-off pushes a penguin that flees out to sea straight into the carousel: no cooldown.
+	entry.start_angle_deg = -50.0
+	var fleeing := _spawn_swimmer(Vector3(0.0, -0.1, -berg_radius - 8.0), 0.0)
+	var spawner := _spawn_pods()
+	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var kept: Array[PodAttack] = []
+	for attack in pod.attacks():
+		if attack is CutOffAttack or attack is CarouselAttack:
+			kept.append(attack)
+	pod.set(&"_attacks", kept)
+	pod.set(&"_cooldown", 0.0)
+	var ev := {"cut_hit": -1, "carousel": -1, "cut_lunged": true}
+	pod.attack_hit.connect(func(a: PodAttack, hit: Array[Penguin]) -> void:
+		if a is CutOffAttack:
+			ev["cut_hit"] = Engine.get_physics_frames()
+			ev["cut_lunged"] = not hit.is_empty())
+	pod.phase_changed.connect(func(ph: PredatorPod.Phase) -> void:
+		if ph == PredatorPod.Phase.LINE_UP and pod.attack is CarouselAttack and ev["carousel"] < 0:
+			ev["carousel"] = Engine.get_physics_frames())
+	for i in 40 * 60:
+		var cut := pod.attack as CutOffAttack
+		if cut == null or pod.phase == PredatorPod.Phase.LINE_UP:
+			fleeing.set(&"_speed", 0.0)
+		else:
+			fleeing.set(&"_yaw", atan2(cut.home.x, cut.home.z)) # straight away from the ice
+		await physics_frame
+		if ev["carousel"] >= 0:
+			break
+	var handed := float(ev["carousel"] - ev["cut_hit"]) / 60.0
+	_check(ev["carousel"] >= 0 and not ev["cut_lunged"] and handed < 0.6 and pod.trap_step == 2,
+		"a penguin the wall pushes out to sea goes straight into the carousel (%.1f s later, trap step %d)" % [handed, pod.trap_step])
+	spawner.queue_free()
+	fleeing.queue_free()
+	await _frames(2)
+
+	# A wave washes a penguin in; when it swims off the edge, the pod cuts it off straight away.
+	entry.start_angle_deg = 180.0
+	spawner = _spawn_pods()
+	pod = spawner.spawn(entry)[0] as PredatorPod
+	kept = []
+	for attack in pod.attacks():
+		if attack is WaveAttack or attack is CutOffAttack:
+			kept.append(attack)
+	pod.set(&"_attacks", kept)
+	await _frames(6 * 60)
+	var facing := Vector3(pod.leader().global_position.x, 0.0, pod.leader().global_position.z).normalized()
+	var at_edge := await _spawn_standing(facing * (berg_radius - 1.5) + Vector3.UP, 0.0)
+	pod.set(&"_cooldown", 0.0)
+	var wave_hit := [-1]
+	pod.attack_hit.connect(func(a: PodAttack, _hit: Array[Penguin]) -> void:
+		if a is WaveAttack:
+			wave_hit[0] = Engine.get_physics_frames())
+	for i in 40 * 60:
+		await physics_frame
+		if wave_hit[0] >= 0 and at_edge.state == Penguin.State.SWIM:
+			break
+	# It swims off: 6 m out, 15 m along the edge from where the wave broke.
+	var turn := 15.0 / berg_radius
+	var off := facing.rotated(Vector3.UP, turn) * (berg_radius + 6.0)
+	at_edge.global_position = Vector3(off.x, -0.1, off.z)
+	at_edge.velocity = Vector3.ZERO
+	at_edge.set_physics_process(false)
+	var cut_started := -1
+	for i in 3 * 60:
+		await physics_frame
+		if pod.attack is CutOffAttack:
+			cut_started = Engine.get_physics_frames()
+			break
+	var after := float(cut_started - wave_hit[0]) / 60.0
+	_check(wave_hit[0] >= 0 and cut_started >= 0 and pod.trap_step == 2,
+		"a penguin a wave washed in that swims off is cut off straight away (%.1f s after the wave, no cooldown)" % after)
+	spawner.queue_free()
+	at_edge.queue_free()
+	await _frames(2)
+
+
 # --- Helpers ----------------------------------------------------------------
 
 ## Leaves `pod` with just its attack called `attack_name`, and returns that attack.
@@ -836,6 +1206,62 @@ func _only_attack(pod: PredatorPod, attack_name: String) -> PodAttack:
 			kept.append(attack)
 	pod.set(&"_attacks", kept)
 	return kept[0] if not kept.is_empty() else null
+
+
+## A spawner for pods, at the origin, around the berg.
+func _spawn_pods() -> PredatorSpawner:
+	var spawner := PredatorSpawner.new()
+	spawner.ice_radius = _level.get(&"berg_radius")
+	_level.add_child(spawner)
+	return spawner
+
+
+## A computer penguin swimming at the surface at `at`, facing `yaw` (0 faces -Z). It swims
+## straight ahead at cruise speed unless a test holds it (set _speed to 0 each frame).
+func _spawn_swimmer(at: Vector3, yaw: float) -> Penguin:
+	var p := load(PENGUIN_SCENE).instantiate() as Penguin
+	p.player_controlled = false
+	p.infinite_energy = true
+	p.start_energy = 50.0
+	p.position = at
+	_level.add_child(p)
+	p.set(&"_yaw", yaw)
+	p.set(&"_speed", 0.0)
+	p.call(&"_set_state", Penguin.State.SWIM)
+	return p
+
+
+## Drops `p` into the water at `at` (on the surface).
+func _put_in_water(p: Penguin, at: Vector3) -> void:
+	p.global_position = Vector3(at.x, -0.2, at.z)
+	p.velocity = Vector3.ZERO
+	p.call(&"_set_state", Penguin.State.SWIM)
+	p.reset_physics_interpolation()
+
+
+## Where a seal with tuning `t` would wait for `p`: off the nearest edge, ambush_depth down.
+func _ambush_spot_for(world: World3D, p: Penguin, t: PredatorTuning) -> Vector3:
+	var edge := IceEdges.nearest_edge(world, p.global_position, t.ambush_edge_reach)
+	if edge.is_empty():
+		return Vector3.INF
+	var spot: Vector3 = (edge["point"] as Vector3) + (edge["out"] as Vector3) * t.ambush_offset
+	spot.y = Penguin.WATER_LEVEL - t.ambush_depth
+	return spot
+
+
+## Waits until `predator` is lying still close to `spot`, in ambush. False if it never does.
+func _wait_settled(predator: Predator, spot: Vector3, max_frames: int) -> bool:
+	for i in max_frames:
+		await physics_frame
+		if predator.state == Predator.State.AMBUSH and predator.global_position.distance_to(spot) < 1.5 and predator.velocity.length() < 0.3:
+			return true
+	return false
+
+
+## Is the pod showing the danger marker called `marker_name`?
+func _marker_shown(pod: PredatorPod, marker_name: String) -> bool:
+	var marker := pod.get_node_or_null(marker_name) as Node3D
+	return marker != null and marker.visible
 
 
 func _spawn_seal(at: Vector3) -> Predator:

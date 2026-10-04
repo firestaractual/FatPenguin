@@ -1,5 +1,5 @@
 class_name WaveAttack
-extends PodAttack
+extends EdgeAttack
 ## The wave (GDD §5.3; numbers in WaveAttackTuning). The pod lines up side by side off an ice edge
 ## where a penguin stands, fins showing, raises a swell, charges, and breaks a wave over the edge
 ## that shoves everyone in the danger zone toward the water.
@@ -45,18 +45,18 @@ func begin_warning() -> void:
 	pod.add_child(_swell)
 
 
-func update_warning(progress: float, line_centre: Vector3) -> void:
-	_swell.shape(line_centre - out * SWELL_AHEAD, -out, _t().wave_width, lerpf(0.15, 0.7, progress))
+func update_warning(progress: float) -> void:
+	_swell.shape(attackers_centre() - out * SWELL_AHEAD, -out, _t().wave_width, lerpf(0.15, 0.7, progress))
 	if progress >= settings.zone_shows_at:
 		show_zone_strip(_t().wave_reach, _t().wave_width)
 
 
-func update_charge(progress: float, line_centre: Vector3) -> void:
-	_swell.shape(line_centre - out * SWELL_AHEAD, -out, _t().wave_width, lerpf(0.7, 1.8, progress))
+func update_charge_progress(progress: float) -> void:
+	_swell.shape(attackers_centre() - out * SWELL_AHEAD, -out, _t().wave_width, lerpf(0.7, 1.8, progress))
 
 
 ## Breaks over the edge: everyone on the ice in the zone is shoved toward the water.
-func strike(_line_centre: Vector3) -> Array[Penguin]:
+func strike() -> Array[Penguin]:
 	var washed := penguins_in_strip(_t().wave_reach, _t().wave_width)
 	for p in washed:
 		p.push(out * _t().wave_push)

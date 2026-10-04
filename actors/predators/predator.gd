@@ -1,9 +1,10 @@
 class_name Predator
 extends CharacterBody3D
 ## A predator in the water (GDD §5): everything predators share. What kind it is comes from its
-## PredatorTuning (how fast, how far it sees, how it lunges, how hungry it gets) and its scene
-## (the model). The leopard seal is this script with leopard_seal.tres; the orca is this script
-## with orca.tres, swimming in a PredatorPod that adds the pod's group attack (OrcaPod: the wave).
+## PredatorTuning (how fast, how far it sees, how it lunges, how hungry it gets, whether it lies in
+## ambush) and its scene (the model). The leopard seal is this script with leopard_seal.tres; the
+## orca is this script with orca.tres, swimming in a PredatorPod that runs the pod's group attacks
+## (PodAttack: the wave, the ram, the cut-off, the carousel).
 ## Spawning is data-driven: a level lists PredatorSpawn entries and a PredatorSpawner places them.
 ##
 ## States
@@ -20,7 +21,12 @@ extends CharacterBody3D
 ##   SATED   - just ate a penguin: slow and harmless for a while (GDD §5.2).
 ##   ORDERED - swimming where its pod tells it (formation, lining up, charging). It still breaks
 ##             off to eat when starving, and still goes after a penguin in the water within
-##             detect_range.
+##             detect_range, unless the order says to hold (a pod herding a penguin).
+##   AMBUSH  - lying in wait under the ice edge where a penguin on the ice would go in (or come
+##             back out): it swims there and holds still, a dark shape under the edge. It lets
+##             penguins in the water come to it; anyone who comes within ambush_strike_range (going
+##             in, or swimming up to get out) gets a lunge with a shorter warning (ambush_warning).
+##             It gives up after waiting ambush_seconds, or when nobody's near that edge any more.
 ##
 ## Hunting: it only notices penguins in the water within detect_range, and penguins out of the
 ## water (on the ice edge, or in the air) within edge_detect_range, and only with a clear line of
@@ -38,7 +44,7 @@ signal lunged(toward: Vector3)
 signal caught_penguin(penguin: Penguin)
 signal ate_fish
 
-enum State { PATROL, CHASE, WARN, LUNGE, RECOVER, FEED, SATED, ORDERED }
+enum State { PATROL, CHASE, WARN, LUNGE, RECOVER, FEED, SATED, ORDERED, AMBUSH }
 
 ## Physics layer 3: predators collide with the world only. Catches are by distance.
 const PREDATOR_LAYER := 4
@@ -60,6 +66,14 @@ const DIVE_SECONDS := 1.5
 const WAYPOINT_REACHED := 2.5
 ## Within this of an ordered spot, it eases off and holds there (m).
 const HOLD_DISTANCE := 1.0
+## Lying in ambush, it looks for a better spot this often (s).
+const AMBUSH_RETHINK := 2.0
+## Near the surface it shows as a dark shadow on the water above it (docs/ART_DIRECTION.md:
+## predators under the surface read as shadows): darkest down to SHADOW_FULL_DEPTH, fading out by
+## SHADOW_DEPTH (m).
+const SHADOW_DEPTH := 3.0
+const SHADOW_FULL_DEPTH := 1.5
+const SHADOW_DARKNESS := 0.6
 
 const DANGER_MATERIAL := preload("res://art/materials/danger.tres")
 
@@ -93,10 +107,23 @@ var _order_point := Vector3.ZERO
 var _order_speed := 0.0
 var _order_depth := MIN_DEPTH
 var _order_face := Vector3.ZERO
+var _order_hunts := true
+## The lunge warning under way lasts this long (s): lunge_warning, or ambush_warning from an ambush.
+var _warning_time := 0.0
+## Lying in ambush: where it waits, which way it faces (toward the ice), and who it's waiting for.
+var _ambush_spot := Vector3.ZERO
+var _ambush_face := Vector3.ZERO
+var _ambush_for: Penguin = null
+var _ambush_rethink := 0.0
+## How long it's been waiting still at its spot (s).
+var _ambush_waited := 0.0
 
 @onready var _model: Node3D = $Model
 var _ring: MeshInstance3D
 var _line: MeshInstance3D
+var _shadow: MeshInstance3D
+var _shadow_material: StandardMaterial3D
+var _shadow_size := Vector3.ONE
 
 
 func _ready() -> void:
@@ -141,6 +168,8 @@ func _physics_process(delta: float) -> void:
 			_sated(delta)
 		State.ORDERED:
 			_ordered(delta)
+		State.AMBUSH:
+			_ambush(delta)
 
 	_update_model(delta)
 	_update_markers()
@@ -176,17 +205,45 @@ func is_available() -> bool:
 
 ## Tells it to swim to `point` at up to `speed` (call every frame to steer it). `min_depth` is
 ## how close to the surface it may come (lower it to bring fins up). Once there it holds its
-## spot, facing `face` if given. Returns false (and does nothing) if it's busy.
-func order_move(point: Vector3, speed: float, min_depth := MIN_DEPTH, face := Vector3.ZERO) -> bool:
+## spot, facing `face` if given. With `may_hunt` off it won't break off after a penguin in the
+## water (a pod herding one wants it to hold its place). Returns false (and does nothing) if it's
+## busy.
+func order_move(point: Vector3, speed: float, min_depth := MIN_DEPTH, face := Vector3.ZERO, may_hunt := true) -> bool:
 	if not is_available():
 		return false
 	_order_point = point
 	_order_speed = speed
 	_order_depth = min_depth
 	_order_face = face
+	_order_hunts = may_hunt
 	if state != State.ORDERED:
 		_set_state(State.ORDERED)
 	return true
+
+
+## Tells it to go for `p` now (a pod's strike): it locks on and lunges with its usual warning,
+## from wherever it is. Returns false if it's busy or still out of breath from its last lunge.
+func order_strike(p: Penguin) -> bool:
+	if not is_available() or _lunge_cooldown > 0.0 or not is_instance_valid(p):
+		return false
+	_ignored.erase(p)
+	_lock_on(p)
+	if _in_lunge_range(p):
+		_start_warning()
+	return true
+
+
+## Could its pod call it back right now? Yes if it's free, or just chasing (not mid-lunge, not
+## eating, not sated).
+func can_be_recalled() -> bool:
+	return is_available() or state == State.CHASE
+
+
+## Drops a chase so its pod can give it orders.
+func recall() -> void:
+	if state == State.CHASE:
+		target = null
+		_set_state(State.PATROL)
 
 
 ## Back to its own patrol.
@@ -201,6 +258,9 @@ func release() -> void:
 func _patrol(delta: float) -> void:
 	_swim_toward(_waypoint, tuning.patrol_speed, delta)
 	if global_position.distance_to(_waypoint) < WAYPOINT_REACHED or _state_time > 25.0:
+		# End of a leg: lie in wait at the ice edge now and then, if a penguin is near one.
+		if randf() < tuning.ambush_chance and _start_ambush():
+			return
 		_next_waypoint()
 		_state_time = 0.0
 	_scan -= delta
@@ -249,7 +309,7 @@ func _warn(delta: float) -> void:
 	# closing in, so the warning is a fair chance to get off the line however fast it chased.
 	_speed = minf(_speed, target.get_speed())
 	_swim_toward(global_position + _lunge_dir * 10.0, _speed, delta)
-	if _state_time >= tuning.lunge_warning:
+	if _state_time >= _warning_time:
 		lunged.emit(global_position + _lunge_dir * _lunge_reach())
 		_set_state(State.LUNGE)
 
@@ -327,20 +387,149 @@ func _ordered(delta: float) -> void:
 	if is_starving() and _find_meal():
 		_set_state(State.FEED)
 		return
+	if not _order_hunts:
+		return
 	var best := _best_target()
 	if best != null:
 		_lock_on(best)
 
 
+## Lying in wait under the ice edge. It swims to its spot and holds still there, facing the ice,
+## until someone comes into the water close by (then a quick lunge), or it gives up.
+func _ambush(delta: float) -> void:
+	var to := _ambush_spot - global_position
+	if to.length() > HOLD_DISTANCE:
+		var speed := minf(tuning.patrol_speed, 1.0 + to.length() * 1.5)
+		_swim_toward(_ambush_spot, speed, delta, true, tuning.ambush_depth)
+	else:
+		# Still and dark under the edge: it eases to a stop and turns to face the ice.
+		_ambush_waited += delta
+		_speed = move_toward(_speed, 0.0, tuning.acceleration * delta)
+		_heading = _turn_toward(_heading, _ambush_face, deg_to_rad(tuning.turn_rate_deg) * delta)
+		velocity = _heading * _speed + to * 2.0
+		_move(tuning.ambush_depth)
+	_scan -= delta
+	if _scan > 0.0:
+		return
+	_scan = SCAN_INTERVAL
+	if is_starving() and _find_meal():
+		_set_state(State.FEED)
+		return
+	var close := _ambush_victim()
+	if close != null:
+		# Coiled and lined up already: it strikes from as far as its lunge carries.
+		_lock_on(close)
+		if _lunge_cooldown <= 0.0:
+			_start_warning(tuning.ambush_warning)
+		return
+	# Anyone farther off it lets come closer: it's lying in wait.
+	if _ambush_waited >= tuning.ambush_seconds:
+		_end_ambush()
+		return
+	_ambush_rethink -= SCAN_INTERVAL
+	if _ambush_rethink <= 0.0 and not _pick_ambush_spot():
+		_end_ambush()
+
+
+## Starts an ambush if there's a penguin on the ice near an edge to wait for. False if not.
+func _start_ambush() -> bool:
+	if tuning.ambush_chance <= 0.0 or is_starving() or not _pick_ambush_spot():
+		return false
+	_set_state(State.AMBUSH)
+	return true
+
+
+## Finds the edge to wait under: where the most tempting penguin on the ice within
+## ambush_edge_reach of an edge (and ambush_scan_range of here) would go in. It moves along the
+## edge as that penguin does. False if there's nobody to wait for.
+func _pick_ambush_spot() -> bool:
+	_ambush_rethink = AMBUSH_RETHINK
+	var picks: Array[Penguin] = []
+	for node in get_tree().get_nodes_in_group(&"penguins"):
+		var p := node as Penguin
+		if p == null or _ignored.has(p) or not (p.state == Penguin.State.WALK or p.state == Penguin.State.SLIDE):
+			continue
+		if p.global_position.y > Penguin.WATER_LEVEL + 1.6:
+			continue # up on the plateau: nowhere near the water
+		if global_position.distance_to(p.global_position) > tuning.ambush_scan_range:
+			continue
+		picks.append(p)
+	# Most tempting first; the first one near an edge wins.
+	picks.sort_custom(func(a: Penguin, b: Penguin) -> bool: return _ambush_appeal(a) > _ambush_appeal(b))
+	for p in picks:
+		var edge := IceEdges.nearest_edge(get_world_3d(), p.global_position, tuning.ambush_edge_reach)
+		if edge.is_empty():
+			continue
+		var out: Vector3 = edge["out"]
+		var spot: Vector3 = edge["point"] + out * tuning.ambush_offset
+		spot.y = Penguin.WATER_LEVEL - tuning.ambush_depth
+		if _spot_taken(spot):
+			continue
+		# Only swim off to a new spot if it's really moved (not every little step it takes).
+		if p != _ambush_for or spot.distance_to(_ambush_spot) > tuning.ambush_reposition:
+			_ambush_spot = spot
+			_ambush_face = -out
+			_ambush_waited = 0.0
+		_ambush_for = p
+		return true
+	_ambush_for = null
+	return false
+
+
+## Another predator is already lying in wait there.
+func _spot_taken(spot: Vector3) -> bool:
+	for node in get_tree().get_nodes_in_group(&"predators"):
+		var other := node as Predator
+		if other != null and other != self and other.state == State.AMBUSH and other._ambush_spot.distance_to(spot) < tuning.ambush_reposition:
+			return true
+	return false
+
+
+## How tempting a penguin on the ice is to wait for: like temptation(), with closeness measured
+## over the ambush scan range.
+func _ambush_appeal(p: Penguin) -> float:
+	var closeness := clampf(1.0 - global_position.distance_to(p.global_position) / tuning.ambush_scan_range, 0.0, 1.0)
+	return tuning.size_weight * p.fatness() + tuning.noise_weight * p.noise + tuning.closeness_weight * closeness
+
+
+## Someone it can grab from its hiding spot: in the water within ambush_strike_range, or right at
+## the edge (or jumping in) within reach of its jaws.
+func _ambush_victim() -> Penguin:
+	var best: Penguin = null
+	var best_score := -1.0
+	var grab := tuning.jaw_reach + tuning.catch_radius
+	for node in get_tree().get_nodes_in_group(&"penguins"):
+		var p := node as Penguin
+		if p == null or _ignored.has(p):
+			continue
+		var in_water := p.state == Penguin.State.SWIM or p.global_position.y < Penguin.WATER_LEVEL
+		var reach := tuning.ambush_strike_range if in_water else grab
+		if global_position.distance_to(p.global_position) > reach or not _can_see(p):
+			continue
+		var score := temptation(p)
+		if score > best_score:
+			best_score = score
+			best = p
+	return best
+
+
+func _end_ambush() -> void:
+	_ambush_for = null
+	_next_waypoint()
+	_set_state(State.PATROL)
+
+
 # --- Hunting ----------------------------------------------------------------
 
-## The most tempting penguin in sight, or null.
-func _best_target() -> Penguin:
+## The most tempting penguin in sight (only those in the water, with `only_in_water`), or null.
+func _best_target(only_in_water := false) -> Penguin:
 	var best: Penguin = null
 	var best_score := -1.0
 	for node in get_tree().get_nodes_in_group(&"penguins"):
 		var p := node as Penguin
 		if p == null or _ignored.has(p) or not _huntable(p, tuning.detect_range):
+			continue
+		if only_in_water and not (p.state == Penguin.State.SWIM or p.global_position.y < Penguin.WATER_LEVEL):
 			continue
 		var score := temptation(p)
 		if score > best_score:
@@ -401,9 +590,11 @@ func _snap_at_close_penguin() -> void:
 			return
 
 
-## Lines up a strike at the target: the lunge will go straight along this line.
-func _start_warning() -> void:
+## Lines up a strike at the target: the lunge will go straight along this line, after a warning
+## of `seconds` (lunge_warning unless given).
+func _start_warning(seconds := -1.0) -> void:
 	_lunge_dir = (target.global_position - global_position).normalized()
+	_warning_time = seconds if seconds >= 0.0 else tuning.lunge_warning
 	_set_state(State.WARN)
 
 
@@ -420,11 +611,16 @@ func _lock_on(p: Penguin) -> void:
 
 
 func _give_up() -> void:
+	var lost := target
 	if target != null:
 		_ignored[target] = tuning.give_up_ignore_seconds
 	target = null
 	_set_state(State.PATROL)
 	_next_waypoint()
+	# It got out onto the ice? Wait for it to come back in.
+	if lost != null and is_instance_valid(lost) and lost.state in [Penguin.State.WALK, Penguin.State.SLIDE]:
+		_ignored.erase(lost)
+		_start_ambush()
 
 
 func _eat_penguin(p: Penguin) -> void:
@@ -548,6 +744,26 @@ func _make_markers() -> void:
 	line_mesh.size = Vector3(0.08, 0.04, 1.0)
 	line_mesh.material = DANGER_MATERIAL
 	_line = _make_marker(&"StrikeLine", line_mesh)
+	# The shadow on the water: dark, not the danger colour. Sized from the body.
+	var body := get_node_or_null("CollisionShape3D") as CollisionShape3D
+	var r := (body.shape as SphereShape3D).radius if body != null and body.shape is SphereShape3D else 0.6
+	_shadow_material = StandardMaterial3D.new()
+	_shadow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_shadow_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_shadow_material.albedo_color = Color(0.02, 0.06, 0.1, 0.0)
+	var blob := CylinderMesh.new()
+	blob.top_radius = 1.0
+	blob.bottom_radius = 1.0
+	blob.height = 0.02
+	blob.material = _shadow_material
+	_shadow = MeshInstance3D.new()
+	_shadow.name = &"Shadow"
+	_shadow.mesh = blob
+	_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_shadow.top_level = true
+	_shadow_size = Vector3(r * 1.6, 1.0, r * 3.5)
+	_shadow.visible = false
+	add_child(_shadow)
 
 
 func _make_marker(marker_name: StringName, mesh: Mesh) -> MeshInstance3D:
@@ -561,8 +777,17 @@ func _make_marker(marker_name: StringName, mesh: Mesh) -> MeshInstance3D:
 	return marker
 
 
-## The lock-on ring around its target, and the strike line during the warning.
+## The lock-on ring around its target, the strike line during the warning, and its shadow on
+## the water when it's near the surface.
 func _update_markers() -> void:
+	var depth := Penguin.WATER_LEVEL - global_position.y
+	var dark := clampf((SHADOW_DEPTH - depth) / (SHADOW_DEPTH - SHADOW_FULL_DEPTH), 0.0, 1.0) * SHADOW_DARKNESS
+	_shadow.visible = dark > 0.01
+	if _shadow.visible:
+		_shadow_material.albedo_color.a = dark
+		var flat := Vector3(_heading.x, 0.0, _heading.z)
+		var facing := Basis.looking_at(flat, Vector3.UP) if flat.length() > 0.05 else Basis.IDENTITY
+		_shadow.global_transform = Transform3D(facing * Basis.from_scale(_shadow_size), Vector3(global_position.x, Penguin.WATER_LEVEL + 0.015, global_position.z))
 	var locked := is_instance_valid(target) and is_hunting(target)
 	_ring.visible = locked
 	_line.visible = locked and state == State.WARN

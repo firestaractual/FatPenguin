@@ -3,7 +3,8 @@ extends Resource
 ## One kind of predator's balance numbers (see Predator). Mirrors the Predators section of
 ## docs/TUNING.md. The defaults here are the leopard seal; each kind is a resource in
 ## res://tuning/predators/ (leopard_seal.tres, orca.tres). Edit them in the inspector, then copy
-## the winners back into TUNING.md. Group behaviour (orca pods) is in PodTuning.
+## the winners back into TUNING.md. Group behaviour (orca pods) is in PodTuning and the pod's
+## attacks (PodAttackTuning).
 ##
 ## Hunger runs from 0 (just ate) to 100. A predator hunts penguins unless it's starving; a
 ## starving one goes to a school and eats fish instead (it still lunges at a penguin that
@@ -71,6 +72,30 @@ extends Resource
 ## How far a lunge can rear up out of the water (m above the surface), to grab penguins
 ## standing right at the ice edge.
 @export var lunge_rise := 0.6
+
+@export_group("Ambush")
+## At the end of each patrol leg, the chance it lies in wait at the ice edge instead (0 to 1; 0
+## never). It also waits where a penguin it was chasing climbed out.
+@export var ambush_chance := 0.5
+## It waits for penguins on the ice within this far of an edge (m)...
+@export var ambush_edge_reach := 10.0
+## ...and within this far of itself (m).
+@export var ambush_scan_range := 45.0
+## Its spot: this far out from the edge (m)...
+@export var ambush_offset := 1.6
+## ...and this deep, a dark shape just under the surface (m). Shallow enough to peek over the edge.
+@export var ambush_depth := 1.2
+## Gives up after waiting this long at one spot (s). Moving to a new spot starts the wait again.
+@export var ambush_seconds := 15.0
+## Lunges at a penguin that comes into the water this close (m): about as far as a lunge carries
+## (lunge_speed × lunge_seconds). Out of the water, only within reach of its jaws (jaw_reach +
+## catch_radius).
+@export var ambush_strike_range := 6.0
+## The warning before a lunge from an ambush (s): shorter than a normal lunge_warning, because
+## it's already lined up. The shadow under the edge is the first warning.
+@export var ambush_warning := 0.4
+## Moves to a new spot along the edge when the penguin it's waiting for has moved this far (m).
+@export var ambush_reposition := 6.0
 
 @export_group("Hunger")
 ## Per second.

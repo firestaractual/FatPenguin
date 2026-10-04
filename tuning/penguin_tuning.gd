@@ -131,6 +131,12 @@ extends Resource
 ## Noise fades from full to nothing over this long (s).
 @export var noise_fade_seconds := 2.0
 
+@export_group("Stunned")
+## Stunned (an orca's tail slap): you can't boost, you turn this much slower...
+@export var stun_turn_mult := 0.35
+## ...and swim at this share of your cruise speed.
+@export var stun_speed_mult := 0.6
+
 @export_group("Air & gravity")
 @export var air_seconds := 25.0
 @export var air_refill_seconds := 2.0

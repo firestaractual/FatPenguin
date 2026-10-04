@@ -1,7 +1,9 @@
 [gd_resource type="Resource" script_class="WaveAttackTuning" format=3]
 
 [ext_resource type="Script" path="res://tuning/wave_attack_tuning.gd" id="1_wave"]
+[ext_resource type="Resource" path="res://tuning/predators/orca_cut_off.tres" id="3_cutoff"]
 
 [resource]
 script = ExtResource("1_wave")
 display_name = "Wave"
+chains_into = Array[Resource]([ExtResource("3_cutoff")])

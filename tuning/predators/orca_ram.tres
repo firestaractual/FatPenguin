@@ -1,10 +1,12 @@
 [gd_resource type="Resource" script_class="RamAttackTuning" format=3]
 
 [ext_resource type="Script" path="res://tuning/ram_attack_tuning.gd" id="1_ram"]
+[ext_resource type="Resource" path="res://tuning/predators/orca_cut_off.tres" id="3_cutoff"]
 
 [resource]
 script = ExtResource("1_ram")
 display_name = "Ram"
 weight = 1.5
+chains_into = Array[Resource]([ExtResource("3_cutoff")])
 warning_seconds = 1.5
 charge_speed = 9.0

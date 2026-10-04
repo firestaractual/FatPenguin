@@ -27,6 +27,7 @@ lunge_cooldown = 2.5
 catch_radius = 1.8
 jaw_reach = 2.4
 lunge_rise = 0.4
+ambush_chance = 0.0
 hunger_rate = 0.5
 fish_hunger = 4.0
 fish_bite_radius = 1.6

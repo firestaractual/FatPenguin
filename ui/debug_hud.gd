@@ -16,8 +16,8 @@ func _ready() -> void:
 	_hint_label.text = "Left thumb: steer (pull back mid-slide to brake)   Right thumb: boost / belly-slide (tap again to push)" if touch else \
 		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   S: brake a slide   R: reset\n" + \
 		"Slide into the blue dummies to bump them; walk into steps to hop.   Q / E: energy -/+   F2: infinite energy   F1: debug\n" + \
-		"Leopard seals hunt the water. An orange ring means one has locked on; when it flashes, turn off the line or boost.\n" + \
-		"Orcas wash penguins off the ice edge and tip floes: when fins or shadows gather and the ice turns orange, get off it (or dig in)."
+		"Seals: an orange ring means one has locked on; when it flashes, turn off the line or boost. A dark shape under the edge is one lying in wait: go in elsewhere.\n" + \
+		"Orcas: fins or shadows gathering and orange ice mean get off it (or dig in). In the water, race their fins home, and boost out of a ring of bubbles."
 
 
 func _process(_delta: float) -> void:
@@ -76,8 +76,9 @@ func _pod_line() -> String:
 		var pod := node as PredatorPod
 		if pod != null and pod.attack != null:
 			var eta := pod.seconds_to_strike()
-			return "\n%s  %s %s%s" % [pod.tuning.display_name.to_lower(), pod.attack.settings.display_name.to_lower(),
-				PredatorPod.Phase.keys()[pod.phase], ("  hits in %.1f s" % eta) if eta >= 0.0 else ""]
+			return "\n%s  %s %s%s%s" % [pod.tuning.display_name.to_lower(), pod.attack.settings.display_name.to_lower(),
+				PredatorPod.Phase.keys()[pod.phase], ("  hits in %.1f s" % eta) if eta >= 0.0 else "",
+				("  (trap step %d)" % pod.trap_step) if pod.trap_step > 1 else ""]
 	return ""
 
 
