@@ -4,6 +4,42 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-04: Orcas ram the ice; pod attacks are data
+
+- **Change:** orca pods get a second attack, the ram. In playtesting the pod pushed the berg by accident and knocked the player off, and it felt right, so it's now on purpose. When a penguin stands on a floe (or within 8 m of the berg's edge facing the pod), the orcas gather 6 m out and 4 m down, rush up and ram the edge, and the ice tips toward them. A small floe tips steeply (25° for the 4 m floe): you slip onto your belly and slide off the low side into the water, where the orcas are waiting, unless you dig in (pull back) and hold on until it rights itself (2 s tipped, then 1.2 s to settle). The big berg only rocks (about 1.2°), but the jolt shoves anyone near the rammed edge toward the water. The wave is unchanged; when both attacks have a target the pod picks one at random (the ram is weighted 1.5 to the wave's 1). See GDD §5.3 and TUNING, Predators.
+- **Why dig-in saves you:** on a floe there isn't time to walk off (the whole floe is the danger zone, and from its middle the edge is 2+ s away), and the water is where the orcas are. Pulling back is the answer, as it is at the bottom of the south chute. Leaving early also works: the pod takes a few seconds to gather.
+- **The warning comes in the art-direction order:** dark shadows gathering under the ice edge, then the water bulging there, then the ice that will be hit marked in the danger colour (the whole floe, or an 8 × 16 m strip of the berg's edge). In the smoke test the ram hits 2.8 s after the pod has gathered, and the zone is up for about 2 s.
+- **How far ice tips:** 200 ÷ radius^1.5 degrees, up to 30°. Big ice barely moves, which is also why the berg's rim only drops about 0.6 m and nobody standing 5 m in falls off.
+- **Reuse:** group attacks are now data, so a new one is a script and a resource, not a new pod class:
+  - `PodAttack` (`actors/predators/pod_attack.gd`): one attack's targeting, line-up and charge spots, warning visuals and strike. `WaveAttack` and `RamAttack` extend it, with shared helpers for finding a penguin near an edge, lining up off it and marking the danger zone.
+  - `PodAttackTuning` (`tuning/pod_attack_tuning.gd`): the steps every attack shares (weight, warning, charge speed, hunt, cooldown), extended by `WaveAttackTuning` and `RamAttackTuning`. A pod lists the attacks it knows in `PodTuning.attacks`.
+  - `PredatorPod` runs every attack through the same steps (line up, warn, charge, strike, hunt). `OrcaPod` is now just a name, and `OrcaPodTuning` is no longer used (its wave values moved to `tuning/predators/orca_wave.tres`; `tuning/orca_pod_tuning.gd` is a leftover stub that can be deleted).
+  - `TippableIce` (`levels/tippable_ice.gd`): marks a piece of ice that can tip, made of one or more bodies (the berg is the ice, the plateau and the ramp). Only ice marked this way can be rammed. The movement toy marks the berg and the three floes.
+- **Not yet:** ice breaking up under a ram, rams on drifting floes, and a hunger meter that makes a starving pod ram more.
+- Proposed.
+
+## 2026-10-02: Orca pods wash penguins off the ice; predators are built from shared parts
+
+- **Change:** an orca pod (three orcas) joins the movement toy, the first piece of Prototype 2. As the GDD says, orcas don't chase in open water: on patrol the pod swims in a V and an orca only goes after a penguin in the water within 8 m. Their attack is the wave. When a penguin stands within 3 m of an ice edge facing the pod, the orcas line up side by side 14 m out with their fins showing, raise a swell, charge, and break a wave over the edge that shoves everyone in a 12 × 3 m zone toward the water. Then they hold off the edge for 6 s and go after whoever went in. See GDD §5.3 and TUNING, Predators.
+- **The warning comes in the art-direction order:** fins lining up, then the swell, then the danger zone marked on the ice in the danger colour, at least 2 s before the charge. In the smoke test the wave hits 4–5 s after the pod has lined up, and walking out of a 3 m zone takes under 2 s.
+- **What the wave does:** the shove works like a bump. On your feet you skid about 3 m, so you end up teetering at the edge and can still scramble back (4 energy). On your belly you go straight in. A bump during a wave stacks with it (GDD §4.5).
+- **Reuse:** predators are now built from shared parts, so a new kind is mostly data:
+  - `Predator`: one script for every kind. It does the swimming, sight, targeting, hunger and feeding, and the lunge with its ring and strike line. A kind is a `PredatorTuning` resource plus a scene with a model. The leopard seal and the orca both use it.
+  - `PredatorPod`: groups predators, keeps them in formation and can give them orders. `OrcaPod` adds the wave on top, and the wave visual is its own `IceWave` effect.
+  - `PredatorSpawn` / `PredatorSpawner`: a level lists what spawns, how many, alone or in pods, and where around the ice. The movement toy's seals and orcas are two entries.
+  - `Penguin.push()`: an outside shove that reuses the bump knockback.
+- **Not yet:** kill-screen lunges across the floe, the pod's hunger meter (campaign Breakup levels), waves that wash right across small floes, and real orca art.
+- Proposed.
+
+## 2026-10-02: Faster seals that catch more often
+
+- **Playtest:** the seals were too slow to give a good chase, and didn't catch much.
+- **Measured:** from 10 m behind, a seal took 8–10 s to run down a penguin swimming in a straight line, and a stuffed one usually got away inside 12 s. A penguin that turned at each warning was never caught.
+- **Change:** faster everywhere: patrol 2.5 → 3.5 m/s, chase 5.5 → 6.5 m/s, acceleration 4 → 8 m/s², turn rate 75 → 85 °/s (a thin penguin still out-turns it), sight 18 → 20 m. Lunges start from 5 m (was 4), carry about 6 m (12 m/s for 0.5 s, was 11 for 0.45), catch within 1.3 m of the jaws (was 1.2) and come every 2 s (was 3).
+- **The warning stays fair:** during the warning the seal now stops closing in and just matches its target's speed. It used to keep closing until 3 m, and with a faster seal that made the lunge almost undodgeable. A turn 0.2 s into the warning still dodges a lunge every time.
+- **Result:** a penguin that does nothing is caught in about 5 s. One that dodges every lunge by turning usually gets caught within about 9 s anyway, because the seal keeps coming. Boosting still gets away, at 8 energy a boost. Escaping a seal now takes the ice, boosts or a tight turning fight. What a catch costs is unchanged: you're eaten and respawn on the ice. See TUNING, Predators.
+- Proposed.
+
 ## 2026-10-01: Leopard seals hunt the movement toy; a catch means you're eaten
 
 - **Change:** the first predator from Prototype 1, the leopard seal, is in the movement toy (two of them). It patrols a loop 4 m off the ice edge, swinging past schools, and hunts the most tempting penguin it can see using the targeting rule (GDD §5.1: size, noise and closeness, switching only for a 25% better target). See GDD §5.3 and TUNING, Predators.

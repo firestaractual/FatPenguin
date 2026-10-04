@@ -1,8 +1,9 @@
 class_name PredatorTuning
 extends Resource
-## One predator's balance numbers. Mirrors the Predators section of docs/TUNING.md.
-## The leopard seal lives in res://tuning/predators/leopard_seal.tres. Edit it in the inspector,
-## then copy the winners back into TUNING.md.
+## One kind of predator's balance numbers (see Predator). Mirrors the Predators section of
+## docs/TUNING.md. The defaults here are the leopard seal; each kind is a resource in
+## res://tuning/predators/ (leopard_seal.tres, orca.tres). Edit them in the inspector, then copy
+## the winners back into TUNING.md. Group behaviour (orca pods) is in PodTuning.
 ##
 ## Hunger runs from 0 (just ate) to 100. A predator hunts penguins unless it's starving; a
 ## starving one goes to a school and eats fish instead (it still lunges at a penguin that
@@ -11,16 +12,17 @@ extends Resource
 @export var display_name := "Leopard seal"
 
 @export_group("Swimming")
-@export var patrol_speed := 2.5
-@export var chase_speed := 5.5
+@export var patrol_speed := 3.5
+## Well above a cruising penguin (4.0 thin, 4.6 stuffed), below a boost (9 to 11).
+@export var chase_speed := 6.5
 ## Sluggish after eating a penguin.
 @export var sated_speed := 1.5
 ## Getting its breath back after a lunge.
 @export var recover_speed := 2.0
 ## Speeding up and slowing down (m/s²).
-@export var acceleration := 4.0
+@export var acceleration := 8.0
 ## A thin penguin (120 °/s) can out-turn it; a stuffed one (66 °/s) can't.
-@export var turn_rate_deg := 75.0
+@export var turn_rate_deg := 85.0
 ## Patrol depth below the surface (min, max).
 @export var patrol_depth := Vector2(1.5, 3.5)
 
@@ -34,7 +36,7 @@ extends Resource
 
 @export_group("Hunting")
 ## Penguins in the water are noticed this far away (m). Underwater fog hides things past ~20 m.
-@export var detect_range := 18.0
+@export var detect_range := 20.0
 ## Penguins out of the water (on the ice, or in the air) are only noticed this close (m):
 ## the ambush at the ice edge.
 @export var edge_detect_range := 6.0
@@ -53,17 +55,19 @@ extends Resource
 
 @export_group("Lunge")
 ## Starts the lunge warning this close to its target (m).
-@export var lunge_range := 4.0
+@export var lunge_range := 5.0
 ## The warning before every lunge (s): the lock-on ring flashes and a line marks the lunge.
+## During it the predator stops closing in and just matches its target's speed.
 @export var lunge_warning := 0.6
-## During the warning it stops closing in at this distance and just shadows its target (m).
-@export var warn_hold_distance := 3.0
-@export var lunge_speed := 11.0
-@export var lunge_seconds := 0.45
+@export var lunge_speed := 12.0
+@export var lunge_seconds := 0.5
 ## No lunging again for this long afterwards (s).
-@export var lunge_cooldown := 3.0
+@export var lunge_cooldown := 2.0
 ## A lunge catches any penguin this close to the predator's jaws (m).
-@export var catch_radius := 1.2
+@export var catch_radius := 1.3
+## The jaws are this far ahead of the body centre (m). Catches are measured from them, so a
+## lunge at the ice edge reaches a little way onto the ice.
+@export var jaw_reach := 1.0
 ## How far a lunge can rear up out of the water (m above the surface), to grab penguins
 ## standing right at the ice edge.
 @export var lunge_rise := 0.6

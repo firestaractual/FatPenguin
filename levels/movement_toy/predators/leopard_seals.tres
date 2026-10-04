@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PredatorSpawn" format=3]
+
+[ext_resource type="Script" path="res://actors/predators/predator_spawn.gd" id="1_spawn"]
+[ext_resource type="PackedScene" path="res://actors/predators/leopard_seal.tscn" id="2_seal"]
+
+[resource]
+script = ExtResource("1_spawn")
+display_name = "Leopard seals"
+predator_scene = ExtResource("2_seal")
+count = 2
+start_angle_deg = -150.0
+spread_deg = 120.0

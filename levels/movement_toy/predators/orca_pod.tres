@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PredatorSpawn" format=3]
+
+[ext_resource type="Script" path="res://actors/predators/predator_spawn.gd" id="1_spawn"]
+[ext_resource type="PackedScene" path="res://actors/predators/orca.tscn" id="2_orca"]
+[ext_resource type="PackedScene" path="res://actors/predators/orca_pod.tscn" id="3_pod"]
+
+[resource]
+script = ExtResource("1_spawn")
+display_name = "Orca pod"
+predator_scene = ExtResource("2_orca")
+count = 1
+pod_scene = ExtResource("3_pod")
+pod_size = 3
+start_angle_deg = 180.0
+start_depth = 4.0

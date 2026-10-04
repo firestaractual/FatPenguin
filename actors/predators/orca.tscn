@@ -1,0 +1,77 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://actors/predators/predator.gd" id="1_pred"]
+[ext_resource type="Resource" path="res://tuning/predators/orca.tres" id="2_tune"]
+[ext_resource type="Material" path="res://art/materials/orca_black.tres" id="3_black"]
+[ext_resource type="Material" path="res://art/materials/orca_white.tres" id="4_white"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_orca"]
+radius = 1.0
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+material = ExtResource("3_black")
+radius = 0.85
+height = 5.0
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_belly"]
+material = ExtResource("4_white")
+radius = 0.6
+height = 3.4
+
+[sub_resource type="SphereMesh" id="SphereMesh_patch"]
+material = ExtResource("4_white")
+radius = 0.22
+height = 0.44
+
+[sub_resource type="BoxMesh" id="BoxMesh_dorsal"]
+material = ExtResource("3_black")
+size = Vector3(0.12, 1.5, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_flukes"]
+material = ExtResource("3_black")
+size = Vector3(1.8, 0.08, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_pectoral"]
+material = ExtResource("3_black")
+size = Vector3(0.9, 0.06, 0.5)
+
+[node name="Orca" type="CharacterBody3D" unique_id=1873420010]
+script = ExtResource("1_pred")
+tuning = ExtResource("2_tune")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1873420011]
+shape = SubResource("SphereShape3D_orca")
+
+[node name="Model" type="Node3D" parent="." unique_id=1873420012]
+
+[node name="Body" type="MeshInstance3D" parent="Model" unique_id=1873420013]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0.3)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Belly" type="MeshInstance3D" parent="Model" unique_id=1873420014]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, -0.32, -0.3)
+mesh = SubResource("CapsuleMesh_belly")
+
+[node name="EyePatchL" type="MeshInstance3D" parent="Model" unique_id=1873420015]
+transform = Transform3D(0.5, 0, 0, 0, 0.8, 0, 0, 0, 1.6, -0.62, 0.22, -1.6)
+mesh = SubResource("SphereMesh_patch")
+
+[node name="EyePatchR" type="MeshInstance3D" parent="Model" unique_id=1873420016]
+transform = Transform3D(0.5, 0, 0, 0, 0.8, 0, 0, 0, 1.6, 0.62, 0.22, -1.6)
+mesh = SubResource("SphereMesh_patch")
+
+[node name="DorsalFin" type="MeshInstance3D" parent="Model" unique_id=1873420017]
+transform = Transform3D(1, 0, 0, 0, 0.9659258, 0.25881904, 0, -0.25881904, 0.9659258, 0, 1.4, 0.35)
+mesh = SubResource("BoxMesh_dorsal")
+
+[node name="Flukes" type="MeshInstance3D" parent="Model" unique_id=1873420018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2.9)
+mesh = SubResource("BoxMesh_flukes")
+
+[node name="PectoralL" type="MeshInstance3D" parent="Model" unique_id=1873420019]
+transform = Transform3D(0.9396926, 0.34202015, 0, -0.34202015, 0.9396926, 0, 0, 0, 1, -0.95, -0.45, -0.8)
+mesh = SubResource("BoxMesh_pectoral")
+
+[node name="PectoralR" type="MeshInstance3D" parent="Model" unique_id=1873420020]
+transform = Transform3D(0.9396926, -0.34202015, 0, 0.34202015, 0.9396926, 0, 0, 0, 1, 0.95, -0.45, -0.8)
+mesh = SubResource("BoxMesh_pectoral")

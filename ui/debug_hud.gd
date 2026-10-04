@@ -16,7 +16,8 @@ func _ready() -> void:
 	_hint_label.text = "Left thumb: steer (pull back mid-slide to brake)   Right thumb: boost / belly-slide (tap again to push)" if touch else \
 		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   S: brake a slide   R: reset\n" + \
 		"Slide into the blue dummies to bump them; walk into steps to hop.   Q / E: energy -/+   F2: infinite energy   F1: debug\n" + \
-		"Leopard seals hunt the water. An orange ring means one has locked on; when it flashes, turn off the line or boost."
+		"Leopard seals hunt the water. An orange ring means one has locked on; when it flashes, turn off the line or boost.\n" + \
+		"Orcas wash penguins off the ice edge and tip floes: when fins or shadows gather and the ice turns orange, get off it (or dig in)."
 
 
 func _process(_delta: float) -> void:
@@ -44,28 +45,40 @@ func _process(_delta: float) -> void:
 			_penguin.hop_height(),
 			_penguin.air,
 			Engine.get_frames_per_second(),
-		] + _seal_line()
+		] + _predator_line() + _pod_line()
 
 
-## The nearest seal: what it's doing and how hungry it is.
-func _seal_line() -> String:
+## The nearest predator: what it is, what it's doing and how hungry it is.
+func _predator_line() -> String:
 	var nearest: Predator = null
 	var best := INF
 	for node in get_tree().get_nodes_in_group(&"predators"):
-		var seal := node as Predator
-		var dist := seal.global_position.distance_to(_penguin.global_position)
+		var predator := node as Predator
+		var dist := predator.global_position.distance_to(_penguin.global_position)
 		if dist < best:
 			best = dist
-			nearest = seal
+			nearest = predator
 	if nearest == null:
 		return ""
-	return "\nseal    %s  %.0f m  hunger %.0f%s%s" % [
+	return "\n%s  %s  %.0f m  hunger %.0f%s%s" % [
+		nearest.tuning.display_name.to_lower(),
 		Predator.State.keys()[nearest.state],
 		best,
 		nearest.hunger,
 		"  (starving)" if nearest.is_starving() else "",
 		"  [hunting you]" if nearest.is_hunting(_penguin) else "",
 	]
+
+
+## Any pod with an attack under way.
+func _pod_line() -> String:
+	for node in get_tree().get_nodes_in_group(&"pods"):
+		var pod := node as PredatorPod
+		if pod != null and pod.attack != null:
+			var eta := pod.seconds_to_strike()
+			return "\n%s  %s %s%s" % [pod.tuning.display_name.to_lower(), pod.attack.settings.display_name.to_lower(),
+				PredatorPod.Phase.keys()[pod.phase], ("  hits in %.1f s" % eta) if eta >= 0.0 else ""]
+	return ""
 
 
 func _status() -> String:

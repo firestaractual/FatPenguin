@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="PredatorTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/predator_tuning.gd" id="1_ptune"]
+
+[resource]
+script = ExtResource("1_ptune")
+display_name = "Orca"
+patrol_speed = 4.0
+chase_speed = 7.5
+sated_speed = 2.0
+recover_speed = 3.0
+acceleration = 5.0
+turn_rate_deg = 55.0
+patrol_depth = Vector2(3, 6)
+patrol_offset = 12.0
+school_visit_chance = 0.25
+school_visit_range = 40.0
+detect_range = 8.0
+edge_detect_range = 0.0
+lose_range = 14.0
+chase_give_up_seconds = 6.0
+give_up_ignore_seconds = 6.0
+lunge_range = 6.0
+lunge_speed = 13.0
+lunge_seconds = 0.5
+lunge_cooldown = 2.5
+catch_radius = 1.8
+jaw_reach = 2.4
+lunge_rise = 0.4
+hunger_rate = 0.5
+fish_hunger = 4.0
+fish_bite_radius = 1.6
+sated_seconds = 12.0

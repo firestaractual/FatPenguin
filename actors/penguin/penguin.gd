@@ -242,6 +242,13 @@ func get_speed() -> float:
 	return velocity.length()
 
 
+## An outside shove (an orca's wave, GDD §5.3). It works like the knockback from a bump: on your
+## feet grip halves it and you skid (and teeter if it takes you to the edge); on your belly you
+## take all of it. It stacks with any knockback you already have.
+func push(dv: Vector3) -> void:
+	_take_knock(dv * _knock_share(), true)
+
+
 ## A predator got you. In the movement toy you're eaten: a puff of feathers, a splash, and you're
 ## back at your spawn point on the ice with starting energy, as if you'd pressed reset.
 func get_caught(by: Node3D) -> void:

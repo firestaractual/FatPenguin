@@ -2,7 +2,7 @@ extends SceneTree
 ## Headless smoke test for the Prototype 0 movement toy.
 ## Drives the penguin with simulated input and checks each movement verb still works,
 ## then checks the plateau (slide down chutes, hop up steps), bumping with dummy penguins,
-## fish schooling with their own species, and leopard seals hunting.
+## fish schooling with their own species, leopard seals hunting, and an orca pod's wave and ram.
 ##
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --script res://tests/movement_smoke_test.gd
@@ -36,11 +36,15 @@ func _run() -> void:
 	# energy or speed check. They stay in the level but can't be eaten during this test.
 	for fish: Fish in level.get_node("Fish").get_children():
 		fish.monitoring = false
-	# The level's seals would hunt the test penguin. The predator checks bring their own.
-	var level_seals := level.get_node("Predators").get_children()
-	_check(level_seals.size() > 0, "the level has leopard seals patrolling it (%d)" % level_seals.size())
-	for seal in level_seals:
-		seal.queue_free()
+	# The level's predators would hunt the test penguin. The predator checks bring their own.
+	var kinds := {}
+	for node in get_nodes_in_group(&"predators"):
+		var name := (node as Predator).tuning.display_name
+		kinds[name] = kinds.get(name, 0) + 1
+	_check(kinds.get("Leopard seal", 0) > 0 and kinds.get("Orca", 0) > 0 and get_nodes_in_group(&"pods").size() > 0,
+		"the level spawns its predators from its spawn list (%s)" % str(kinds))
+	for spawned in level.get_node("Predators").get_children():
+		spawned.queue_free()
 
 	await _test_lands_on_ice()
 	await _test_slide_off_edge_into_water()
@@ -59,6 +63,8 @@ func _run() -> void:
 	await _test_teeter_and_scramble()
 	await _test_fish_schools()
 	await _test_predators()
+	await _test_orcas()
+	await _test_orca_ram()
 
 	print("\nStates seen: ", " > ".join(_states_seen))
 	if _failures.is_empty():
@@ -624,19 +630,213 @@ func _test_predators() -> void:
 	_check(grabbed[0] == edge, "a penguin standing at the ice edge gets grabbed from the water")
 	seal.queue_free()
 	edge.queue_free()
-	# ...but 4 m in from the edge it can't reach you.
+	# ...but 4 m in from the edge it can't reach you, however often it tries.
 	var inland := await _spawn_standing(Vector3(-berg_radius + 4.0, 1.0, 0.0), 0.0)
 	seal = _spawn_seal(Vector3(-berg_radius - 1.5, -0.5, 0.0))
-	var lunges := [0]
-	seal.lunged.connect(func(_at: Vector3) -> void: lunges[0] += 1)
+	var tries := [0]
+	var got_inland := [false]
+	seal.lunged.connect(func(_at: Vector3) -> void: tries[0] += 1)
+	seal.caught_penguin.connect(func(_p: Penguin) -> void: got_inland[0] = true)
 	await _frames(8 * 60)
-	_check(lunges[0] == 0 and inland.global_position.distance_to(Vector3(-berg_radius + 4.0, inland.global_position.y, 0.0)) < 0.5,
-		"4 m in from the edge, a seal can't reach you (lunges=%d)" % lunges[0])
+	_check(not got_inland[0], "4 m in from the edge, a seal can't catch you (it lunged %d times)" % tries[0])
 	seal.queue_free()
 	inland.queue_free()
 
 
+func _test_orcas() -> void:
+	var berg_radius: float = _level.get(&"berg_radius")
+	# A spawn entry puts three orcas in a pod, on their patrol loop west of the berg.
+	var spawner := PredatorSpawner.new()
+	spawner.ice_radius = berg_radius
+	_level.add_child(spawner)
+	var entry: PredatorSpawn = load("res://levels/movement_toy/predators/orca_pod.tres")
+	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var t := _only_attack(pod, "Wave").settings as WaveAttackTuning
+	_check(pod.members().size() == entry.pod_size, "a spawn entry puts %d orcas in a pod" % pod.members().size())
+
+	# On patrol the pod swims together (after a few seconds to fall in behind the leader).
+	await _frames(6 * 60)
+	var total := 0.0
+	var samples := 0
+	for i in 8 * 60:
+		await physics_frame
+		for member in pod.members():
+			if member != pod.leader():
+				total += member.global_position.distance_to(pod.leader().global_position)
+				samples += 1
+	var mean := total / samples
+	_check(mean < pod.tuning.spacing * 2.5, "the pod swims together (followers %.1f m from the leader on average)" % mean)
+
+	# Orcas don't chase in open water: a fat penguin that keeps 12 m from the pod isn't hunted.
+	var bait := _spawn_bait(Vector3(0.0, -1.0, -110.0), 100.0)
+	var hunted := [false]
+	var bait_id := bait.get_instance_id()
+	for member in pod.members():
+		member.locked_on.connect(func(p: Penguin) -> void: hunted[0] = hunted[0] or p.get_instance_id() == bait_id)
+	for i in 3 * 60:
+		var outermost: Predator = null
+		for member in pod.members():
+			if outermost == null or member.global_position.length() > outermost.global_position.length():
+				outermost = member
+		var out := Vector3(outermost.global_position.x, 0.0, outermost.global_position.z).normalized()
+		bait.global_position = Vector3(outermost.global_position.x, -1.0, outermost.global_position.z) + out * 12.0
+		await physics_frame
+	_check(not hunted[0], "orcas don't chase a penguin 12 m away in open water")
+	bait.queue_free()
+
+	# The wave: a penguin standing near the edge the pod is passing gets washed off; one 6 m in
+	# is untouched.
+	var facing := Vector3(pod.leader().global_position.x, 0.0, pod.leader().global_position.z).normalized()
+	var at_edge := await _spawn_standing(facing * (berg_radius - 1.5) + Vector3.UP, 0.0)
+	var inland := await _spawn_standing(facing * (berg_radius - 6.0) + Vector3.UP, 0.0)
+	var inland_start := inland.global_position
+	var wave := {"coming": -1, "hit": -1, "washed": [], "surfaced": true}
+	pod.attack_coming.connect(func(_a: PodAttack) -> void: wave["coming"] = Engine.get_physics_frames())
+	pod.attack_hit.connect(func(_a: PodAttack, washed: Array[Penguin]) -> void:
+		wave["hit"] = Engine.get_physics_frames()
+		wave["washed"] = washed)
+	pod.set(&"_cooldown", 0.0)
+	for i in 40 * 60:
+		await physics_frame
+		if pod.phase == PredatorPod.Phase.WARN and pod.get(&"_phase_time") > t.warning_seconds * 0.8:
+			var at_surface := 0
+			for member: Predator in pod.get(&"_attackers"):
+				if member.global_position.y > -t.surface_depth - 0.4:
+					at_surface += 1
+			wave["surfaced"] = wave["surfaced"] and at_surface >= t.min_attackers
+		if wave["hit"] >= 0:
+			break
+	var warning := float(wave["hit"] - wave["coming"]) / 60.0
+	_check(wave["hit"] >= 0 and warning >= t.warning_seconds, "orcas line up and warn (fins, swell, danger zone) %.1f s before the wave hits" % warning)
+	_check(wave["surfaced"], "lined up, the orcas swim at the surface with their fins showing")
+	var washed: Array = wave["washed"]
+	_check(washed.has(at_edge) and not washed.has(inland), "the wave washes over the zone by the edge: it shoves the penguin standing there")
+	var went_in := await _wait_for(at_edge, Penguin.State.SWIM, 4 * 60)
+	_check(went_in or not is_instance_valid(at_edge), "and that penguin ends up in the water")
+	_check(inland.state == Penguin.State.WALK and inland.global_position.distance_to(inland_start) < 0.3,
+		"a penguin 6 m in from the edge is untouched")
+	spawner.queue_free()
+	at_edge.queue_free()
+	inland.queue_free()
+	await _frames(2)
+
+
+func _test_orca_ram() -> void:
+	var berg_radius: float = _level.get(&"berg_radius")
+	var entry: PredatorSpawn = (load("res://levels/movement_toy/predators/orca_pod.tres") as PredatorSpawn).duplicate()
+
+	# A floe: the pod rams it, it tips steeply toward them, and a penguin standing on it slides off.
+	var floe := _level.get_node("FloeEasy") as Node3D
+	var floe_ice := _level.get_node("TippableFloeEasy") as TippableIce
+	var floe_rest := floe.global_transform
+	var on_floe := await _spawn_standing(Vector3(floe.global_position.x, floe.global_position.y + 1.0, floe.global_position.z), 50.0)
+	var spawner := PredatorSpawner.new()
+	spawner.ice_radius = berg_radius
+	_level.add_child(spawner)
+	entry.start_angle_deg = rad_to_deg(atan2(floe.global_position.z, floe.global_position.x))
+	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var ram := _only_attack(pod, "Ram")
+	var t := ram.settings as RamAttackTuning
+	var rammed := {"coming": -1, "hit": -1, "jolted": []}
+	pod.attack_coming.connect(func(_a: PodAttack) -> void: rammed["coming"] = Engine.get_physics_frames())
+	pod.attack_hit.connect(func(_a: PodAttack, hit: Array[Penguin]) -> void:
+		rammed["hit"] = Engine.get_physics_frames()
+		rammed["jolted"] = hit)
+	pod.set(&"_cooldown", 0.0)
+	var deepest := 0.0
+	var tilt := 0.0
+	for i in 40 * 60:
+		await physics_frame
+		if pod.phase == PredatorPod.Phase.WARN:
+			for member: Predator in pod.get(&"_attackers"):
+				deepest = minf(deepest, member.global_position.y)
+		tilt = maxf(tilt, floe_ice.tilt_degrees())
+		if rammed["hit"] >= 0 and on_floe.state == Penguin.State.SWIM:
+			break
+	var warning := float(rammed["hit"] - rammed["coming"]) / 60.0
+	_check(rammed["hit"] >= 0 and warning >= t.warning_seconds, "orcas gather under a floe and warn (shadows, bulge, danger zone) %.1f s before they ram it" % warning)
+	_check(deepest < -t.gather_depth + 1.0, "they gather deep, as shadows under the ice (down to %.1f m)" % -deepest)
+	_check(tilt > 20.0, "the ram tips the floe steeply toward them (%.0f°)" % tilt)
+	_check((rammed["jolted"] as Array).has(on_floe) and on_floe.state == Penguin.State.SWIM, "a penguin standing on the floe slides off into the water")
+	for i in 6 * 60:
+		await physics_frame
+		if not floe_ice.is_tipping():
+			break
+	_check(not floe_ice.is_tipping() and floe.global_transform.is_equal_approx(floe_rest), "then the floe rights itself")
+	on_floe.queue_free()
+
+	# Digging in: the player on the floe pulls back the moment it tips, and holds on.
+	spawner.queue_free()
+	await _frames(2)
+	await _place_on_ice(_penguin, Vector3(floe.global_position.x, floe.global_position.y + 1.0, floe.global_position.z), 0.0, 50.0)
+	_penguin.infinite_energy = true
+	spawner = PredatorSpawner.new()
+	spawner.ice_radius = berg_radius
+	_level.add_child(spawner)
+	pod = spawner.spawn(entry)[0] as PredatorPod
+	_only_attack(pod, "Ram")
+	pod.set(&"_cooldown", 0.0)
+	var struck := [false]
+	pod.attack_hit.connect(func(_a: PodAttack, _hit: Array[Penguin]) -> void: struck[0] = true)
+	var went_in := false
+	for i in 40 * 60:
+		if struck[0]:
+			Input.action_press(&"move_down")
+		await physics_frame
+		went_in = went_in or _penguin.state == Penguin.State.SWIM
+		if struck[0] and not floe_ice.is_tipping():
+			break
+	Input.action_release(&"move_down")
+	_check(struck[0] and not went_in, "pulling back digs in and holds on to a tipping floe")
+	_penguin.infinite_energy = false
+	spawner.queue_free()
+	await _place_on_ice(_penguin, Vector3(0.0, 3.0, -8.0), 0.0, 50.0)
+
+	# The berg only rocks: it tips about a degree, a penguin 5 m in is jolted but stays on the ice,
+	# and the berg (plateau and all) settles back exactly where it was.
+	var berg := _level.get_node("Iceberg") as Node3D
+	var plateau := _level.get_node("Plateau") as Node3D
+	var berg_ice := _level.get_node("TippableBerg") as TippableIce
+	var berg_rest := berg.global_transform
+	var plateau_rest := plateau.global_transform
+	var near_edge := await _spawn_standing(Vector3(-berg_radius + 5.0, 1.0, 0.0), 50.0)
+	spawner = PredatorSpawner.new()
+	spawner.ice_radius = berg_radius
+	_level.add_child(spawner)
+	entry.start_angle_deg = 180.0
+	pod = spawner.spawn(entry)[0] as PredatorPod
+	_only_attack(pod, "Ram")
+	var jolted := [false]
+	pod.attack_hit.connect(func(_a: PodAttack, hit: Array[Penguin]) -> void: jolted[0] = hit.has(near_edge))
+	pod.set(&"_cooldown", 0.0)
+	var rock := 0.0
+	var fell_in := false
+	for i in 40 * 60:
+		await physics_frame
+		rock = maxf(rock, berg_ice.tilt_degrees())
+		fell_in = fell_in or near_edge.state == Penguin.State.SWIM
+		if jolted[0] and not berg_ice.is_tipping():
+			break
+	_check(jolted[0] and rock > 0.5 and rock < 2.0, "rammed, the berg only rocks (%.1f°) and jolts the penguins near the edge" % rock)
+	_check(not fell_in, "a penguin 5 m in from the edge stays on the ice")
+	_check(berg.global_transform.is_equal_approx(berg_rest) and plateau.global_transform.is_equal_approx(plateau_rest),
+		"and the berg, plateau and all, settles back exactly where it was")
+	spawner.queue_free()
+	near_edge.queue_free()
+	await _frames(2)
+
+
 # --- Helpers ----------------------------------------------------------------
+
+## Leaves `pod` with just its attack called `attack_name`, and returns that attack.
+func _only_attack(pod: PredatorPod, attack_name: String) -> PodAttack:
+	var kept: Array[PodAttack] = []
+	for attack in pod.attacks():
+		if attack.settings.display_name == attack_name:
+			kept.append(attack)
+	pod.set(&"_attacks", kept)
+	return kept[0] if not kept.is_empty() else null
+
 
 func _spawn_seal(at: Vector3) -> Predator:
 	var seal := load(SEAL_SCENE).instantiate() as Predator

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://actors/predators/orca_pod.gd" id="1_opod"]
+[ext_resource type="Resource" path="res://tuning/predators/orca_pod.tres" id="2_otune"]
+
+[node name="OrcaPod" type="Node3D" unique_id=1873420001]
+script = ExtResource("1_opod")
+tuning = ExtResource("2_otune")

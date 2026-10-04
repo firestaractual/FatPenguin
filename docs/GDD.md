@@ -126,7 +126,7 @@ PvP is physical. There's no attack button: you hit rivals by sliding (or boostin
 - **The ice edge (the doorway):** penguins climbing out of the water land low and slow, fat ones especially (§4.4). A rival waiting at the edge can bump them straight back in, right where the leopard seal waits. The counter is a fast launch: you come out on your belly at speed, so a doorman standing in the way gets bumped instead. Or you launch somewhere else.
 - **Pulses:** shove rivals off the bait ball, block them from a fish, or knock fish loose from whoever ate first.
 - **Predators:** knock a rival toward a predator's lock-on, or spin them out just as a seal lunges. A fat rival knocked toward a predator becomes the most tempting target nearby.
-- **Orca waves:** waves push everyone across the ice (§5.3), and a bump during a wave stacks with it.
+- **Orca waves and rams:** waves push everyone across the ice and rams tip it (§5.3); a bump during either stacks with it.
 - **Slopes and drops:** a slide down a chute (§4.10) arrives fast enough for a hard bump, and a plateau's sheer edges are ring-outs onto the ice below: a fall and a long way round, not a swim.
 - **The waddle:** the edge is where bumps happen; the middle is a shoving match.
 - **Kill screen:** sumo on a shrinking floe. A short shove is enough to put someone on a lunge line during its 1-second warning, but a slide that misses has to brake hard or it ends in the water.
@@ -234,7 +234,7 @@ Fish come in species, all based on real Antarctic forage fish. For now every spe
 | Predator | Behavior | Warning signs |
 |---|---|---|
 | **Leopard seal** [Proposed] | Patrols the ice edges and the schools, and waits in ambush at ice edges and breathing holes, exactly where penguins must surface. Chases faster than a cruising penguin but slower than a boost, and turns wider than a thin one. Short, fast lunges along a marked line; a lunge reaches a little way onto the ice. In the movement toy since Prototype 0. | Shadow under the ice edge, a trail of bubbles, then the lock-on ring; before a lunge the ring flashes and a **strike line** shows where it will go |
-| **Orca pod** [Proposed] | Doesn't chase in open water. Lines up and makes waves that wash penguins off the ice. Lunges across the floe in the kill screen. | Fins lining up, the water swelling |
+| **Orca pod** [Proposed] | Doesn't chase in open water: swims in formation and only goes after a penguin that comes right up to it. Two group attacks, then it hunts whoever went in. The **wave:** lines up side by side off an ice edge where a penguin stands, charges, and breaks a wave that washes penguins near the edge into the water. The **ram:** gathers deep under the ice and rams it from below, so the ice tips toward the pod. A small floe tips steeply and everyone on it slides off the low side unless they dig in and hold on; the big berg only rocks, but the jolt shoves penguins near the rammed edge toward the water. Lunges across the floe in the kill screen (not built yet). In the movement toy since Prototype 0. | Wave: fins lining up, the water swelling, then the **danger zone** marked on the ice. Ram: dark shadows gathering under the ice edge, the water bulging, then the danger zone (the whole floe, or a strip of the berg's edge) |
 
 ### 5.4 Kill screen [Locked]
 
@@ -340,6 +340,10 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | **Lock-on** | A predator's visible choice of target |
 | **Strike line** | The line that marks exactly where a predator's lunge will go, shown during the lunge warning |
 | **Starving** | A predator hungry enough to eat fish from a school instead of hunting penguins |
+| **Pod** | A group of predators that swim and attack together (orcas) |
+| **Wave** | An orca pod's attack: it charges an ice edge and washes penguins near it into the water |
+| **Ram** | An orca pod's attack: it rams the ice from below and tips it, so penguins slide off a floe or get jolted off the berg's edge |
+| **Danger zone** | The ice a coming wave or ram will hit, marked in the danger colour |
 | **Bump** | Sliding or boosting into another penguin fast enough to knock it back |
 | **Hard bump** | A bump fast enough to spin a penguin out or knock a fish loose |
 | **Flop** | Diving onto your belly to start a slide; costs a little energy |

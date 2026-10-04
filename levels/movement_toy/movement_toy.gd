@@ -1,10 +1,10 @@
 extends Node3D
 ## Prototype 0 test level: an iceberg with a plateau on top (chutes to slide down, steps to hop up),
-## a few floes, a low ramp out of the water, fish to eat, dummy penguins to bump, and leopard
-## seals patrolling the water (the first piece of Prototype 1). No goals yet.
+## a few floes, a low ramp out of the water, fish to eat, dummy penguins to bump, and predators:
+## leopard seals hunting the water and an orca pod that washes penguins off the ice edge and tips
+## floes (early pieces of Prototypes 1 and 2). No goals yet.
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
-const SEAL_SCENE := preload("res://actors/predators/leopard_seal.tscn")
 
 @export var fish_seed := 7
 ## The kinds of fish in the level. Each gets at least one school; the rest are picked by
@@ -26,11 +26,18 @@ const SEAL_SCENE := preload("res://actors/predators/leopard_seal.tscn")
 @export var fish_ring := Vector2(36.0, 70.0)
 ## Schools sit in the inner part of the ring, within an easy swim of the ice edge (min, max).
 @export var school_ring := Vector2(36.0, 50.0)
+## The ice orcas can tip with a ram (TippableIce): the berg with its plateau and ramp, and each
+## floe. Their size comes from their collision shapes.
+@export var berg_bodies: Array[NodePath] = [^"Iceberg", ^"Plateau", ^"Ramp"]
+@export var floes: Array[NodePath] = [^"FloeEasy", ^"FloeMedium", ^"FloeHard"]
 ## A dummy knocked into the water pops back to its spot after this long.
 @export var dummy_respawn_seconds := 2.0
-## Leopard seals patrolling the water around the berg and its schools. They start on the far
-## side from the player's spawn.
-@export var seals := 2
+## The predators: what spawns, how many and where (PredatorSpawn entries, placed around the berg
+## by a PredatorSpawner). They start away from the player's spawn on the south side.
+@export var predator_spawns: Array[PredatorSpawn] = [
+	preload("res://levels/movement_toy/predators/leopard_seals.tres"),
+	preload("res://levels/movement_toy/predators/orca_pod.tres"),
+]
 
 var _wet_time := {}
 
@@ -54,22 +61,34 @@ func _ready() -> void:
 	for i in loose_fish:
 		var species := _pick_species(rng)
 		container.add_child(_make_fish(_random_spot(rng, species, rng.randf() * TAU, fish_ring), species))
-	_spawn_seals()
+	_make_tippable_ice()
+	var spawner := PredatorSpawner.new()
+	spawner.name = "Predators"
+	spawner.spawns = predator_spawns
+	spawner.ice_centre = Vector3.ZERO
+	spawner.ice_radius = berg_radius
+	add_child(spawner)
 
 
-func _spawn_seals() -> void:
-	var container := Node3D.new()
-	container.name = "Predators"
-	add_child(container)
-	for i in seals:
-		var seal := SEAL_SCENE.instantiate() as Predator
-		seal.patrol_centre = Vector3.ZERO
-		seal.ice_radius = berg_radius
-		# Spread around the north side; the player starts on the south edge.
-		var angle := -PI / 2.0 + (i - (seals - 1) / 2.0) * TAU / maxf(seals, 3.0)
-		var radius := berg_radius + seal.tuning.patrol_offset
-		seal.position = Vector3(cos(angle) * radius, -2.5, sin(angle) * radius)
-		container.add_child(seal)
+## Marks the berg and each floe as ice that can be tipped, pivoting at its middle at the waterline.
+func _make_tippable_ice() -> void:
+	_add_tippable(&"TippableBerg", berg_bodies, Vector3.ZERO, berg_radius)
+	for path in floes:
+		var floe := get_node_or_null(path) as Node3D
+		if floe == null:
+			continue
+		var shape := (floe.get_node("CollisionShape3D") as CollisionShape3D).shape as CylinderShape3D
+		_add_tippable(StringName("Tippable" + floe.name), [path], Vector3(floe.position.x, 0.0, floe.position.z), shape.radius if shape else 4.0)
+
+
+func _add_tippable(ice_name: StringName, paths: Array[NodePath], at: Vector3, radius: float) -> void:
+	var ice := TippableIce.new()
+	ice.name = ice_name
+	ice.position = at
+	ice.radius = radius
+	for path in paths:
+		ice.bodies.append(NodePath("../" + str(path)))
+	add_child(ice)
 
 
 ## A species picked at random, weighted by abundance. Null if the level has none.

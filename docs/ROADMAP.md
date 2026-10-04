@@ -61,12 +61,14 @@ Each prototype answers one question. Don't move on until the current one's answe
 
 ## Prototype 2: Shrinking ice + orcas + kill screen + coop
 
+**Status: started early.** An orca pod is in the movement toy: formation, and two attacks with their warnings, the wave that washes penguins off the ice edge and the ram that tips floes and rocks the berg. Predators are built from shared parts (`Predator`, `PredatorPod`, `PodAttack`, `PredatorSpawner`), and ice that can tip is marked with `TippableIce`, so the kill-screen orcas and breaking ice can reuse them. Still to do: ice breakup, kill-screen lunges, the hunger meter, the last meal and coop.
+
 **Question:** does the kill screen feel fair and exciting, and does coop make people laugh?
 
 **In scope**
 
 - The ice breaking up on a schedule, new breathing holes, gaps to hop, the shrinking waddle
-- Orca pod: waves that wash penguins off the ice, kill-screen lunges with warnings, hunger meter
+- Orca pod: waves that wash penguins off the ice, rams that tip floes, kill-screen lunges with warnings, hunger meter
 - The last-meal pulse
 - 2–4 player coop (local or online), with bumping (friendly bumps on)
 - A coop win condition (to be decided)

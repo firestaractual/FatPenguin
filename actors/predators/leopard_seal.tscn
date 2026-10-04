@@ -4,7 +4,6 @@
 [ext_resource type="Resource" path="res://tuning/predators/leopard_seal.tres" id="2_tune"]
 [ext_resource type="Material" path="res://art/materials/seal.tres" id="3_seal"]
 [ext_resource type="Material" path="res://art/materials/seal_pale.tres" id="4_pale"]
-[ext_resource type="Material" path="res://art/materials/danger.tres" id="5_dngr"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_seal"]
 radius = 0.6
@@ -26,15 +25,6 @@ size = Vector3(0.6, 0.05, 0.28)
 [sub_resource type="BoxMesh" id="BoxMesh_tail"]
 material = ExtResource("3_seal")
 size = Vector3(0.55, 0.05, 0.3)
-
-[sub_resource type="TorusMesh" id="TorusMesh_ring"]
-material = ExtResource("5_dngr")
-inner_radius = 0.65
-outer_radius = 0.8
-
-[sub_resource type="BoxMesh" id="BoxMesh_line"]
-material = ExtResource("5_dngr")
-size = Vector3(0.08, 0.04, 1)
 
 [node name="LeopardSeal" type="CharacterBody3D" unique_id=1873410012]
 script = ExtResource("1_pred")
@@ -64,11 +54,3 @@ mesh = SubResource("BoxMesh_flipper")
 [node name="Tail" type="MeshInstance3D" parent="Model" unique_id=1873410019]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.55)
 mesh = SubResource("BoxMesh_tail")
-
-[node name="LockOnRing" type="MeshInstance3D" parent="." unique_id=1873410020]
-cast_shadow = 0
-mesh = SubResource("TorusMesh_ring")
-
-[node name="LungeLine" type="MeshInstance3D" parent="." unique_id=1873410021]
-cast_shadow = 0
-mesh = SubResource("BoxMesh_line")

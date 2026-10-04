@@ -1,12 +1,12 @@
 # Fat Penguin — Tuning Values
 
-Last updated: 2026-10-01
+Last updated: 2026-10-04
 
 **Every number here is a starting guess for playtesting.** Change them freely, but keep this file in step with the game.
 
 **The live copy is in Godot:** `tuning/penguin_tuning_default.tres` (the class is `tuning/penguin_tuning.gd`). Edit the values in the Inspector, then copy the ones that work back here.
 
-**In the game so far (Prototype 0, plus the leopard seal from Prototype 1):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump credit), bump noise, air, fish schooling, and the leopard seal. Waddle drain, the other action costs, food pulses, orcas, rounds and campaign values arrive with later prototypes.
+**In the game so far (Prototype 0, plus the leopard seal from Prototype 1):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump credit), bump noise, air, fish schooling, the leopard seal, and the orca pod with its wave and ram (from Prototype 2). Waddle drain, the other action costs, food pulses, the orcas' kill-screen lunges, rounds and campaign values arrive with later prototypes.
 
 Units: energy runs from 0 (empty) to 100 (full). Time is in seconds, distance in meters.
 
@@ -249,11 +249,12 @@ Fish counts scale with the number of players.
 | Target switch threshold | ×1.25 | The new target must score at least 25% higher |
 | Sated time after chum | 4 s | |
 | Sated time after eating a penguin | 8 s | |
-| Leopard seal lunge range | 4 m | |
+| Leopard seal lunge range | 5 m | Was 4 m (DECISIONS, 2026-10-02) |
 | Leopard seal lunge warning | 0.6 s | |
-| Leopard seal lunge cooldown | 3 s | |
-| Orca wave warning (fins lining up) | 2.0 s | |
-| Orca wave reach (from the ice edge inward) | 3 m | |
+| Leopard seal lunge cooldown | 2 s | Was 3 s |
+| Orca wave warning (fins lining up) | 2.0 s | Built in the movement toy (see Orca pod below) |
+| Orca wave reach (from the ice edge inward) | 3 m | Built in the movement toy |
+| Orca ram tilt (4 m floe / the berg) | 25° / about 1.2° | Built in the movement toy (see Orca pod below) |
 
 ### Leopard seal (in the movement toy)
 
@@ -261,38 +262,126 @@ The live values are in `tuning/predators/leopard_seal.tres` (the class is `tunin
 
 | Value | Start | Notes |
 |---|---|---|
-| Patrol speed | 2.5 m/s | |
-| Chase speed | 5.5 m/s | Faster than a cruising penguin (4.0 thin, 4.6 stuffed), slower than a boost (9–11) |
+| Patrol speed | 3.5 m/s | |
+| Chase speed | 6.5 m/s | Well above a cruising penguin (4.0 thin, 4.6 stuffed), below a boost (9–11) |
 | Sated speed | 1.5 m/s | |
 | Speed after a lunge | 2.0 m/s | Until the lunge cooldown ends |
-| Acceleration | 4 m/s² | |
-| Turn rate | 75 °/s | A thin penguin (120 °/s) out-turns it; a stuffed one (66 °/s) can't |
+| Acceleration | 8 m/s² | Up to chase speed in under half a second |
+| Turn rate | 85 °/s | A thin penguin (120 °/s) out-turns it; a stuffed one (66 °/s) can't |
 | Patrol loop | 4 m off the ice edge, 1.5–3.5 m deep | 40% of legs swing past a school within 30 m |
-| Sees penguins in the water | 18 m | Underwater fog hides things past ~20 m |
+| Sees penguins in the water | 20 m | Underwater fog hides things past ~20–25 m |
 | Sees penguins out of the water | 6 m | The edge ambush. Never through ice; never up on the plateau |
 | Gives up a chase | Beyond 25 m, or after 12 s | Then ignores that penguin for 4 s |
-| Lunge warning | 0.6 s | Ring flashes; the strike line shows where the lunge will go. It stops closing in at 3 m |
-| Lunge | 11 m/s for 0.45 s (~5 m) | Straight along the strike line |
-| Catch reach | 1.2 m from the jaws | The jaws are 1 m ahead of the body; the lunge can rear 0.6 m out of the water |
+| Lunge warning | 0.6 s | Ring flashes; the strike line shows where the lunge will go. Starts 5 m out; during it the seal stops closing in and matches its target's speed |
+| Lunge | 12 m/s for 0.5 s (~6 m) | Straight along the strike line, then 2 s before the next |
+| Catch reach | 1.3 m from the jaws | The jaws are 1 m ahead of the body; the lunge can rear 0.6 m out of the water |
 | Hunger | +1 /s, starts at 10–40 | Out of 100 |
 | Starving at | 70 | Goes to the nearest school (within 80 m) and eats fish |
 | Fed at | 40 | Each fish takes 8 off. About 4 fish |
 | Sated after eating a penguin | 8 s | Hunger drops to 0 |
 
-**Check, can you get away?** A penguin cruising in a straight line gets caught: the smoke test sees a seal run down a penguin from 8 m behind. Boosting outruns it for a moment, and a thin penguin can out-turn it.
+**Check, does it give a good chase?** Headless trials: a seal starts 10 m behind a swimming penguin and gets 12 s, 5 runs each at energy 10, 50 and 100 (15 per row). The penguin reacts to each lunge warning the same way every time.
 
-**Check, is the warning fair?** Headless trials with a seal chasing a penguin from behind, 4 runs each at energy 10, 50 and 100:
+| What the penguin does at each warning | Old seal (5.5 m/s, lunge every 3 s) | Now |
+|---|---|---|
+| Nothing | caught 10/15 in 8–10 s; stuffed ones got away | caught 15/15 in ~5 s |
+| Turns, 0.2 s into the warning | caught 0/15 | caught 13/15, in ~9 s |
+| Turns, 0.4 s in | caught 8/15 | caught 14/15 |
+| Boosts | caught 0/15 | caught 0/15, but about 4 boosts (~32 energy) |
+
+So a seal now runs you down fast, and dodging lunges only buys time: to get away for good you need the ice, boosts (which cost fish) or a tight turning fight a thin penguin can win. ✓
+
+**Check, is each lunge still fair?** The same trials, stopping after the first lunge (6 runs per size, 18 per row):
 
 | Reaction (into the 0.6 s warning) | Do nothing | Turn | Boost |
 |---|---|---|---|
-| 0.2 s | caught 12/12 | escaped 12/12 | escaped 12/12 |
-| 0.45 s | caught 12/12 | caught 12/12 | escaped 12/12 |
+| 0.2 s | caught 18/18 | escaped 18/18 | escaped 17/18 |
+| 0.4 s | – | caught 9/18 | escaped 18/18 |
 
-So spotting the warning early lets you turn away for free; spotting it late costs a boost (8 energy and a bubble trail). ✓ The smoke test checks that a 0.2 s turn dodges.
+Spot the warning early and a turn gets you off the line for free; spot it late and it's a coin flip unless you boost. ✓ The smoke test checks that a 0.2 s turn dodges. This only holds because the seal stops closing in during the warning; when it kept closing (the first version), a faster seal made turns useless.
 
-**Check, the ice edge:** the lunge reaches about 1 m onto the ice. A penguin standing at the edge gets grabbed; 4 m in, the seal can't even start a lunge (smoke test). ✓
+**Check, the ice edge:** the lunge reaches about 1 m onto the ice. A penguin standing at the edge gets grabbed; 4 m in, the seal may lunge at you but can't reach (smoke test). ✓
 
 **Check, how often a seal goes off to feed:** with no catches, a seal starts starving 30–60 s into the toy and then about every 30 s, and one school (about 4 fish) feeds it. In a 2-minute headless run, each of the two seals went feeding three times, and they ate 25 fish between them, out of ~130. ✓
+
+### Orca (in the movement toy)
+
+Each orca is a predator like the seal, with its own values in `tuning/predators/orca.tres` (same class, `tuning/predator_tuning.gd`). Anything not listed is the same as the seal.
+
+| Value | Start | Notes |
+|---|---|---|
+| Patrol speed | 4.0 m/s | |
+| Chase speed | 7.5 m/s | Faster than a seal, but it rarely chases |
+| Acceleration | 5 m/s² | Big and heavy |
+| Turn rate | 55 °/s | Any penguin out-turns it |
+| Patrol loop | 12 m off the ice edge, 3–6 m deep | 25% of legs swing past a school within 40 m |
+| Sees penguins in the water | 8 m | Orcas don't chase in open water (GDD §5.3) |
+| Sees penguins out of the water | – | Never: on the ice, the wave is its attack |
+| Gives up a chase | Beyond 14 m, or after 6 s | |
+| Lunge | from 6 m, 13 m/s for 0.5 s | Same 0.6 s warning and strike line as the seal; every 2.5 s |
+| Catch reach | 1.8 m from the jaws, 2.4 m ahead of the body | A big mouth |
+| Hunger | +0.5 /s; each fish takes 4 off | Starving and fed at 70 and 40, like the seal |
+| Sated after eating a penguin | 12 s | |
+
+### Orca pod (in the movement toy)
+
+The pod's values are in `tuning/predators/orca_pod.tres` (`tuning/pod_tuning.gd`), and each attack it knows has its own file: `orca_wave.tres` (`tuning/wave_attack_tuning.gd`) and `orca_ram.tres` (`tuning/ram_attack_tuning.gd`). Both attack classes extend `tuning/pod_attack_tuning.gd`, which holds the steps every attack shares. The movement toy has one pod of 3.
+
+| Value | Start | Notes |
+|---|---|---|
+| Formation spacing | 4 m | A V behind the leader. Followers lagging behind swim up to 0.8 m/s faster per metre they're off |
+| Attacks | The wave and the ram | When both have a target, one is picked at random by weight: ram 1.5, wave 1 |
+| First attack | No sooner than 10 s in | |
+
+Every attack runs the same steps: pick a target, line up, warn, charge, strike, then hunt the water. These are the shared values, the same for both attacks unless the attack's table says otherwise:
+
+| Value | Start | Notes |
+|---|---|---|
+| Targets | Penguins on the ice within 40 m of the leader | The most tempting one (GDD §5.1); each attack adds where they must stand |
+| Line-up | Gives up waiting for stragglers after 8 s | |
+| Warning, once lined up | 2.0 s | The danger zone shows from 40% of the way through |
+| Charge speed | 8 m/s | |
+| Hunt after the strike | 6 s | The orcas hold near the ice and go after anyone in the water within 8 m |
+| Between attacks | 20 s (10 s if one was called off) | |
+| Needs | At least 2 free orcas | A starving or hunting orca drops out; with too few left, the attack is called off |
+
+#### The wave (`orca_wave.tres`)
+
+| Value | Start | Notes |
+|---|---|---|
+| Targets | Standing within 3 m of the edge that faces the pod | |
+| Line-up | Side by side, 14 m out from the edge, at 0.5 m depth (fins showing) | |
+| Warning | 2.0 s | The swell rises from the start |
+| Charge | 8 m/s, the wave breaks 3.5 m from the edge | About 2 s |
+| Wave zone | 12 m along the edge × 3 m in | Penguins up to 0.4 m outside it are caught too (about a body width) |
+| Wave shove | 8 m/s toward the water | On your feet you take half (grip), on your belly all of it |
+
+**Check, can you get out of the way?** In the smoke test the wave hits 4–5 s after the pod lines up (2 s of fins and swell, then the charge), on top of however long the line-up takes. Walking (1.8 m/s) gets you out of a 3 m zone in under 2 s, and the zone is on screen for at least 3 s. ✓
+
+**Check, what the wave does:** on your feet, half the 8 m/s shove is 4 m/s, and skid friction (2.5 m/s²) carries you about 3.2 m: anyone in the zone ends up teetering at the edge, and can still scramble back for 4 energy. On your belly you take the full 8 m/s, and tumble friction (2 m/s²) carries you about 16 m, straight into the sea. The smoke test sees a penguin standing 1.5 m from the edge go in, and one 6 m in left alone. ✓
+
+#### The ram (`orca_ram.tres`)
+
+Only ice marked as tippable (`TippableIce`, `levels/tippable_ice.gd`) can be rammed. The movement toy marks the berg (with its plateau and ramp) and the three floes.
+
+| Value | Start | Notes |
+|---|---|---|
+| Targets | Standing on tippable ice within 8 m of the edge that faces the pod | Anywhere on a small floe |
+| Line-up | Side by side, 6 m out from the edge, 4 m down (dark shadows under the ice) | |
+| Warning | 1.5 s | The water bulges by the edge from the start |
+| Charge | 9 m/s up to 2 m from the edge, rising to 0.8 m deep, then the ram | About 1.2 s |
+| Danger zone | The whole floe, if it's no wider than 8 m; on bigger ice an 8 m deep × 16 m strip by the rammed edge | |
+| Tilt | 200 ÷ radius^1.5 degrees, at most 30° | A 4 m floe tips 25° (its rim goes under); the 30 m berg rocks about 1.2° (its rim drops about 0.6 m) |
+| Tip timing | Over in 0.35 s, held 2 s, righted over 1.2 s | |
+| Jolt | 5 m/s toward the pod, for everyone in the danger zone | On your feet you take half (grip) |
+
+**Check, can you get out of the way?** In the smoke test the ram hits 2.8 s after the pod has gathered, and the danger zone is up for about 2 s. On a floe that isn't enough to walk off from the middle (2+ s to the edge), and the water is where the orcas are, so the answer is to dig in. Leaving early works too: gathering takes a few seconds, and the HUD's F1 line shows it. ✓
+
+**Check, what the ram does to a floe:** 25° is far steeper than you can stand on (14°), so you slip onto your belly and slide off the low side. The smoke test sees a penguin standing in the middle of the 4 m floe end up in the water about a second after the ram. Pulling back holds (the brake grips on slopes up to 25°), and the smoke test sees a penguin digging in stay on until the floe rights itself. ✓
+
+**Check, what the ram does to the berg:** 1.2° is gentle, so only the jolt matters: on your feet you skid about 1.3 m (2.5 m/s at 2.5 m/s²), so only someone right at the edge goes in; on your belly you slide about 6 m. The smoke test sees a penguin 5 m in stay on the ice, and the berg, plateau and all, settle back exactly where they were. ✓
+
+**Check, a pod stays a pod:** on patrol the followers keep about 6–7 m from the leader. ✓
 
 ## Multiplayer round
 

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="PodTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/pod_tuning.gd" id="1_pod"]
+[ext_resource type="Script" path="res://tuning/pod_attack_tuning.gd" id="2_attack"]
+[ext_resource type="Resource" path="res://tuning/predators/orca_wave.tres" id="3_wave"]
+[ext_resource type="Resource" path="res://tuning/predators/orca_ram.tres" id="4_ram"]
+
+[resource]
+script = ExtResource("1_pod")
+display_name = "Orca pod"
+attacks = Array[ExtResource("2_attack")]([ExtResource("3_wave"), ExtResource("4_ram")])

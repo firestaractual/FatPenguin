@@ -38,23 +38,28 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 - Try the three floes (easy, medium and hard): each sits higher above the water.
 - **The plateau** in the middle of the iceberg: walk into the small east steps to hop up (anyone can), or the big north steps (thin penguins only; press Q to slim down). Slide back down the gentle south chute or the steep west one. The south chute will shoot you into the sea unless you dig in (pull back) at the bottom.
 - **Leopard seals:** two patrol the water around the berg. An orange ring around you means one has locked on. When the ring flashes and a line appears, that line is where it's about to lunge: turn off it or boost. If you're caught you're eaten, and you start again on the ice. Seals go for the fattest penguin they can see, and noisy bumps draw them. Don't stand right at the ice edge: a lunge reaches about a metre onto the ice. A starving seal goes off to eat from a school, which is your chance to slip past (F1 shows the nearest seal's state and hunger).
+- **Orcas:** a pod of three swims farther out. They won't chase you in open water unless you swim right up to them, but stand near an ice edge they're passing and they'll line up with their fins showing, raise a swell and charge. The ice you're on turns orange: walk out of it before the wave breaks. On your feet the wave skids you to the edge, where you can still scramble back; on your belly it washes you straight in, where the orcas are waiting. Stand on a floe (or near the berg's edge) and they may ram it instead: dark shadows gather under the ice, the water bulges and the floe turns orange, then it tips and you slide off into the water. Pull back to dig in and hold on until it rights itself. Rammed, the big berg only rocks, but the jolt can still shove you in if you're right at the edge. F1 shows which attack is coming and how long until it hits.
 - **Fish schools:** fish come in three species, and each schools only with its own kind: silver Antarctic silverfish in big tight schools, small dark lanternfish deeper down, and big pale icefish in loose little groups. Swim through a school to grab several in one pass. An eaten fish comes back beside its school.
 - **Bumping:** belly-slide into the blue dummy penguins. A thin one standing skids about a metre; one lying on its belly flies. Get stuffed (E) and you hit like a bowling ball; slide into the fat dummy while thin and you bounce off, but knock a fish loose. The dummy near the south-west edge teeters before it falls in. Get knocked to an edge yourself and pull the stick back to scramble to safety (costs a little energy).
 
 ## Tuning
 
-Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, each fish species is in **`tuning/fish/`**, and the leopard seal is in **`tuning/predators/leopard_seal.tres`**. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
+Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, each fish species is in **`tuning/fish/`**, and the predators are in **`tuning/predators/`** (`leopard_seal.tres`, `orca.tres`, `orca_pod.tres`, and the pod's attacks `orca_wave.tres` and `orca_ram.tres`). What spawns in the movement toy is in `levels/movement_toy/predators/`. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
 
 ## Project layout
 
 ```
 actors/penguin/     Penguin controller (penguin.gd) + placeholder model scene
 actors/fish/        Fish pickup (schools with its own species)
-actors/predators/   Leopard seal (predator.gd) + placeholder model
+actors/predators/   Predators: predator.gd (every kind), leopard seal and orca scenes, pods (predator_pod.gd,
+                    orca_pod.gd), pod attacks (pod_attack.gd, wave_attack.gd, ram_attack.gd + the IceWave
+                    effect), and spawning (PredatorSpawn + PredatorSpawner)
 camera/             Follow camera (also switches on the underwater fog)
+levels/             tippable_ice.gd (ice that orcas can tip)
 levels/movement_toy Prototype 0 test level (iceberg + plateau, ramp, floes, fish, dummy penguins)
 tuning/             PenguinTuning resource class + default values; FishSpecies class + species in tuning/fish/;
-                    PredatorTuning class + the leopard seal in tuning/predators/
+                    PredatorTuning / PodTuning / PodAttackTuning classes + the seal, orca, orca pod
+                    and its attacks in tuning/predators/
 ui/                 Debug HUD (air bar, numbers) and touch controls
 art/materials/      Placeholder materials
 tests/              Headless smoke test

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="RamAttackTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/ram_attack_tuning.gd" id="1_ram"]
+
+[resource]
+script = ExtResource("1_ram")
+display_name = "Ram"
+weight = 1.5
+warning_seconds = 1.5
+charge_speed = 9.0
