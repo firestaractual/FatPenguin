@@ -1,0 +1,122 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/title/title_screen.gd" id="1_ecy2s"]
+[ext_resource type="Material" path="res://art/materials/water.tres" id="2_n838c"]
+[ext_resource type="Script" path="res://levels/bergs/tabular_berg.gd" id="3_liy0u"]
+[ext_resource type="Script" path="res://levels/bergs/pinnacle_berg.gd" id="4_65t2c"]
+[ext_resource type="PackedScene" path="res://ui/menus/settings_panel.tscn" id="5_p2dn7"]
+[ext_resource type="Script" path="res://ui/menus/settings_panel.gd" id="6_vdtkt"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sah4c"]
+sky_top_color = Color(0.38, 0.6, 0.85, 1)
+sky_horizon_color = Color(0.82, 0.9, 0.96, 1)
+ground_bottom_color = Color(0.1, 0.3, 0.45, 1)
+ground_horizon_color = Color(0.55, 0.72, 0.8, 1)
+
+[sub_resource type="Sky" id="Sky_3jlwc"]
+sky_material = SubResource("ProceduralSkyMaterial_sah4c")
+
+[sub_resource type="Environment" id="Environment_nyhe3"]
+background_mode = 2
+sky = SubResource("Sky_3jlwc")
+ambient_light_source = 3
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.75, 0.85, 0.92, 1)
+fog_density = 0.006
+fog_sky_affect = 0.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_x6hs5"]
+material = ExtResource("2_n838c")
+size = Vector2(600, 600)
+
+[node name="TitleScreen" type="Node3D" unique_id=475673380]
+script = ExtResource("1_ecy2s")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1671452074]
+environment = SubResource("Environment_nyhe3")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=42759990]
+transform = Transform3D(0.8660254, -0.38302222, 0.32139382, 0, 0.64278764, 0.76604444, -0.5, -0.66341394, 0.5566704, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Water" type="MeshInstance3D" parent="." unique_id=240052089]
+mesh = SubResource("PlaneMesh_x6hs5")
+
+[node name="BackBergs" type="Node3D" parent="." unique_id=1876351061]
+
+[node name="Mesa" type="StaticBody3D" parent="BackBergs" unique_id=1265607153]
+transform = Transform3D(0.90630776, 0, 0.42261827, 0, 1, 0, -0.42261827, 0, 0.90630776, -46, 0, -95)
+script = ExtResource("3_liy0u")
+
+[node name="Spire" type="StaticBody3D" parent="BackBergs" unique_id=58921136]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 0, -110)
+script = ExtResource("4_65t2c")
+
+[node name="Camera" type="Camera3D" parent="." unique_id=558055996]
+transform = Transform3D(1, 0, 0, 0, 0.9609726, 0.27664363, 0, -0.27664363, 0.9609726, 0, 1.45, 3.3)
+current = true
+fov = 50.0
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1335735946]
+
+[node name="Root" type="Control" parent="UI" unique_id=324495936]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Wordmark" type="Label" parent="UI/Root" unique_id=1060935777]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+offset_top = 30.0
+offset_bottom = 190.0
+theme_type_variation = &"Wordmark"
+text = "FAT PENGUIN"
+horizontal_alignment = 1
+
+[node name="Prompt" type="Label" parent="UI/Root" unique_id=1591885889]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -120.0
+offset_bottom = -70.0
+theme_type_variation = &"HudLabel"
+theme_override_font_sizes/font_size = 36
+text = "Tap to feed him"
+horizontal_alignment = 1
+
+[node name="SettingsButton" type="Button" parent="UI/Root" unique_id=359904654]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -230.0
+offset_top = -100.0
+offset_right = -28.0
+offset_bottom = -28.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Settings"
+
+[node name="SettingsPanel" type="Control" parent="UI/Root" unique_id=2087359595 instance=ExtResource("5_p2dn7")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("6_vdtkt")
+
+[node name="Flash" type="ColorRect" parent="UI/Root" unique_id=736967137]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(1, 1, 1, 0)

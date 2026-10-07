@@ -60,7 +60,6 @@ extends Resource
 @export var swim_pitch_return_deg := 25.0
 ## While cruising along the surface the nose can tilt up this far (aiming a launch).
 @export var surface_max_pitch_deg := 50.0
-@export var invert_pitch := false
 
 @export_group("Boost & launch")
 @export var boost_peak_speed := 9.0

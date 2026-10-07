@@ -46,7 +46,7 @@ func _exit_tree() -> void:
 
 ## The tippable piece of ice right under `point`, or null.
 static func under(world: World3D, point: Vector3) -> TippableIce:
-	var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.5, point + Vector3.DOWN * 3.0, Penguin.WORLD_LAYER)
+	var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.5, point + Vector3.DOWN * 3.0, GameWorld.WORLD_LAYER)
 	var hit := world.direct_space_state.intersect_ray(query)
 	if hit.is_empty():
 		return null

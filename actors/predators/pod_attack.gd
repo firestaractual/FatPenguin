@@ -173,7 +173,7 @@ func show_zone_ring(centre: Vector3, radius: float) -> void:
 		torus.outer_radius = 1.0
 		torus.rings = 48
 		_ring = make_marker(&"DangerRing", torus)
-	_ring.global_transform = Transform3D(Basis.from_scale(Vector3(radius, 0.3, radius)), Vector3(centre.x, Penguin.WATER_LEVEL + 0.02, centre.z))
+	_ring.global_transform = Transform3D(Basis.from_scale(Vector3(radius, 0.3, radius)), Vector3(centre.x, GameWorld.WATER_LEVEL + 0.02, centre.z))
 	_ring.visible = true
 
 

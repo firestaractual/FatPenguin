@@ -90,11 +90,11 @@ func _ready() -> void:
 	home = global_position
 	_phase = randf() * TAU
 	collision_layer = 0
-	collision_mask = Penguin.PENGUIN_LAYER
+	collision_mask = GameWorld.PENGUIN_LAYER
 	body_entered.connect(_on_body_entered)
 	if pickup_delay > 0.0:
 		monitoring = false
-		get_tree().create_timer(pickup_delay).timeout.connect(func() -> void: monitoring = true)
+		get_tree().create_timer(pickup_delay, false).timeout.connect(func() -> void: monitoring = true)
 	if species != null:
 		_pos = global_position
 		_speed = species.swim_speed * (1.0 + randf_range(-species.speed_variation, species.speed_variation))
@@ -204,7 +204,7 @@ func _swim_in_school(delta: float) -> void:
 	velocity = velocity.limit_length(_speed * 1.5)
 
 	pos += velocity * delta
-	pos.y = minf(pos.y, Penguin.WATER_LEVEL - MIN_DEPTH)
+	pos.y = minf(pos.y, GameWorld.WATER_LEVEL - MIN_DEPTH)
 	_pos = pos
 	# One transform write per frame: every write also moves the pickup area in physics.
 	var facing := global_basis
@@ -267,7 +267,18 @@ func get_eaten() -> void:
 		queue_free()
 		return
 	_set_active(false)
-	get_tree().create_timer(respawn_seconds).timeout.connect(_set_active.bind(true))
+	# (false: the timer waits while the game is paused.)
+	get_tree().create_timer(respawn_seconds, false).timeout.connect(_set_active.bind(true))
+
+
+## Comes back now, beside its school if it has one (as it does respawn_seconds after being eaten).
+func respawn() -> void:
+	_set_active(true)
+
+
+## How many school mates it's swimming with right now (the nearest few in school range).
+func school_mate_count() -> int:
+	return _neighbours.size()
 
 
 ## The nearest visible fish within max_distance that's swimming in a school (with at least two

@@ -18,6 +18,8 @@
 [ext_resource type="Script" path="res://levels/bergs/dome_berg.gd" id="16_dome"]
 [ext_resource type="Script" path="res://levels/bergs/drydock_berg.gd" id="17_dry"]
 [ext_resource type="Script" path="res://levels/bergs/floe_chain.gd" id="18_chain"]
+[ext_resource type="PackedScene" path="res://ui/hud/game_hud.tscn" id="19_hud"]
+[ext_resource type="PackedScene" path="res://ui/menus/pause_menu.tscn" id="20_pause"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_r75tr"]
 sky_top_color = Color(0.38, 0.6, 0.85, 1)
@@ -290,3 +292,8 @@ target_path = NodePath("../Penguin")
 [node name="DebugHud" parent="." unique_id=855342483 instance=ExtResource("7_w4e3x")]
 
 [node name="TouchControls" parent="." unique_id=1581323103 instance=ExtResource("8_yvbwr")]
+
+[node name="GameHud" parent="." instance=ExtResource("19_hud")]
+penguin_path = NodePath("../Penguin")
+
+[node name="PauseMenu" parent="." instance=ExtResource("20_pause")]

@@ -1,6 +1,15 @@
 class_name Penguin
 extends CharacterBody3D
-## A penguin (Prototype 0: movement toy). The player, or a dummy to bump into.
+## A penguin: the player, a computer penguin (with a PenguinBrain child), or a dummy to bump into.
+## This script is the body and its movement rules. Its parts:
+##   input  - where its stick and button come from (PenguinInput): a player's controls
+##            (PlayerInput, one per player in local coop), a brain (BrainInput, via wish_dir), or
+##            nobody (a dummy). Every penguin moves by the same rules whoever is steering.
+##   vitals - energy and air, and the rules for both (PenguinVitals). energy, air, drain_mult and
+##            infinite_energy on this node are the same numbers.
+##   Model  - how it looks (PenguinLook, the script on the Model node): reads the body, never
+##            moves it.
+## What a catch does is up to the level's GameMode.
 ##
 ## States
 ##   SWIM  - under or along the water surface. Always moving forward; stick steers yaw/pitch.
@@ -18,7 +27,8 @@ extends CharacterBody3D
 ## when hit and teeters at the ice edge; on its belly it's a puck. Bumps never kill, they just move
 ## you toward whatever does. They also make noise, which draws predators (GDD §5.1).
 ##
-## Predators (actors/predators) do the killing: a caught penguin is eaten and respawns on the ice.
+## Predators (actors/predators) do the killing: get_caught(), then the level's GameMode decides
+## (in the movement toy you're eaten and respawn on the ice).
 ##
 ## The body itself never rotates (sphere collider); only the Model node turns and stretches.
 
@@ -33,10 +43,11 @@ signal spilled_fish(at: Vector3)
 signal teetered
 signal scrambled
 signal caught(by: Node3D)
+## Feathers flew (a bump, at the contact point, or a catch). For the look: PenguinLook puffs.
+signal feathers_flew(at: Vector3, strength: float)
 
 enum State { SWIM, AIR, WALK, SLIDE }
 
-const WATER_LEVEL := 0.0
 ## Swimming along the top, the body centre sits this far below the surface: shallow enough
 ## that the back and head stay above the water, the way a resting penguin floats.
 const SURFACE_DEPTH := 0.1
@@ -49,9 +60,6 @@ const WATER_EXIT_DEPTH := 0.4
 ## Grace time before walking off an edge counts as falling.
 const COYOTE_TIME := 0.12
 
-## Physics layers: the world (ice, seafloor) and penguins.
-const WORLD_LAYER := 1
-const PENGUIN_LAYER := 2
 ## A drop deeper than this below your feet counts as an edge you can teeter on.
 const EDGE_DROP := 0.6
 ## Walking up to an edge, it looks this far across for more ice (m). Ice that close is a gap: you
@@ -74,29 +82,60 @@ const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 @export var tuning: PenguinTuning
 ## Off for dummies: they ignore input and just get knocked around.
 @export var player_controlled := true
+## Which player steers it (1 to 4; see PlayerInput). Only used when player_controlled.
+@export_range(1, 4) var player_number := 1
 ## Energy to start (and reset) with. Negative = tuning.starting_energy.
 @export var start_energy := -1.0
 ## No drain and no costs (F2 toggles it for the player).
-@export var infinite_energy := false
+@export var infinite_energy := false:
+	get:
+		return vitals.infinite
+	set(value):
+		vitals.infinite = value
 ## Tints the body so dummies are easy to tell from the player. Alpha 0 = leave it alone.
 @export var body_tint := Color(0, 0, 0, 0)
 
 var state: State = State.AIR
-var energy := 50.0
-var air := 25.0
-## How much attention this penguin has drawn lately, 0 to 1. Bumps make noise; it fades.
-var noise := 0.0
+## Energy and air, and their rules. The properties below are shortcuts to its numbers.
+var vitals := PenguinVitals.new()
+var energy: float:
+	get:
+		return vitals.energy
+	set(value):
+		vitals.energy = value
+## Seconds of breath left.
+var air: float:
+	get:
+		return vitals.air
+	set(value):
+		vitals.air = value
 ## Energy drains this many times as fast as normal (1). A computer penguin sheltered in a huddle
 ## drains slower (GDD §4.6, PenguinBrain).
-var drain_mult := 1.0
+var drain_mult: float:
+	get:
+		return vitals.drain_mult
+	set(value):
+		vitals.drain_mult = value
+## How much attention this penguin has drawn lately, 0 to 1. Bumps make noise; it fades.
+var noise := 0.0
+## Where its stick and button come from. Set when it's ready (a PlayerInput or nobody) unless
+## something set it first; a PenguinBrain sets a BrainInput.
+var input: PenguinInput = null
+## The camera following it: on the ice a player steers relative to it. FollowCamera sets it.
+var camera: Camera3D = null
 
-## Steering from a PenguinBrain (computer penguins), used when brain_controlled is on: where it
-## wants to go (world space; on the ice only the flat part counts), whether it presses action this
-## frame (it's cleared after each frame), and whether it pulls back to brake a slide.
-var brain_controlled := false
+## Steering from a PenguinBrain (computer penguins), read by its BrainInput: where it wants to go
+## (world space; on the ice only the flat part counts), whether it presses action this frame
+## (cleared after each frame), and whether it pulls back to brake a slide.
 var wish_dir := Vector3.ZERO
 var wish_action := false
 var wish_brake := false
+## On: it's steered by wish_dir (a BrainInput). Off again: back to its own controls.
+var brain_controlled: bool:
+	get:
+		return input is BrainInput
+	set(value):
+		input = BrainInput.new() if value else _own_input()
 
 var _yaw := 0.0
 var _pitch := 0.0
@@ -124,18 +163,13 @@ var _hop_speed := 1.6
 var _hop_cooldown := 0.0
 var _immune_time := 0.0
 var _spin_time := 0.0
-var _spin_angle := 0.0
 var _stun_time := 0.0
 var _teeter_time := 0.0
 var _teeter_dir := Vector3.ZERO
 var _recent_bumps := {}
 var _floor_normal := Vector3.UP
 
-@onready var _model: Node3D = $Model
 var _shape: SphereShape3D
-@onready var _bubbles: CPUParticles3D = $Bubbles
-@onready var _splash: CPUParticles3D = $Splash
-@onready var _puff: CPUParticles3D = $Puff
 
 
 func _ready() -> void:
@@ -144,27 +178,23 @@ func _ready() -> void:
 		add_to_group(&"player")
 	if tuning == null:
 		tuning = PenguinTuning.new()
-	collision_layer = PENGUIN_LAYER
-	collision_mask = WORLD_LAYER | PENGUIN_LAYER
+	vitals.tuning = tuning
+	if input == null:
+		input = _own_input()
+	collision_layer = GameWorld.PENGUIN_LAYER
+	collision_mask = GameWorld.WORLD_LAYER | GameWorld.PENGUIN_LAYER
 	# Each penguin gets its own collision shape so fat can resize it.
 	var col: CollisionShape3D = $CollisionShape3D
 	_shape = (col.shape as SphereShape3D).duplicate()
 	col.shape = _shape
 	_base_radius = _shape.radius
-	if body_tint.a > 0.0:
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = body_tint
-		($Model/Body as MeshInstance3D).material_override = mat
 
 	_spawn_position = global_position
 	_spawn_yaw = rotation.y
 	_yaw = rotation.y
 	rotation = Vector3.ZERO # only the model rotates
-	energy = _starting_energy()
-	air = tuning.air_seconds
-	_splash.top_level = true
-	_puff.top_level = true
-	_set_state(State.SWIM if global_position.y < WATER_LEVEL else State.AIR)
+	vitals.refill(_starting_energy())
+	_set_state(State.SWIM if global_position.y < GameWorld.WATER_LEVEL else State.AIR)
 
 
 func _physics_process(delta: float) -> void:
@@ -181,18 +211,16 @@ func _physics_process(delta: float) -> void:
 		State.SLIDE:
 			_slide(delta, _move_input)
 
-	_update_air(delta)
-	_update_energy(delta)
-	_update_body(delta)
-	if player_controlled:
-		_debug_input()
+	var underwater := state == State.SWIM and GameWorld.WATER_LEVEL - global_position.y > BREATH_DEPTH
+	vitals.tick(delta, underwater)
+	_update_collider()
 
 
 # --- Public API -------------------------------------------------------------
 
 ## 0.0 = starving, 1.0 = stuffed.
 func fatness() -> float:
-	return clampf(energy / tuning.max_energy, 0.0, 1.0)
+	return vitals.fatness()
 
 
 ## 1.0 thin, up to tuning.fat_mass_mult when stuffed.
@@ -200,20 +228,18 @@ func mass() -> float:
 	return _fat(tuning.fat_mass_mult)
 
 
-## How high this penguin can hop right now.
-## How wide a gap you can hop across (m): a full belly is a bad jumper.
+## How wide a gap this penguin can hop across right now (m): a full belly is a bad jumper.
 func hop_distance() -> float:
 	return tuning.hop_distance * _fat(tuning.fat_hop_distance_mult)
 
 
+## How high a ledge this penguin can hop up right now (m).
 func hop_height() -> float:
 	return tuning.hop_height * _fat(tuning.fat_hop_height_mult)
 
 
 func eat_fish() -> void:
-	var before := energy
-	energy = minf(energy + tuning.fish_value, tuning.max_energy)
-	ate_fish.emit(energy - before)
+	ate_fish.emit(vitals.gain(tuning.fish_value))
 
 
 func is_boosting() -> bool:
@@ -255,6 +281,35 @@ func get_facing() -> Vector3:
 	return Vector3(-sin(_yaw), 0.0, -cos(_yaw))
 
 
+## The way it faces as an angle about +Y (rad; 0 faces -Z).
+func facing_yaw() -> float:
+	return _yaw
+
+
+## Its swim pitch (rad; up is positive).
+func swim_pitch() -> float:
+	return _pitch
+
+
+## Hopping up a ledge or across a gap (in the air, on its feet).
+func is_hopping() -> bool:
+	return state == State.AIR and _hopping
+
+
+## Teetering at the edge: the flat direction it's about to fall.
+func teeter_direction() -> Vector3:
+	return _teeter_dir
+
+
+## Its collider's radius right now (it grows with fat), and when thin.
+func body_radius() -> float:
+	return _shape.radius if _shape != null else _base_radius
+
+
+func base_radius() -> float:
+	return _base_radius
+
+
 ## Full 3D travel direction (includes pitch while swimming).
 func get_heading() -> Vector3:
 	match state:
@@ -291,13 +346,87 @@ func drift(dv: Vector3) -> void:
 		_knock += dv
 
 
-## A predator got you. In the movement toy you're eaten: a puff of feathers, a splash, and you're
-## back at your spawn point on the ice with starting energy, as if you'd pressed reset.
+## A predator got you: a puff of feathers, a splash, the caught signal, and then whatever the
+## level's GameMode says. With none, the movement toy's rule: you're eaten and come back at your
+## spawn point with starting energy, as if you'd pressed reset.
 func get_caught(by: Node3D) -> void:
-	_emit_puff(global_position, 8.0)
-	_emit_splash(6.0)
+	feathers_flew.emit(global_position, 8.0)
+	_make_splash(6.0)
 	caught.emit(by)
-	reset()
+	var mode := GameMode.current(get_tree()) if is_inside_tree() else null
+	if mode != null:
+		mode.penguin_caught(self, by)
+	else:
+		reset()
+
+
+## Boosts now, if it can (what pressing action does in the water). False if it couldn't: not
+## swimming, out of breath, stunned, short of energy or still cooling down.
+func boost() -> bool:
+	if state != State.SWIM:
+		return false
+	return _try_boost()
+
+
+## Turn rate right now as a share of a thin penguin's (fat turns slower).
+func turn_rate_mult() -> float:
+	return _turn_mult()
+
+
+## Where it respawns (reset(), getting caught in the movement toy).
+func spawn_point() -> Vector3:
+	return _spawn_position
+
+
+# --- Placing and steering by hand -------------------------------------------
+# For levels, cutscenes and tests: these skip the movement rules, so gameplay code (brains
+# included) shouldn't use them. Brains steer through wish_dir.
+
+## Puts it at `pos` in `new_state`, facing `yaw` (0 faces -Z) with swim pitch `pitch` (rad) and
+## swim speed `speed`, with no other motion. Put it in AIR to drop it onto the ice: it lands and
+## stands up by itself.
+func place(pos: Vector3, yaw: float, new_state: State, pitch := 0.0, speed := 0.0) -> void:
+	global_position = pos
+	velocity = Vector3.ZERO
+	_yaw = yaw
+	_pitch = pitch
+	_speed = speed
+	_walk_vel = Vector3.ZERO
+	_knock = Vector3.ZERO
+	_set_state(new_state)
+	reset_physics_interpolation()
+
+
+## Puts it in `new_state` where it is, keeping its motion.
+func force_state(new_state: State) -> void:
+	_set_state(new_state)
+
+
+## Flops it onto its belly, sliding along `dir` at `speed`.
+func start_slide(dir: Vector3, speed: float) -> void:
+	_yaw = atan2(-dir.x, -dir.z)
+	velocity = dir * speed
+	_set_state(State.SLIDE)
+
+
+## Turns it to face `yaw` (0 faces -Z) straight away.
+func set_facing(yaw: float) -> void:
+	_yaw = yaw
+
+
+## Pitches it (swimming; rad, up is positive) straight away.
+func set_pitch(pitch: float) -> void:
+	_pitch = pitch
+
+
+## Its swimming speed along its heading (m/s), boost included.
+func swim_speed() -> float:
+	return _speed
+
+
+## Sets its swimming speed straight away. Hold it at 0 every frame to keep it still.
+func set_swim_speed(speed: float) -> void:
+	_speed = speed
 
 
 func reset() -> void:
@@ -313,28 +442,27 @@ func reset() -> void:
 	_knock = Vector3.ZERO
 	_recent_bumps.clear()
 	noise = 0.0
-	energy = _starting_energy()
-	air = tuning.air_seconds
+	vitals.refill(_starting_energy())
 	_set_state(State.AIR)
 	reset_physics_interpolation()
 
 
 # --- States -----------------------------------------------------------------
 
-func _swim(delta: float, input: Vector2) -> void:
+func _swim(delta: float, stick: Vector2) -> void:
 	var turn := deg_to_rad(tuning.swim_turn_rate_deg) * _turn_mult()
 	if _stun_time > 0.0:
 		turn *= tuning.stun_turn_mult
-	_yaw -= input.x * turn * delta
+	_yaw -= stick.x * turn * delta
 
-	var pitch_input := -input.y if tuning.invert_pitch else input.y
+	var pitch_input := stick.y
 	if air <= 0.0:
 		pitch_input = 1.0 # out of breath: forced up to the surface
 	_pitch += pitch_input * turn * delta
 	if is_zero_approx(pitch_input):
 		_pitch = move_toward(_pitch, 0.0, deg_to_rad(tuning.swim_pitch_return_deg) * delta)
 
-	var depth := WATER_LEVEL - global_position.y
+	var depth := GameWorld.WATER_LEVEL - global_position.y
 	var max_pitch := deg_to_rad(tuning.swim_max_pitch_deg)
 	if depth <= SURFACE_DEPTH + 0.05 and _speed < tuning.porpoise_min_speed:
 		# Cruising along the top: nose can only tilt up so far (aiming a launch).
@@ -370,7 +498,7 @@ func _swim(delta: float, input: Vector2) -> void:
 	_move()
 
 	# Touching a walkable surface near the top? Climb out onto the ice.
-	if WATER_LEVEL - global_position.y < WATER_EXIT_DEPTH:
+	if GameWorld.WATER_LEVEL - global_position.y < WATER_EXIT_DEPTH:
 		for i in get_slide_collision_count():
 			var c := get_slide_collision(i)
 			if c.get_collider() is Penguin:
@@ -381,13 +509,13 @@ func _swim(delta: float, input: Vector2) -> void:
 				return
 
 
-func _air(delta: float, input: Vector2) -> void:
+func _air(delta: float, stick: Vector2) -> void:
 	velocity.y -= tuning.gravity * delta
 	if _hopping:
 		# Keep pressing forward so we land on the ledge (or across the gap) once we're over it.
 		velocity.x = _hop_dir.x * _hop_speed
 		velocity.z = _hop_dir.z * _hop_speed
-	var turn := -input.x * deg_to_rad(tuning.air_turn_rate_deg) * delta
+	var turn := -stick.x * deg_to_rad(tuning.air_turn_rate_deg) * delta
 	if not is_zero_approx(turn) and not _hopping:
 		var h := Vector3(velocity.x, 0.0, velocity.z).rotated(Vector3.UP, turn)
 		velocity.x = h.x
@@ -399,21 +527,21 @@ func _air(delta: float, input: Vector2) -> void:
 	_move()
 
 	# Only re-enter on the way down: a breach starts just below the surface while still rising.
-	if global_position.y < WATER_LEVEL and velocity.y <= 0.0:
+	if global_position.y < GameWorld.WATER_LEVEL and velocity.y <= 0.0:
 		_enter_water()
 	elif is_on_floor():
 		_land()
 
 
-func _walk(delta: float, input: Vector2) -> void:
+func _walk(delta: float, stick: Vector2) -> void:
 	if _teeter_time > 0.0:
-		_teeter(delta, input)
+		_teeter(delta, stick)
 		return
 
 	var skidding := _knock.length() > SKID_CONTROL_LOSS
 	var target_vel := Vector3.ZERO
 	if not skidding:
-		var move := _camera_relative(input)
+		var move := _ground_dir(stick)
 		if move.length() > 0.05:
 			var target_yaw := atan2(-move.x, -move.z)
 			_yaw = rotate_toward(_yaw, target_yaw, deg_to_rad(tuning.walk_turn_rate_deg) * _turn_mult() * delta)
@@ -458,9 +586,9 @@ func _walk(delta: float, input: Vector2) -> void:
 		_try_hop()
 
 
-func _slide(delta: float, input: Vector2) -> void:
+func _slide(delta: float, stick: Vector2) -> void:
 	if not _tumbling:
-		_yaw -= input.x * deg_to_rad(tuning.slide_turn_rate_deg) * _turn_mult() * delta
+		_yaw -= stick.x * deg_to_rad(tuning.slide_turn_rate_deg) * _turn_mult() * delta
 	var on_floor := is_on_floor()
 	if on_floor:
 		_floor_normal = get_floor_normal()
@@ -523,13 +651,10 @@ func _slide(delta: float, input: Vector2) -> void:
 
 
 ## Knocked to the ice edge on its feet: wobble, then fall in unless the player pulls back.
-func _teeter(delta: float, input: Vector2) -> void:
+func _teeter(delta: float, stick: Vector2) -> void:
 	_teeter_time -= delta
-	var back := _camera_relative(input)
-	var can_pay := infinite_energy or energy >= tuning.scramble_energy_cost
-	if back.dot(-_teeter_dir) > 0.5 and can_pay:
-		if not infinite_energy:
-			energy -= tuning.scramble_energy_cost
+	var back := _ground_dir(stick)
+	if back.dot(-_teeter_dir) > 0.5 and vitals.spend(tuning.scramble_energy_cost):
 		_teeter_time = 0.0
 		_yaw = atan2(_teeter_dir.x, _teeter_dir.z) # turn away from the edge
 		_knock = Vector3.ZERO
@@ -537,7 +662,7 @@ func _teeter(delta: float, input: Vector2) -> void:
 		scrambled.emit()
 		return
 	velocity = Vector3(0.0, 0.0 if is_on_floor() else velocity.y - tuning.gravity * delta, 0.0)
-	move_and_slide()
+	_move()
 	if _teeter_time <= 0.0:
 		# Over you go.
 		_teeter_time = 0.0
@@ -547,30 +672,27 @@ func _teeter(delta: float, input: Vector2) -> void:
 
 # --- Transitions ------------------------------------------------------------
 
-func _try_boost() -> void:
+func _try_boost() -> bool:
 	if _boost_cooldown > 0.0 or air <= 0.0:
-		return
+		return false
 	if _stun_time > 0.0:
 		boost_denied.emit()
-		return
-	if not infinite_energy and energy < tuning.boost_energy_cost:
+		return false
+	if not vitals.spend(tuning.boost_energy_cost):
 		boost_denied.emit()
-		return
-	if not infinite_energy:
-		energy -= tuning.boost_energy_cost
+		return false
 	_speed = maxf(_speed, tuning.boost_peak_speed * _fat(tuning.fat_boost_speed_mult))
 	_boost_time = tuning.boost_duration
 	_boost_cooldown = tuning.boost_duration + tuning.boost_cooldown
 	boosted.emit()
+	return true
 
 
 ## Dive onto your belly. Costs a little energy; returns false if you can't afford it.
 func _try_flop(h: Vector3) -> bool:
-	if not infinite_energy and energy < tuning.slide_energy_cost:
+	if not vitals.spend(tuning.slide_energy_cost):
 		boost_denied.emit()
 		return false
-	if not infinite_energy:
-		energy -= tuning.slide_energy_cost
 	var speed := maxf(tuning.slide_start_speed, h.length())
 	velocity = get_facing() * speed
 	_set_state(State.SLIDE)
@@ -646,7 +768,7 @@ func _gap_ahead() -> GapAhead:
 	while d <= GAP_SENSE:
 		var probe := global_position + dir * d
 		var hit := _ray(Vector3(probe.x, feet + LEDGE_PROBE_HEIGHT, probe.z), Vector3(probe.x, feet - 1.0, probe.z))
-		if not hit.is_empty() and (hit.position as Vector3).y > WATER_LEVEL + 0.05:
+		if not hit.is_empty() and (hit.position as Vector3).y > GameWorld.WATER_LEVEL + 0.05:
 			var gap := d - edge
 			var rise: float = (hit.position as Vector3).y - feet
 			if gap > reach or rise > top - 0.05:
@@ -664,7 +786,7 @@ func _gap_ahead() -> GapAhead:
 		while d <= GAP_SENSE:
 			var probe := global_position + aside * d
 			var hit := _ray(Vector3(probe.x, feet + LEDGE_PROBE_HEIGHT, probe.z), Vector3(probe.x, feet - 1.0, probe.z))
-			if not hit.is_empty() and hit.get("collider") != standing_on and (hit.position as Vector3).y > WATER_LEVEL + 0.05:
+			if not hit.is_empty() and hit.get("collider") != standing_on and (hit.position as Vector3).y > GameWorld.WATER_LEVEL + 0.05:
 				return GapAhead.TOO_FAR
 			d += 0.2
 	return GapAhead.NONE
@@ -696,9 +818,9 @@ func _breach() -> void:
 	velocity = _heading_dir() * _speed
 	velocity.y *= sqrt(_fat(tuning.fat_launch_height_mult)) * tuning.breach_vertical_mult
 	_boost_time = 0.0
-	_emit_splash(_speed)
+	_make_splash(_speed)
 	_set_state(State.AIR)
-	move_and_slide()
+	_move()
 
 
 func _enter_water() -> void:
@@ -709,7 +831,7 @@ func _enter_water() -> void:
 		_yaw = atan2(-v.x, -v.z)
 	var max_pitch := deg_to_rad(tuning.swim_max_pitch_deg)
 	_pitch = clampf(atan2(v.y, horizontal), -max_pitch, max_pitch)
-	_emit_splash(v.length())
+	_make_splash(v.length())
 	_set_state(State.SWIM)
 
 
@@ -747,7 +869,7 @@ func _set_state(new_state: State) -> void:
 
 ## Shared by WALK and SLIDE. Returns true if the state changed.
 func _check_ground_transitions(delta: float) -> bool:
-	if WATER_LEVEL - global_position.y > WATER_ENTRY_DEPTH:
+	if GameWorld.WATER_LEVEL - global_position.y > WATER_ENTRY_DEPTH:
 		_enter_water()
 		return true
 	if is_on_floor():
@@ -820,7 +942,7 @@ func _bump(other: Penguin, my_velocity: Vector3) -> void:
 
 	_recent_bumps[other] = PAIR_COOLDOWN
 	other._recent_bumps[self] = PAIR_COOLDOWN
-	_emit_puff(global_position + n * _shape.radius, closing)
+	feathers_flew.emit(global_position + n * _shape.radius, closing)
 	_after_bump(other, n, closing, hard, dv_me)
 	other._after_bump(self, -n, closing, hard, dv_them)
 
@@ -855,7 +977,7 @@ func _after_bump(other: Penguin, toward: Vector3, closing: float, hard: bool, dv
 		if absf(get_facing().dot(toward)) < 0.6:
 			_spin_time = tuning.spin_out_seconds
 		# Overfed: a fish comes back up.
-		if energy > tuning.overfill_threshold:
+		if vitals.is_overfed():
 			_spill_fish(toward)
 	if dv.length() > 0.5 or not was_immune:
 		_immune_time = tuning.knock_immunity_seconds
@@ -865,13 +987,13 @@ func _after_bump(other: Penguin, toward: Vector3, closing: float, hard: bool, dv
 ## A fish pops out to one side of the hit. Anyone can grab it, except the penguin that lost it
 ## (for a moment), so it can't just skid back over it.
 func _spill_fish(toward_hit: Vector3) -> void:
-	energy = maxf(energy - tuning.fish_value, 0.0)
-	var fish := FISH_SCENE.instantiate()
-	fish.set(&"circle_radius", 0.0)
-	fish.set(&"one_shot", true)
-	fish.set(&"pickup_delay", 0.3)
-	fish.set(&"ignore_body", self)
-	fish.set(&"ignore_seconds", 2.0)
+	vitals.lose(tuning.fish_value)
+	var fish := FISH_SCENE.instantiate() as Fish
+	fish.circle_radius = 0.0
+	fish.one_shot = true
+	fish.pickup_delay = 0.3
+	fish.ignore_body = self
+	fish.ignore_seconds = 2.0
 	var side := toward_hit.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
 	var spot := global_position + side * (_shape.radius + 1.0)
 	spot.y = global_position.y - _shape.radius + 0.25
@@ -900,20 +1022,17 @@ func _edge_ahead(dir: Vector3) -> bool:
 
 
 func _ray(from: Vector3, to: Vector3) -> Dictionary:
-	var query := PhysicsRayQueryParameters3D.create(from, to, WORLD_LAYER, [get_rid()])
+	var query := PhysicsRayQueryParameters3D.create(from, to, GameWorld.WORLD_LAYER, [get_rid()])
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
 
 # --- Per-frame upkeep -------------------------------------------------------
 
 func _read_input() -> void:
-	if brain_controlled:
-		_move_input = _brain_input()
-		_action_pressed = wish_action
-		wish_action = false
-	elif player_controlled:
-		_move_input = Input.get_vector(&"move_left", &"move_right", &"move_down", &"move_up")
-		_action_pressed = Input.is_action_just_pressed(&"action")
+	if input != null:
+		input.read(self)
+		_move_input = input.move
+		_action_pressed = input.action
 	else:
 		_move_input = Vector2.ZERO
 		_action_pressed = false
@@ -940,109 +1059,23 @@ func _tick_timers(delta: float) -> void:
 			_recent_bumps.erase(other)
 
 
-func _update_air(delta: float) -> void:
-	var underwater := state == State.SWIM and WATER_LEVEL - global_position.y > BREATH_DEPTH
-	if underwater:
-		air = maxf(air - delta, 0.0)
-	else:
-		air = minf(air + tuning.air_seconds / tuning.air_refill_seconds * delta, tuning.air_seconds)
-
-
-func _update_energy(delta: float) -> void:
-	if infinite_energy or not tuning.energy_drain_enabled:
-		return
-	if energy < tuning.energy_floor:
-		# Spent below the floor: get your breath back, up to the floor.
-		energy = minf(energy + tuning.floor_recovery * delta, tuning.energy_floor)
-		return
-	var rate := tuning.base_drain * drain_mult
-	if energy > tuning.overfill_threshold:
-		rate *= tuning.overfill_drain_mult
-	# The cold never takes you below the floor (a stand-in until there's a real exhausted state).
-	energy = maxf(energy - rate * delta, tuning.energy_floor)
-
-
-func _update_body(delta: float) -> void:
-	# Fat changes the collision size...
+## Fat changes the collision size (the look widens the model to match).
+func _update_collider() -> void:
 	var radius := _base_radius * _fat(tuning.fat_collision_radius_mult)
 	if not is_equal_approx(_shape.radius, radius):
 		_shape.radius = radius
 
-	# ...and the model's orientation and girth.
-	var target: Basis
-	match state:
-		State.WALK:
-			target = Basis(Vector3.UP, _yaw)
-			if _teeter_time > 0.0:
-				# Windmilling at the edge, leaning out over the water.
-				var lean := 0.35 + 0.25 * sin(Time.get_ticks_msec() * 0.02)
-				target = Basis(Vector3.UP.cross(_teeter_dir).normalized(), lean) * target
-		State.SLIDE:
-			var up := get_floor_normal() if is_on_floor() else Vector3.UP
-			var along := get_facing() - up * get_facing().dot(up)
-			target = _belly_down_basis(along if along.length() > 0.01 else get_facing(), up)
-		State.AIR:
-			target = Basis(Vector3.UP, _yaw) if _hopping else _belly_down_basis(get_heading())
-		_:
-			target = _belly_down_basis(get_heading())
-	if _spin_time > 0.0:
-		_spin_angle += 18.0 * delta
-		target = Basis(Vector3.UP, _spin_angle) * target
-	else:
-		_spin_angle = 0.0
-	if _stun_time > 0.0:
-		# Dazed: a slow, woozy roll from side to side.
-		var roll := 0.5 * sin(Time.get_ticks_msec() * 0.012)
-		target = target * Basis(Vector3.UP, roll)
-	var current := _model.basis.get_rotation_quaternion()
-	var rot := current.slerp(target.get_rotation_quaternion(), clampf(12.0 * delta, 0.0, 1.0))
-	var width := _fat(tuning.fat_body_width_mult)
-	_model.basis = Basis(rot) * Basis.from_scale(Vector3(width, 1.0, width))
-	# Keep feet on the ice when the collider grows.
-	var drop := -(radius - _base_radius) if state == State.WALK else 0.0
-	_model.position.y = lerpf(_model.position.y, drop, clampf(10.0 * delta, 0.0, 1.0))
-
-	_bubbles.emitting = state == State.SWIM and (_boost_time > 0.0 or _speed > tuning.porpoise_min_speed)
-
-
-func _debug_input() -> void:
-	if Input.is_action_just_pressed(&"debug_energy_up"):
-		energy = minf(energy + 10.0, tuning.max_energy)
-	if Input.is_action_just_pressed(&"debug_energy_down"):
-		energy = maxf(energy - 10.0, 0.0)
-	if Input.is_action_just_pressed(&"debug_toggle_drain"):
-		infinite_energy = not infinite_energy
-	if Input.is_action_just_pressed(&"reset"):
-		reset()
-
 
 # --- Helpers ----------------------------------------------------------------
 
-## The stick a brain would push to steer toward wish_dir: on the ice it only needs the length
-## (_camera_relative() turns it into wish_dir); swimming and sliding, it turns and pitches the
-## penguin the way a player would.
-func _brain_input() -> Vector2:
-	var want := wish_dir
-	var strength := minf(want.length(), 1.0)
-	if strength < 0.05:
-		return Vector2(0.0, -1.0) if wish_brake and state == State.SLIDE else Vector2.ZERO
-	match state:
-		State.SWIM, State.SLIDE, State.AIR:
-			var flat := Vector2(want.x, want.z)
-			var turn := 0.0
-			if flat.length() > 0.01:
-				var target_yaw := atan2(-want.x, -want.z)
-				turn = clampf(-wrapf(target_yaw - _yaw, -PI, PI) * 3.0, -1.0, 1.0)
-			var pitch := 0.0
-			if state == State.SWIM:
-				var target_pitch := asin(clampf(want.normalized().y, -1.0, 1.0))
-				pitch = clampf((target_pitch - _pitch) * 3.0, -1.0, 1.0)
-				if tuning.invert_pitch:
-					pitch = -pitch
-			if state == State.SLIDE and wish_brake:
-				pitch = -1.0
-			return Vector2(turn, pitch)
-	return Vector2(0.0, strength)
+## A player's own controls, or nobody's (a dummy).
+func _own_input() -> PenguinInput:
+	return PlayerInput.new(player_number) if player_controlled else PenguinInput.new()
+
+
+## Which way `stick` points on the ice (flat, world space), for whoever is steering.
+func _ground_dir(stick: Vector2) -> Vector3:
+	return input.ground_dir(self, stick) if input != null else Vector3.ZERO
 
 
 func _starting_energy() -> float:
@@ -1065,38 +1098,6 @@ func _heading_dir() -> Vector3:
 	return Vector3(-sin(_yaw) * cos(_pitch), sin(_pitch), -cos(_yaw) * cos(_pitch))
 
 
-## Model is built standing: head = +Y, belly faces -Z. This lays it belly-down with the head along `dir`.
-func _belly_down_basis(dir: Vector3, up: Vector3 = Vector3.UP) -> Basis:
-	var y := dir.normalized()
-	if absf(y.dot(up)) > 0.98:
-		up = get_facing()
-	var z := (up - y * y.dot(up)).normalized()
-	var x := y.cross(z)
-	return Basis(x, y, z)
-
-
-func _camera_relative(input: Vector2) -> Vector3:
-	if brain_controlled:
-		return Vector3(wish_dir.x, 0.0, wish_dir.z).limit_length(1.0) if input.length() >= 0.05 else Vector3.ZERO
-	var cam := get_viewport().get_camera_3d()
-	if cam == null or input.length() < 0.05:
-		return Vector3.ZERO
-	var forward := -cam.global_basis.z
-	forward.y = 0.0
-	var right := cam.global_basis.x
-	right.y = 0.0
-	var move := right.normalized() * input.x + forward.normalized() * input.y
-	return move.limit_length(1.0)
-
-
-func _emit_splash(strength: float) -> void:
-	_splash.global_position = Vector3(global_position.x, WATER_LEVEL, global_position.z)
-	_splash.amount = clampi(int(strength * 4.0), 8, 48)
-	_splash.restart()
-	splashed.emit(_splash.global_position, strength)
-
-
-func _emit_puff(at: Vector3, strength: float) -> void:
-	_puff.global_position = at
-	_puff.amount = clampi(int(strength * 4.0), 6, 32)
-	_puff.restart()
+## A splash on the water where it is (PenguinLook plays it).
+func _make_splash(strength: float) -> void:
+	splashed.emit(Vector3(global_position.x, GameWorld.WATER_LEVEL, global_position.z), strength)

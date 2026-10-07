@@ -44,6 +44,8 @@ func _ready() -> void:
 		_surface_fog_density = _env.fog_density
 		_surface_fog_sky_affect = _env.fog_sky_affect
 	if _target:
+		# Its player steers relative to this camera on the ice (PlayerInput).
+		_target.camera = self
 		global_position = _desired_position(_target.global_position)
 		_target.bumped.connect(_on_target_bumped)
 
@@ -78,7 +80,7 @@ func _desired_position(target_pos: Vector3) -> Vector3:
 
 ## Keep the camera from ending up inside the iceberg.
 func _avoid_clipping(from: Vector3, to: Vector3) -> Vector3:
-	var query := PhysicsRayQueryParameters3D.create(from, to, Penguin.WORLD_LAYER)
+	var query := PhysicsRayQueryParameters3D.create(from, to, GameWorld.WORLD_LAYER)
 	query.exclude = [_target.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit.is_empty():
@@ -89,7 +91,7 @@ func _avoid_clipping(from: Vector3, to: Vector3) -> Vector3:
 func _update_underwater() -> void:
 	if _env == null:
 		return
-	var under := global_position.y < Penguin.WATER_LEVEL
+	var under := global_position.y < GameWorld.WATER_LEVEL
 	_env.fog_enabled = under or _surface_fog_enabled
 	_env.fog_light_color = underwater_fog_color if under else _surface_fog_color
 	_env.fog_density = underwater_fog_density if under else _surface_fog_density

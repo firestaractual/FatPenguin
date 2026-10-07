@@ -1,0 +1,70 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/menus/pause_menu.gd" id="1_51icm"]
+[ext_resource type="PackedScene" path="res://ui/menus/settings_panel.tscn" id="2_2pmna"]
+[ext_resource type="Script" path="res://ui/menus/settings_panel.gd" id="3_412up"]
+
+[node name="PauseMenu" type="CanvasLayer" unique_id=1993045379]
+layer = 10
+script = ExtResource("1_51icm")
+
+[node name="Root" type="Control" parent="." unique_id=1917835421]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Dim" type="ColorRect" parent="Root" unique_id=1018177519]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.086, 0.161, 0.29, 0.55)
+
+[node name="Center" type="CenterContainer" parent="Root" unique_id=2107971128]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Sheet" type="PanelContainer" parent="Root/Center" unique_id=906152519]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(460, 0)
+layout_mode = 2
+
+[node name="Rows" type="VBoxContainer" parent="Root/Center/Sheet" unique_id=1184404260]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Root/Center/Sheet/Rows" unique_id=1856305634]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+text = "Paused"
+horizontal_alignment = 1
+
+[node name="Resume" type="Button" parent="Root/Center/Sheet/Rows" unique_id=1950181603]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+text = "Resume"
+
+[node name="Restart" type="Button" parent="Root/Center/Sheet/Rows" unique_id=762380636]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Restart"
+
+[node name="Settings" type="Button" parent="Root/Center/Sheet/Rows" unique_id=79774531]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Settings"
+
+[node name="Quit" type="Button" parent="Root/Center/Sheet/Rows" unique_id=635432047]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Quit to title"
+
+[node name="SettingsPanel" type="Control" parent="Root" unique_id=2087359595 instance=ExtResource("2_2pmna")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("3_412up")

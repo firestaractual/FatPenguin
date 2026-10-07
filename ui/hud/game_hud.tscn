@@ -1,0 +1,82 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/hud/game_hud.gd" id="1_72rr5"]
+[ext_resource type="Script" path="res://ui/hud/air_meter.gd" id="2_i5ojc"]
+[ext_resource type="Script" path="res://ui/hud/pause_icon.gd" id="3_knees"]
+[ext_resource type="Script" path="res://ui/hud/control_prompts.gd" id="4_wo40e"]
+
+[node name="GameHud" type="CanvasLayer" unique_id=1027615463]
+layer = 5
+script = ExtResource("1_72rr5")
+
+[node name="Root" type="Control" parent="." unique_id=805377794]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="AirMeter" type="Control" parent="Root" unique_id=1258192897]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -140.0
+offset_top = 22.0
+offset_right = 140.0
+offset_bottom = 68.0
+script = ExtResource("2_i5ojc")
+
+[node name="PauseButton" type="Button" parent="Root" unique_id=268930729]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -100.0
+offset_top = 22.0
+offset_right = -24.0
+offset_bottom = 98.0
+tooltip_text = "Pause"
+focus_mode = 0
+theme_type_variation = &"RoundButton"
+
+[node name="Icon" type="Control" parent="Root/PauseButton" unique_id=213604534]
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("3_knees")
+
+[node name="Prompts" type="PanelContainer" parent="Root" unique_id=1413915743]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -104.0
+offset_bottom = -104.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_type_variation = &"PromptPanel"
+script = ExtResource("4_wo40e")
+
+[node name="Row" type="HBoxContainer" parent="Root/Prompts" unique_id=926982010]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="KeyChip" type="PanelContainer" parent="Root/Prompts/Row" unique_id=1128552325]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"KeyChip"
+
+[node name="KeyLabel" type="Label" parent="Root/Prompts/Row/KeyChip" unique_id=1500892551]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"KeyChipLabel"
+text = "TAP"
+
+[node name="PromptText" type="Label" parent="Root/Prompts/Row" unique_id=554906128]
+unique_name_in_owner = true
+layout_mode = 2
+text = "boost"

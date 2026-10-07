@@ -115,7 +115,7 @@ func strike() -> Array[Penguin]:
 		if p == null or p.state != Penguin.State.SWIM:
 			continue
 		var flat := _flat(p.global_position) - centre
-		if flat.length() > t.slap_radius + ZONE_MARGIN or Penguin.WATER_LEVEL - p.global_position.y > t.slap_depth:
+		if flat.length() > t.slap_radius + ZONE_MARGIN or GameWorld.WATER_LEVEL - p.global_position.y > t.slap_depth:
 			continue
 		p.stun(t.stun_seconds)
 		p.push((flat.normalized() if flat.length() > 0.1 else Vector3.FORWARD) * t.slap_push)
@@ -163,7 +163,7 @@ func cancel() -> void:
 func ring_spot(i: int, n: int) -> Vector3:
 	var a := _angle + TAU * i / maxf(n, 1)
 	var spot := centre + Vector3(cos(a), 0.0, sin(a)) * radius
-	spot.y = Penguin.WATER_LEVEL - _t().ring_depth
+	spot.y = GameWorld.WATER_LEVEL - _t().ring_depth
 	return spot
 
 
@@ -192,7 +192,7 @@ func _hold_in(delta: float, closing: float) -> void:
 			var excess := p.velocity.dot(outward) + closing
 			if excess > 0.0:
 				p.drift(-outward * minf(excess, t.wall_push * delta))
-		if Penguin.WATER_LEVEL - p.global_position.y > t.lift_depth:
+		if GameWorld.WATER_LEVEL - p.global_position.y > t.lift_depth:
 			var short := t.lift_speed - p.velocity.y
 			if short > 0.0:
 				p.drift(Vector3.UP * minf(short, t.lift_push * delta))
@@ -251,7 +251,7 @@ func _splash(at: Vector3) -> void:
 	spray.emission_sphere_radius = 1.5
 	spray.top_level = true
 	pod.add_child(spray)
-	spray.global_position = Vector3(at.x, Penguin.WATER_LEVEL, at.z)
+	spray.global_position = Vector3(at.x, GameWorld.WATER_LEVEL, at.z)
 	spray.emitting = true
 	spray.finished.connect(spray.queue_free)
 

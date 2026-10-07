@@ -4,6 +4,20 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-07: A real UI: the title gag, a HUD that teaches, debug numbers out of sight
+
+- **Change:** the movement toy gets a real UI instead of a debug overlay. The game starts at a title screen; in play there's a HUD, a pause menu and settings; the debug numbers and the wall of tester notes are hidden unless asked for.
+- **Title screen (GDD §1):** the logo acted out, with the game's own placeholder penguin. It stands on a disc of thin, gray-blue ice (the only thin ice in the game). Each tap, click, Space or A throws it a fish; it gulps it down and swells (about 1.9× as wide by the sixth). From the third fish the ice cracks along its seams, more with each one; on the sixth it drops straight through, the pieces tip into the water, and the splash whites out into the game. The game scene loads in the background meanwhile. Settings are reachable from here.
+- **HUD:** no energy bar, still (body size is the energy display, §4.1). An **air meter**, a row of six bubbles that pop as your breath runs out, shows only underwater and short of breath, and pulses when nearly out. A **pause button** sits top right. **Control prompts** at the bottom replace the wall of hint text: a short prompt naming the control for the device you're using ("SPACE boost", "TAP belly-slide", "PULL BACK dig in to brake") at the moment it's useful. Each tutorial prompt stops once you've done the thing a few times (2–3), and remembers that between sessions. Warnings always show and cut in first: low on air, teetering at an edge, a seal locked on (the first three times).
+- **Pause menu:** Resume, Restart, Settings, Quit to title. Esc, P or a gamepad's Start, or the pause button. It pauses by itself when a phone sends the game to the background (§8). The game really stops: fish respawns and pickup delays wait too.
+- **Settings** (saved on the device): invert swim pitch (moved here from the penguin's tuning: it's a player preference, not balance), left-handed touch controls (stick on the right), hints on or off, and show debug info.
+- **Debug numbers:** hidden by default. F1 or the settings switch shows them (the same setting); the tester keys (Q/E/F2/R) still work either way. R no longer sits on the gamepad's Start, which pauses now.
+- **Look:** chunky and rounded to match the logo brief. The wordmark is Erica One (very fat letters), the UI text Outfit; both are free fonts under the SIL Open Font License, in `ui/fonts/` with their licences. (Fredoka was the first choice but couldn't be fetched into the project; swap it in through the theme if wanted.) White and pale-cyan "ice" panels, navy text, sky-blue highlights. No orange anywhere in the UI: the beak's orange sits close to the reserved danger colour, so the UI stays clear of that whole range.
+- **Why:** the toy is about to be played by people who weren't there when it was built. A first-time player needs to know which button does what at the moment it matters, not from a paragraph of notes, and the title gag sets the tone (fat is funny, and risky) before the first dive.
+- **Reuse:** `GameHud` takes one penguin, so coop can have one per player. Prompts are a table (`ControlPrompts.PROMPTS`): a new verb's prompt is a line plus a condition. `GameSettings` holds anything the player chooses. One theme (`ui/theme/fat_penguin_theme.tres`) styles everything, with a type variation per kind of element.
+- **Not yet:** real logo art, sound, a how-to-play page, autosave on backgrounding, button remapping, and a HUD per player for split screen.
+- Proposed.
+
 ## 2026-10-05: A berg field to climb, ice tunnels, and colonies of NPC penguins
 
 - **Change:** the movement toy grows from one berg into a berg field about 200 m across: the home floe, five new bergs, two chains of pack ice, and 25 computer penguins living in colonies on four of the bergs. See GDD §4.6, §4.10 and §8, and TUNING (Berg field, NPC penguins).

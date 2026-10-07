@@ -3,6 +3,8 @@
 [ext_resource type="Script" path="res://ui/debug_hud.gd" id="1_6xdpc"]
 
 [node name="DebugHud" type="CanvasLayer" unique_id=855342483]
+layer = 20
+visible = false
 script = ExtResource("1_6xdpc")
 
 [node name="DebugLabel" type="Label" parent="." unique_id=340821659]
@@ -10,35 +12,12 @@ offset_left = 16.0
 offset_top = 12.0
 offset_right = 16.0
 offset_bottom = 12.0
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
+theme_type_variation = &"DebugLabel"
 
 [node name="HintLabel" type="Label" parent="." unique_id=310001801]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
 offset_left = 16.0
-offset_top = -104.0
+offset_top = 236.0
 offset_right = 1000.0
-offset_bottom = -12.0
+offset_bottom = 330.0
+theme_type_variation = &"DebugLabel"
 theme_override_font_sizes/font_size = 16
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
-theme_override_constants/shadow_offset_x = 1
-theme_override_constants/shadow_offset_y = 1
-vertical_alignment = 2
-
-[node name="AirBar" type="ProgressBar" parent="." unique_id=1427077923]
-visible = false
-modulate = Color(0.6, 0.9, 1, 1)
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -150.0
-offset_top = 16.0
-offset_right = 150.0
-offset_bottom = 34.0
-max_value = 25.0
-value = 25.0
-show_percentage = false

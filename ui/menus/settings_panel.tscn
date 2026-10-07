@@ -1,0 +1,102 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://ui/menus/settings_panel.gd" id="1_n4tv0"]
+
+[node name="SettingsPanel" type="Control" unique_id=2087359595]
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_n4tv0")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=443389421]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.086, 0.161, 0.29, 0.45)
+
+[node name="Center" type="CenterContainer" parent="." unique_id=1753589656]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Sheet" type="PanelContainer" parent="Center" unique_id=370068087]
+custom_minimum_size = Vector2(660, 0)
+layout_mode = 2
+
+[node name="Rows" type="VBoxContainer" parent="Center/Sheet" unique_id=1435632507]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Title" type="Label" parent="Center/Sheet/Rows" unique_id=1738491356]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 44
+text = "Settings"
+horizontal_alignment = 1
+
+[node name="InvertPitch" type="CheckButton" parent="Center/Sheet/Rows" unique_id=1476663259]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Invert swim pitch"
+
+[node name="InvertPitchNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=1959815824]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_bottom = 2
+
+[node name="InvertPitchCaption" type="Label" parent="Center/Sheet/Rows/InvertPitchNote" unique_id=1814215780]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Swimming, push up to dive (like a flight stick)"
+
+[node name="LeftHanded" type="CheckButton" parent="Center/Sheet/Rows" unique_id=1549789263]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Left-handed touch controls"
+
+[node name="LeftHandedNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=1816164522]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_bottom = 2
+
+[node name="LeftHandedCaption" type="Label" parent="Center/Sheet/Rows/LeftHandedNote" unique_id=585125867]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Steer with your right thumb, boost with your left"
+
+[node name="ControlHints" type="CheckButton" parent="Center/Sheet/Rows" unique_id=25264938]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Hints"
+
+[node name="ControlHintsNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=27536485]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_bottom = 2
+
+[node name="ControlHintsCaption" type="Label" parent="Center/Sheet/Rows/ControlHintsNote" unique_id=344505069]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Control prompts and warnings at the bottom of the screen"
+
+[node name="ShowDebug" type="CheckButton" parent="Center/Sheet/Rows" unique_id=208374823]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Show debug info"
+
+[node name="ShowDebugNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=1250880998]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_bottom = 2
+
+[node name="ShowDebugCaption" type="Label" parent="Center/Sheet/Rows/ShowDebugNote" unique_id=872672471]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Numbers for testing (F1 on a keyboard)"
+
+[node name="Back" type="Button" parent="Center/Sheet/Rows" unique_id=998630879]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+text = "Back"

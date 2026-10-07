@@ -148,6 +148,22 @@ func release_all() -> void:
 		member.release()
 
 
+## How long the current phase has run (s).
+func phase_time() -> float:
+	return _phase_time
+
+
+## No more waiting: it attacks as soon as it finds a target (a level scripting an attack, tests).
+func clear_cooldown() -> void:
+	_cooldown = 0.0
+
+
+## Narrows the attacks it knows to `list` (made from its tuning; see attacks()). For a level that
+## saves an attack for later, and for tests.
+func set_attacks(list: Array[PodAttack]) -> void:
+	_attacks = list
+
+
 ## Seconds until the attack under way strikes; -1 if there's none on its way (or it can't tell).
 func seconds_to_strike() -> float:
 	if attack == null or phase == Phase.HUNT:

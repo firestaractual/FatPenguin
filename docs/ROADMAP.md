@@ -8,7 +8,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 
 ## Prototype 0: Movement toy (1–2 weeks)
 
-**Status: in progress.** A placeholder version is playable (`levels/movement_toy`), with every verb below working and covered by the headless smoke test. The toy has grown into a berg field: five more bergs of real shapes to climb (ramps, slopes, spiral steps, a lagoon, caves and swim tunnels), pack ice with gaps to hop, and colonies of NPC penguins that huddle and go fishing. Next steps: playtest on a phone, tune the feel, and swap in a real penguin model.
+**Status: in progress.** A placeholder version is playable (`levels/movement_toy`), with every verb below working and covered by the headless smoke test. The toy has grown into a berg field: five more bergs of real shapes to climb (ramps, slopes, spiral steps, a lagoon, caves and swim tunnels), pack ice with gaps to hop, and colonies of NPC penguins that huddle and go fishing. It starts at a title screen (feed the penguin until it falls through the ice) and has a real HUD (air meter, control prompts), a pause menu and settings; the debug numbers are hidden unless asked for. Next steps: playtest on a phone, tune the feel, and swap in a real penguin model.
 
 **Question:** is swimming, boosting and launching onto the ice fun with no goals at all?
 

@@ -31,7 +31,7 @@ func shape(crest: Vector3, travel: Vector3, width: float, height: float) -> void
 	var flat := Vector3(travel.x, 0.0, travel.z)
 	if flat.length() < 0.01:
 		return
-	global_transform = Transform3D(Basis.looking_at(flat, Vector3.UP), Vector3(crest.x, Penguin.WATER_LEVEL, crest.z))
+	global_transform = Transform3D(Basis.looking_at(flat, Vector3.UP), Vector3(crest.x, GameWorld.WATER_LEVEL, crest.z))
 	_body.scale = Vector3(width, height * 2.0, 2.0 + height)
 
 

@@ -295,8 +295,8 @@ func _way_to_water(goal: Vector3) -> Dictionary:
 		while d < 60.0:
 			d += 0.5
 			var at := start + dir * d
-			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(at.x, start.y + 1.5, at.z), Vector3(at.x, -1.0, at.z), Penguin.WORLD_LAYER))
-			if hit.is_empty() or (hit["position"] as Vector3).y < Penguin.WATER_LEVEL + 0.05:
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(at.x, start.y + 1.5, at.z), Vector3(at.x, -1.0, at.z), GameWorld.WORLD_LAYER))
+			if hit.is_empty() or (hit["position"] as Vector3).y < GameWorld.WATER_LEVEL + 0.05:
 				break # the edge
 			if absf((hit["position"] as Vector3).y - start.y) > 0.35:
 				clear = false # a step, a wall or a chute in the way
@@ -310,13 +310,9 @@ func _gather() -> void:
 	if _party.is_empty():
 		_set_mode(Mode.HUDDLE)
 		return
-	var spot: Vector3 = _party["spot"]
-	var out: Vector3 = _party["out"]
 	# Line up along the edge, side by side.
 	var members: Array = _party["members"]
-	var i := members.find(self)
-	var side := out.cross(Vector3.UP).normalized()
-	var mine := spot + side * ((i % 5) - 2) * 0.8 - out * (i / 5) * 0.8
+	var mine := _party_spot()
 	_walk_to(mine)
 	var waited := _clock - float(_party["since"])
 	var ready := 0
@@ -332,6 +328,7 @@ func _gather() -> void:
 				m._set_mode(Mode.GO_IN)
 
 
+## Its place in the party's line-up at the edge: rows of five, side by side, 0.8 m apart.
 func _party_spot() -> Vector3:
 	if _party.is_empty():
 		return _penguin.global_position
@@ -375,8 +372,8 @@ func _forage(rethink: bool) -> void:
 
 
 func _home(rethink: bool) -> void:
-	if _danger():
-		pass # keep going home, a boost already fired if it could
+	# A predator on it: it boosts away if it can, and keeps heading home either way.
+	_danger()
 	if rethink and _exit.is_empty():
 		_exit = _nearest_exit()
 		_launched = false
@@ -492,7 +489,7 @@ func _round_ice(dir: Vector3, look: float) -> Vector3:
 		return dir
 	var space := _penguin.get_world_3d().direct_space_state
 	var from := _penguin.global_position
-	var ahead := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * look, Penguin.WORLD_LAYER, [_penguin.get_rid()]))
+	var ahead := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + dir * look, GameWorld.WORLD_LAYER, [_penguin.get_rid()]))
 	if ahead.is_empty():
 		if _avoid_time <= 0.0:
 			_avoid_side = 0.0
@@ -503,7 +500,7 @@ func _round_ice(dir: Vector3, look: float) -> Vector3:
 			continue
 		for turn_deg in [45.0, 75.0, 105.0]:
 			var try := dir.rotated(Vector3.UP, side * deg_to_rad(turn_deg))
-			if space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + try * 6.0, Penguin.WORLD_LAYER, [_penguin.get_rid()])).is_empty():
+			if space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + try * 6.0, GameWorld.WORLD_LAYER, [_penguin.get_rid()])).is_empty():
 				_avoid_side = side
 				_avoid_time = 1.5
 				return try
@@ -523,7 +520,7 @@ func _nearest_exit() -> Dictionary:
 		var at: Vector3 = exit["at"]
 		var time := me.distance_to(at) / swim_speed + Vector2(at.x - huddle.x, at.z - huddle.z).length() / walk_speed
 		# A launch takes energy for the boost; low on it, prefer a ramp.
-		if exit["launch"] and not _penguin.infinite_energy and _penguin.energy < _penguin.tuning.boost_energy_cost:
+		if exit["launch"] and not _penguin.vitals.can_afford(_penguin.tuning.boost_energy_cost):
 			time += 1000.0
 		if time < best_time:
 			best_time = time
@@ -537,14 +534,14 @@ func _exit_out() -> float:
 	var toward: Vector3 = _exit["toward"]
 	var space := _penguin.get_world_3d().direct_space_state
 	var from := Vector3(at.x, 0.3, at.z)
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + toward * 12.0, Penguin.WORLD_LAYER))
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + toward * 12.0, GameWorld.WORLD_LAYER))
 	return from.distance_to(hit["position"]) if not hit.is_empty() else 4.5
 
 
 func _on_home_berg() -> bool:
 	var me := _penguin.global_position
 	var centre := berg.global_position
-	return Vector2(me.x - centre.x, me.z - centre.z).length() <= berg.reach() + 0.5 and me.y > Penguin.WATER_LEVEL + 0.2
+	return Vector2(me.x - centre.x, me.z - centre.z).length() <= berg.reach() + 0.5 and me.y > GameWorld.WATER_LEVEL + 0.2
 
 
 # --- Walking ------------------------------------------------------------------

@@ -18,7 +18,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish on a shrink
 
 **Platform:** mobile first (touch, one thumb). **Engine:** Godot 4, 3D.
 
-**Title screen** [Proposed]: the logo comes to life. Each tap feeds the penguin a fish, and it swells until the ice cracks and it drops through; the splash starts the game. Thin ice exists only here. In play, ice never breaks under a penguin's weight [Locked] (see DECISIONS, 2026-10-01).
+**Title screen** [Proposed]: the logo comes to life. Each tap feeds the penguin a fish, and it swells until the ice cracks and it drops through; the splash starts the game. Thin ice exists only here. In play, ice never breaks under a penguin's weight [Locked] (see DECISIONS, 2026-10-01). Built in the movement toy with the placeholder penguin (DECISIONS, 2026-10-07).
 
 ## 2. Pillars
 
@@ -300,7 +300,7 @@ Levels last 5–10 minutes [Locked]. Only the later levels have a kill screen [L
   - **Hold out:** survive until the predators move on.
   - **Breakup:** kill-screen finale. The pod has a visible **hunger meter** that works like a boss's health bar. Survive the lunges and feed the pod chum to fill it; when it's full, the pod leaves. Chum costs the energy you need for dodging.
 - **Getting caught:** costs most of your energy instead of ending the level. Being caught while thin ends it, so fat works as armor. Checkpoints on floes are the backup. [Open: energy cost vs. instant fail]
-- **Mobile:** instant pause/resume, and an autosave when the app goes to the background.
+- **Mobile:** instant pause/resume, and an autosave when the app goes to the background. (The pause is built: the pause menu opens by itself when the app goes to the background. No autosave yet.)
 
 ## 9. PvP tools [Proposed]
 

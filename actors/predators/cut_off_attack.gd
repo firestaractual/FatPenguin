@@ -131,7 +131,7 @@ func wall_spot(i: int, n: int) -> Vector3:
 	var gap := minf(_gap, maxf(shore_distance - _t().wall_shore_margin, 1.0))
 	var side := home.cross(Vector3.UP).normalized()
 	var spot := at + home * gap + side * (i - (n - 1) * 0.5) * _t().wall_spacing
-	spot.y = Penguin.WATER_LEVEL - _t().wall_depth
+	spot.y = GameWorld.WATER_LEVEL - _t().wall_depth
 	return spot
 
 
@@ -197,7 +197,7 @@ func _show_line() -> void:
 	var n := attackers.size()
 	var length := maxf(n - 1, 0) * _t().wall_spacing + _t().snap_range * 2.0
 	var centre := (wall_spot(0, n) + wall_spot(n - 1, n)) * 0.5
-	centre.y = Penguin.WATER_LEVEL + 0.03
+	centre.y = GameWorld.WATER_LEVEL + 0.03
 	var side := home.cross(Vector3.UP).normalized()
 	_line.global_transform = Transform3D(Basis(side, Vector3.UP, side.cross(Vector3.UP)), centre).scaled_local(Vector3(length, 1.0, 1.0))
 	_line.visible = true

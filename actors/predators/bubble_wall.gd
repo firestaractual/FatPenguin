@@ -56,7 +56,7 @@ func _ready() -> void:
 ## Centres the ring on `centre` (on the water), `radius` across.
 func set_ring(centre: Vector3, radius: float) -> void:
 	_radius = radius
-	global_position = Vector3(centre.x, Penguin.WATER_LEVEL, centre.z)
+	global_position = Vector3(centre.x, GameWorld.WATER_LEVEL, centre.z)
 	if _bubbles == null:
 		return
 	_bubbles.emission_ring_radius = radius

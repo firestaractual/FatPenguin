@@ -1,17 +1,21 @@
+class_name DebugHud
 extends CanvasLayer
-## Prototype HUD. Body size is the real energy display (no energy bar, per the design),
-## so the numbers here are for testers only (F1 toggles them).
-## The air bar is a real game element: it shows only while underwater and short of breath.
+## Numbers for testers: the penguin's state, speed, energy, fat and air, the nearest predator and
+## any pod attack under way, plus the tester notes. Hidden unless "Show debug info" is on in the
+## settings (GameSettings.show_debug); F1 flips that setting. The real HUD is GameHud.
+## Also the tester keys for the player's penguin, which work whether it shows or not: Q / E energy
+## -/+ 10, F2 infinite energy, R reset.
 
 @onready var _debug_label: Label = $DebugLabel
 @onready var _hint_label: Label = $HintLabel
-@onready var _air_bar: ProgressBar = $AirBar
 
 var _penguin: Penguin
 
 
 func _ready() -> void:
 	_penguin = get_tree().get_first_node_in_group(&"player") as Penguin
+	_apply_setting(&"show_debug")
+	GameSettings.current().changed.connect(_apply_setting)
 	var touch := DisplayServer.is_touchscreen_available()
 	_hint_label.text = "Left thumb: steer (pull back mid-slide to brake)   Right thumb: boost / belly-slide (tap again to push)" if touch else \
 		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   S: brake a slide   R: reset\n" + \
@@ -20,19 +24,30 @@ func _ready() -> void:
 		"Orcas: fins or shadows gathering and orange ice mean get off it (or dig in). In the water, race their fins home, and boost out of a ring of bubbles."
 
 
+## Is the debug layer showing?
+func is_showing() -> bool:
+	return visible
+
+
+func _exit_tree() -> void:
+	if GameSettings.current().changed.is_connected(_apply_setting):
+		GameSettings.current().changed.disconnect(_apply_setting)
+
+
+func _apply_setting(setting: StringName) -> void:
+	if setting == &"show_debug":
+		visible = GameSettings.current().show_debug
+
+
 func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed(&"debug_toggle_hud"):
-		_debug_label.visible = not _debug_label.visible
-		_hint_label.visible = _debug_label.visible
+		GameSettings.current().show_debug = not GameSettings.current().show_debug
 	if _penguin == null:
 		return
-
+	_tester_keys()
 	var t := _penguin.tuning
-	_air_bar.max_value = t.air_seconds
-	_air_bar.value = _penguin.air
-	_air_bar.visible = _penguin.air < t.air_seconds - 0.05
 
-	if _debug_label.visible:
+	if visible:
 		_debug_label.text = "state   %s%s\nspeed   %.1f m/s\nenergy  %.0f%s%s\nfat     %.0f%%   mass x%.2f   hop %.2f m up, %.1f m across\nair     %.1f s\nfps     %d" % [
 			Penguin.State.keys()[_penguin.state],
 			_status(),
@@ -98,3 +113,15 @@ func _status() -> String:
 	if _penguin.is_immune():
 		bits.append("immune")
 	return "  (" + ", ".join(bits) + ")" if not bits.is_empty() else ""
+
+
+func _tester_keys() -> void:
+	var t := _penguin.tuning
+	if Input.is_action_just_pressed(&"debug_energy_up"):
+		_penguin.energy = minf(_penguin.energy + 10.0, t.max_energy)
+	if Input.is_action_just_pressed(&"debug_energy_down"):
+		_penguin.energy = maxf(_penguin.energy - 10.0, 0.0)
+	if Input.is_action_just_pressed(&"debug_toggle_drain"):
+		_penguin.infinite_energy = not _penguin.infinite_energy
+	if Input.is_action_just_pressed(&"reset"):
+		_penguin.reset()

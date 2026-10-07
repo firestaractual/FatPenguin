@@ -23,16 +23,14 @@ const KEEL := preload("res://art/materials/ice_keel.tres")
 const MAX_DRAFT := 25.0
 
 ## How many NPC penguins huddle on this berg (the level spawns them at its waddle spot).
-@export var colony := 0:
-	set(value):
-		colony = value
+@export var colony := 0
 
 var _rebuild_queued := false
 
 
 func _ready() -> void:
 	add_to_group(&"bergs")
-	collision_layer = Penguin.WORLD_LAYER
+	collision_layer = GameWorld.WORLD_LAYER
 	collision_mask = 0
 	_rebuild()
 

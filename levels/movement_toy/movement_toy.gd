@@ -1,3 +1,4 @@
+class_name MovementToy
 extends Node3D
 ## Prototype 0 test level, grown into a berg field: the home floe with a plateau on top (chutes to
 ## slide down, steps to hop up), a few floes and a low ramp out of the water, and around it five
@@ -131,18 +132,19 @@ func _spot_near(rng: RandomNumberGenerator, species: FishSpecies, berg: IceBerg,
 		var angle := rng.randf() * TAU
 		var d := reach + rng.randf_range(distance.x, distance.y)
 		spot = centre + Vector3(cos(angle) * d, -rng.randf_range(depths.x, depths.y), sin(angle) * d)
-		if _clear_of_ice(spot, fish_clearance):
+		if clear_of_ice(spot, fish_clearance):
 			return spot
 	return spot
 
 
-func _clear_of_ice(spot: Vector3, clearance: float) -> bool:
+## No ice (berg, floe, keel) within `clearance` of `spot`.
+func clear_of_ice(spot: Vector3, clearance: float) -> bool:
 	var ball := SphereShape3D.new()
 	ball.radius = clearance
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = ball
 	query.transform = Transform3D(Basis.IDENTITY, spot)
-	query.collision_mask = Penguin.WORLD_LAYER
+	query.collision_mask = GameWorld.WORLD_LAYER
 	for hit in get_world_3d().direct_space_state.intersect_shape(query, 4):
 		if hit["collider"] != $Seafloor and hit["collider"] != $Bounds:
 			return false

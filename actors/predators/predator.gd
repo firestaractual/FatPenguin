@@ -47,8 +47,6 @@ signal ate_fish
 
 enum State { PATROL, CHASE, WARN, LUNGE, RECOVER, FEED, SATED, ORDERED, AMBUSH }
 
-## Physics layer 3: predators collide with the world only. Catches are by distance.
-const PREDATOR_LAYER := 4
 ## The body centre stays at least this far below the surface (m), except mid-lunge.
 const MIN_DEPTH := 0.35
 ## Seafloor safety: never deeper than this (m).
@@ -136,8 +134,8 @@ func _ready() -> void:
 	add_to_group(&"predators")
 	if tuning == null:
 		tuning = PredatorTuning.new()
-	collision_layer = PREDATOR_LAYER
-	collision_mask = Penguin.WORLD_LAYER
+	collision_layer = GameWorld.PREDATOR_LAYER
+	collision_mask = GameWorld.WORLD_LAYER
 	motion_mode = MOTION_MODE_FLOATING
 	hunger = randf_range(tuning.start_hunger.x, tuning.start_hunger.y)
 	_patrol_dir = 1.0 if randf() < 0.5 else -1.0
@@ -250,6 +248,12 @@ func recall() -> void:
 	if state == State.CHASE:
 		target = null
 		_set_state(State.PATROL)
+
+
+## Lies in wait now under the ice edge nearest a penguin on the ice, if there's one to wait for
+## (it does this by itself at the end of some patrol legs). False if there's nobody.
+func start_ambush() -> bool:
+	return _start_ambush()
 
 
 ## Back to its own patrol.
@@ -455,7 +459,7 @@ func _pick_ambush_spot() -> bool:
 		var p := node as Penguin
 		if p == null or _ignored.has(p) or not (p.state == Penguin.State.WALK or p.state == Penguin.State.SLIDE):
 			continue
-		if p.global_position.y > Penguin.WATER_LEVEL + 1.6:
+		if p.global_position.y > GameWorld.WATER_LEVEL + 1.6:
 			continue # up on the plateau: nowhere near the water
 		if global_position.distance_to(p.global_position) > tuning.ambush_scan_range:
 			continue
@@ -468,7 +472,7 @@ func _pick_ambush_spot() -> bool:
 			continue
 		var out: Vector3 = edge["out"]
 		var spot: Vector3 = edge["point"] + out * tuning.ambush_offset
-		spot.y = Penguin.WATER_LEVEL - tuning.ambush_depth
+		spot.y = GameWorld.WATER_LEVEL - tuning.ambush_depth
 		if _spot_taken(spot):
 			continue
 		# Only swim off to a new spot if it's really moved (not every little step it takes).
@@ -508,7 +512,7 @@ func _ambush_victim() -> Penguin:
 		var p := node as Penguin
 		if p == null or _ignored.has(p):
 			continue
-		var in_water := p.state == Penguin.State.SWIM or p.global_position.y < Penguin.WATER_LEVEL
+		var in_water := p.state == Penguin.State.SWIM or p.global_position.y < GameWorld.WATER_LEVEL
 		var reach := tuning.ambush_strike_range if in_water else grab
 		if global_position.distance_to(p.global_position) > reach or not _can_see(p):
 			continue
@@ -535,7 +539,7 @@ func _best_target(only_in_water := false) -> Penguin:
 		var p := node as Penguin
 		if p == null or _ignored.has(p) or not _huntable(p, tuning.detect_range):
 			continue
-		if only_in_water and not (p.state == Penguin.State.SWIM or p.global_position.y < Penguin.WATER_LEVEL):
+		if only_in_water and not (p.state == Penguin.State.SWIM or p.global_position.y < GameWorld.WATER_LEVEL):
 			continue
 		var score := temptation(p)
 		if score > best_score:
@@ -550,9 +554,9 @@ func _huntable(p: Penguin, max_range: float) -> bool:
 	if p == null or not is_instance_valid(p) or not p.is_inside_tree():
 		return false
 	var at := p.global_position
-	if at.y > Penguin.WATER_LEVEL + 1.6:
+	if at.y > GameWorld.WATER_LEVEL + 1.6:
 		return false
-	var in_water := p.state == Penguin.State.SWIM or at.y < Penguin.WATER_LEVEL
+	var in_water := p.state == Penguin.State.SWIM or at.y < GameWorld.WATER_LEVEL
 	var reach := max_range if in_water else minf(max_range, tuning.edge_detect_range)
 	if global_position.distance_to(at) > reach:
 		return false
@@ -567,9 +571,9 @@ func _in_lunge_range(p: Penguin) -> bool:
 func _can_see(p: Penguin) -> bool:
 	var at := p.global_position
 	var eye := global_position + Vector3.UP * EYE_HEIGHT
-	if at.y > Penguin.WATER_LEVEL and global_position.y > Penguin.WATER_LEVEL - PEEK_DEPTH:
-		eye.y = Penguin.WATER_LEVEL + PEEK_HEIGHT
-	var query := PhysicsRayQueryParameters3D.create(eye, at, Penguin.WORLD_LAYER, [get_rid()])
+	if at.y > GameWorld.WATER_LEVEL and global_position.y > GameWorld.WATER_LEVEL - PEEK_DEPTH:
+		eye.y = GameWorld.WATER_LEVEL + PEEK_HEIGHT
+	var query := PhysicsRayQueryParameters3D.create(eye, at, GameWorld.WORLD_LAYER, [get_rid()])
 	query.hit_from_inside = true
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
@@ -661,7 +665,7 @@ func _next_waypoint() -> void:
 		var fish := Fish.random_in_school_near(global_position, tuning.school_visit_range)
 		if fish != null:
 			_waypoint = fish.home
-			_waypoint.y = minf(_waypoint.y, Penguin.WATER_LEVEL - MIN_DEPTH)
+			_waypoint.y = minf(_waypoint.y, GameWorld.WATER_LEVEL - MIN_DEPTH)
 			return
 	var centre := patrol_centre
 	var ice := ice_radius
@@ -679,7 +683,7 @@ func _next_waypoint() -> void:
 	if not arriving:
 		angle += _patrol_dir * randf_range(17.0, 30.0) / radius
 	_waypoint = centre + Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
-	_waypoint.y = Penguin.WATER_LEVEL - depth
+	_waypoint.y = GameWorld.WATER_LEVEL - depth
 
 
 ## Which berg to patrol round next: the one it's on, or now and then (roam_chance) one of the
@@ -741,7 +745,7 @@ func _swim_toward(point: Vector3, speed: float, delta: float, slow_to_turn := fa
 ## Open water for a few metres under it (no tunnel floor, no lagoon bed).
 func _open_below() -> bool:
 	var from := global_position
-	var query := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 4.0, Penguin.WORLD_LAYER, [get_rid()])
+	var query := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 4.0, GameWorld.WORLD_LAYER, [get_rid()])
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
@@ -759,7 +763,7 @@ func _move(min_depth: float) -> void:
 		elif normal.y > 0.5:
 			grounded = true
 	var p := global_position
-	var top := Penguin.WATER_LEVEL - min_depth
+	var top := GameWorld.WATER_LEVEL - min_depth
 	if grounded and p.y > top + 0.05:
 		# Ice underneath pushing it up out of the water: too shallow for it to swim here (an orca
 		# in a lagoon). It can't go on; it stays where it was, like at a wall.
@@ -853,14 +857,14 @@ func _make_marker(marker_name: StringName, mesh: Mesh) -> MeshInstance3D:
 ## The lock-on ring around its target, the strike line during the warning, and its shadow on
 ## the water when it's near the surface.
 func _update_markers() -> void:
-	var depth := Penguin.WATER_LEVEL - global_position.y
+	var depth := GameWorld.WATER_LEVEL - global_position.y
 	var dark := clampf((SHADOW_DEPTH - depth) / (SHADOW_DEPTH - SHADOW_FULL_DEPTH), 0.0, 1.0) * SHADOW_DARKNESS
 	_shadow.visible = dark > 0.01
 	if _shadow.visible:
 		_shadow_material.albedo_color.a = dark
 		var flat := Vector3(_heading.x, 0.0, _heading.z)
 		var facing := Basis.looking_at(flat, Vector3.UP) if flat.length() > 0.05 else Basis.IDENTITY
-		_shadow.global_transform = Transform3D(facing * Basis.from_scale(_shadow_size), Vector3(global_position.x, Penguin.WATER_LEVEL + 0.015, global_position.z))
+		_shadow.global_transform = Transform3D(facing * Basis.from_scale(_shadow_size), Vector3(global_position.x, GameWorld.WATER_LEVEL + 0.015, global_position.z))
 	var locked := is_instance_valid(target) and is_hunting(target)
 	_ring.visible = locked
 	_line.visible = locked and state == State.WARN

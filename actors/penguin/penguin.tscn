@@ -8,6 +8,7 @@
 [ext_resource type="Material" path="res://art/materials/bubble.tres" id="6_vxcfp"]
 [ext_resource type="Material" path="res://art/materials/splash.tres" id="7_o82ok"]
 [ext_resource type="Material" path="res://art/materials/feather.tres" id="8_fthr1"]
+[ext_resource type="Script" path="res://actors/penguin/penguin_look.gd" id="9_look1"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_1xsdw"]
 radius = 0.32
@@ -90,6 +91,7 @@ tuning = ExtResource("2_78top")
 shape = SubResource("SphereShape3D_1xsdw")
 
 [node name="Model" type="Node3D" parent="." unique_id=1959943088]
+script = ExtResource("9_look1")
 
 [node name="Body" type="MeshInstance3D" parent="Model" unique_id=1933708824]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)

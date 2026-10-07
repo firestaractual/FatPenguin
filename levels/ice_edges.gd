@@ -22,9 +22,9 @@ static func edge_toward(world: World3D, from: Vector3, dir: Vector3, reach: floa
 	var d := 0.0
 	while d <= reach:
 		var at := from + dir * d
-		var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, from.y + 1.5, at.z), Vector3(at.x, Penguin.WATER_LEVEL - 1.0, at.z), Penguin.WORLD_LAYER)
+		var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, from.y + 1.5, at.z), Vector3(at.x, GameWorld.WATER_LEVEL - 1.0, at.z), GameWorld.WORLD_LAYER)
 		var hit := space.intersect_ray(query)
-		if hit.is_empty() or (hit["position"] as Vector3).y < Penguin.WATER_LEVEL + 0.05:
+		if hit.is_empty() or (hit["position"] as Vector3).y < GameWorld.WATER_LEVEL + 0.05:
 			return last
 		last = {"point": hit["position"]}
 		d += EDGE_STEP
@@ -55,13 +55,13 @@ static func nearest_edge(world: World3D, from: Vector3, reach: float) -> Diction
 ## no ice that close: open water.
 static func nearest_shore(world: World3D, from: Vector3, reach: float) -> Dictionary:
 	var space := world.direct_space_state
-	var start := Vector3(from.x, Penguin.WATER_LEVEL + SHORE_RAY_HEIGHT, from.z)
+	var start := Vector3(from.x, GameWorld.WATER_LEVEL + SHORE_RAY_HEIGHT, from.z)
 	var best := {}
 	var best_distance := INF
 	for i in SHORE_DIRECTIONS:
 		var angle := TAU * i / SHORE_DIRECTIONS
 		var dir := Vector3(cos(angle), 0.0, sin(angle))
-		var query := PhysicsRayQueryParameters3D.create(start, start + dir * reach, Penguin.WORLD_LAYER)
+		var query := PhysicsRayQueryParameters3D.create(start, start + dir * reach, GameWorld.WORLD_LAYER)
 		query.hit_from_inside = false
 		var hit := space.intersect_ray(query)
 		if hit.is_empty():

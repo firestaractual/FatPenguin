@@ -14,6 +14,7 @@ var _strip: MeshInstance3D = null
 
 
 # --- What each kind of edge attack fills in ---------------------------------
+# (Every kind overrides these with numbers from its tuning; the values here are placeholders.)
 
 ## How far out from the edge they line up, and strike (m).
 func lineup_distance() -> float:
@@ -119,7 +120,7 @@ func best_target_near_edge(lead: Predator, reach: float, accept := Callable(), m
 			continue
 		var dir := to_pod.normalized()
 		var edge := IceEdges.edge_toward(pod.get_world_3d(), p.global_position, dir, reach)
-		if edge.is_empty() or (edge["point"] as Vector3).y > Penguin.WATER_LEVEL + max_height:
+		if edge.is_empty() or (edge["point"] as Vector3).y > GameWorld.WATER_LEVEL + max_height:
 			continue
 		var score := lead.temptation(p)
 		if score > best_score:
@@ -134,7 +135,7 @@ func best_target_near_edge(lead: Predator, reach: float, accept := Callable(), m
 func line_spot(i: int, n: int, distance: float, depth: float) -> Vector3:
 	var side := out.cross(Vector3.UP).normalized()
 	var spot := impact + out * distance + side * (i - (n - 1) * 0.5) * pod.tuning.spacing
-	spot.y = Penguin.WATER_LEVEL - depth
+	spot.y = GameWorld.WATER_LEVEL - depth
 	return spot
 
 
@@ -151,7 +152,7 @@ func penguins_in_strip(reach: float, width: float) -> Array[Penguin]:
 	var found: Array[Penguin] = []
 	for node in pod.get_tree().get_nodes_in_group(&"penguins"):
 		var p := node as Penguin
-		if p == null or p.global_position.y < Penguin.WATER_LEVEL:
+		if p == null or p.global_position.y < GameWorld.WATER_LEVEL:
 			continue
 		var rel := p.global_position - impact
 		rel.y = 0.0
