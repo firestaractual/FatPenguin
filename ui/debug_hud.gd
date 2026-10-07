@@ -15,7 +15,7 @@ func _ready() -> void:
 	var touch := DisplayServer.is_touchscreen_available()
 	_hint_label.text = "Left thumb: steer (pull back mid-slide to brake)   Right thumb: boost / belly-slide (tap again to push)" if touch else \
 		"WASD / arrows: steer   Space: boost (water) / belly-slide, tap again to push (ice)   S: brake a slide   R: reset\n" + \
-		"Slide into the blue dummies to bump them; walk into steps to hop.   Q / E: energy -/+   F2: infinite energy   F1: debug\n" + \
+		"Walk into steps, or at a gap between floes, to hop (thin, you hop farther). Slide into the blue dummies to bump them.   Q / E: energy -/+   F2: infinite   F1: debug\n" + \
 		"Seals: an orange ring means one has locked on; when it flashes, turn off the line or boost. A dark shape under the edge is one lying in wait: go in elsewhere.\n" + \
 		"Orcas: fins or shadows gathering and orange ice mean get off it (or dig in). In the water, race their fins home, and boost out of a ring of bubbles."
 
@@ -33,7 +33,7 @@ func _process(_delta: float) -> void:
 	_air_bar.visible = _penguin.air < t.air_seconds - 0.05
 
 	if _debug_label.visible:
-		_debug_label.text = "state   %s%s\nspeed   %.1f m/s\nenergy  %.0f%s%s\nfat     %.0f%%   mass x%.2f   hop %.2f m\nair     %.1f s\nfps     %d" % [
+		_debug_label.text = "state   %s%s\nspeed   %.1f m/s\nenergy  %.0f%s%s\nfat     %.0f%%   mass x%.2f   hop %.2f m up, %.1f m across\nair     %.1f s\nfps     %d" % [
 			Penguin.State.keys()[_penguin.state],
 			_status(),
 			_penguin.get_speed(),
@@ -43,6 +43,7 @@ func _process(_delta: float) -> void:
 			_penguin.fatness() * 100.0,
 			_penguin.mass(),
 			_penguin.hop_height(),
+			_penguin.hop_distance(),
 			_penguin.air,
 			Engine.get_frames_per_second(),
 		] + _predator_line() + _pod_line()

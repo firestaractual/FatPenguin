@@ -4,6 +4,8 @@ extends SceneTree
 ## then checks the plateau (slide down chutes, hop up steps), bumping with dummy penguins,
 ## fish schooling with their own species, leopard seals hunting and lying in ambush, and an orca
 ## pod's attacks: the wave, the ram, the cut-off and the carousel, and how they chain into a trap.
+## Then the berg field (real kinds of berg, ramps, tunnels, the lagoon, pack ice to hop) and the
+## colonies of NPC penguins (huddling, fishing parties, getting home).
 ##
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --script res://tests/movement_smoke_test.gd
@@ -47,6 +49,11 @@ func _run() -> void:
 		"the level spawns its predators from its spawn list (%s)" % str(kinds))
 	for spawned in level.get_node("Predators").get_children():
 		spawned.queue_free()
+	# The colonies' NPC penguins would get in the way too. The NPC checks bring their own.
+	var npcs := get_nodes_in_group(&"npcs").size()
+	_check(npcs > 0, "the level spawns its colonies of NPC penguins (%d)" % npcs)
+	for npc in get_nodes_in_group(&"npcs"):
+		npc.queue_free()
 
 	await _test_lands_on_ice()
 	await _test_slide_off_edge_into_water()
@@ -71,6 +78,12 @@ func _run() -> void:
 	await _test_orca_cut_off()
 	await _test_orca_carousel()
 	await _test_orca_trap()
+	await _test_berg_field()
+	await _test_gap_hops()
+	await _test_tunnels()
+	await _test_spire_climb()
+	await _test_huddle()
+	await _test_npc_fishing()
 
 	print("\nStates seen: ", " > ".join(_states_seen))
 	if _failures.is_empty():
@@ -496,8 +509,12 @@ func _test_predators() -> void:
 	await _frames(2)
 	var berg_radius: float = _level.get(&"berg_radius")
 
-	# Patrol: around the berg and past the schools, in the water and never into the ice.
+	# Patrol: around the berg and past the schools, in the water and never into the ice. (This one
+	# stays round the home floe; roaming the field is checked below.)
 	var seal := _spawn_seal(Vector3(berg_radius + 4.0, -2.5, 0.0))
+	var stay := seal.tuning.duplicate() as PredatorTuning
+	stay.roam_chance = 0.0
+	seal.tuning = stay
 	var last := 0.0
 	var swept := 0.0
 	var closest := INF
@@ -513,6 +530,22 @@ func _test_predators() -> void:
 			closest = minf(closest, Vector2(at.x, at.z).length())
 	_check(rad_to_deg(swept) > 45.0, "a seal on patrol swims around the berg (%.0f° in 30 s)" % rad_to_deg(swept))
 	_check(highest < 0.0 and closest > berg_radius, "and stays in the water, clear of the ice (top y=%.2f, closest %.1f m out)" % [highest, closest])
+	seal.queue_free()
+
+	# In the berg field a seal heads off now and then to patrol another berg.
+	seal = _spawn_seal(Vector3(berg_radius + 4.0, -2.5, 0.0))
+	var roams := seal.tuning.duplicate() as PredatorTuning
+	roams.roam_chance = 0.5
+	roams.school_visit_chance = 0.0
+	seal.tuning = roams
+	var visited := {}
+	for i in 90 * 60:
+		await physics_frame
+		if i % 30 == 0 and seal.patrol_berg != null:
+			visited[seal.patrol_berg.name] = true
+		if visited.size() >= 2 and seal.patrol_berg != null and seal.global_position.distance_to(seal.patrol_berg.global_position) < seal.patrol_berg.reach() + 8.0 and seal.patrol_berg.name != "HomeFloe":
+			break
+	_check(visited.size() >= 2, "a seal roams the berg field, patrolling more than one berg (%s)" % ", ".join(visited.keys()))
 	seal.queue_free()
 
 	# Targeting: of two penguins in sight, it locks on to the more tempting, fatter one.
@@ -778,7 +811,7 @@ func _test_orcas() -> void:
 	spawner.ice_radius = berg_radius
 	_level.add_child(spawner)
 	var entry: PredatorSpawn = load("res://levels/movement_toy/predators/orca_pod.tres")
-	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var pod := _spawn_pod(spawner, entry)
 	var t := _only_attack(pod, "Wave").settings as WaveAttackTuning
 	_check(pod.members().size() == entry.pod_size, "a spawn entry puts %d orcas in a pod" % pod.members().size())
 
@@ -862,7 +895,7 @@ func _test_orca_ram() -> void:
 	spawner.ice_radius = berg_radius
 	_level.add_child(spawner)
 	entry.start_angle_deg = rad_to_deg(atan2(floe.global_position.z, floe.global_position.x))
-	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var pod := _spawn_pod(spawner, entry)
 	var ram := _only_attack(pod, "Ram")
 	var t := ram.settings as RamAttackTuning
 	var rammed := {"coming": -1, "hit": -1, "jolted": []}
@@ -901,7 +934,7 @@ func _test_orca_ram() -> void:
 	spawner = PredatorSpawner.new()
 	spawner.ice_radius = berg_radius
 	_level.add_child(spawner)
-	pod = spawner.spawn(entry)[0] as PredatorPod
+	pod = _spawn_pod(spawner, entry)
 	_only_attack(pod, "Ram")
 	pod.set(&"_cooldown", 0.0)
 	var struck := [false]
@@ -932,7 +965,7 @@ func _test_orca_ram() -> void:
 	spawner.ice_radius = berg_radius
 	_level.add_child(spawner)
 	entry.start_angle_deg = 180.0
-	pod = spawner.spawn(entry)[0] as PredatorPod
+	pod = _spawn_pod(spawner, entry)
 	_only_attack(pod, "Ram")
 	var jolted := [false]
 	pod.attack_hit.connect(func(_a: PodAttack, hit: Array[Penguin]) -> void: jolted[0] = hit.has(near_edge))
@@ -965,7 +998,7 @@ func _test_orca_cut_off() -> void:
 	var floater := _spawn_bait(off_south, 50.0)
 	floater.call(&"_set_state", Penguin.State.SWIM)
 	var spawner := _spawn_pods()
-	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var pod := _spawn_pod(spawner, entry)
 	var cut := _only_attack(pod, "Cut-off") as CutOffAttack
 	var t := cut.settings as CutOffAttackTuning
 	pod.set(&"_cooldown", 0.0)
@@ -996,7 +1029,7 @@ func _test_orca_cut_off() -> void:
 	# attack is called off.
 	var racer := _spawn_swimmer(off_south, PI) # facing north, toward the berg
 	spawner = _spawn_pods()
-	pod = spawner.spawn(entry)[0] as PredatorPod
+	pod = _spawn_pod(spawner, entry)
 	_only_attack(pod, "Cut-off")
 	pod.set(&"_cooldown", 0.0)
 	var called_off := [false]
@@ -1025,7 +1058,7 @@ func _test_orca_carousel() -> void:
 	var floater := _spawn_bait(open_water, 50.0)
 	floater.call(&"_set_state", Penguin.State.SWIM)
 	var spawner := _spawn_pods()
-	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var pod := _spawn_pod(spawner, entry)
 	var ring := _only_attack(pod, "Carousel") as CarouselAttack
 	var t := ring.settings as CarouselAttackTuning
 	pod.set(&"_cooldown", 0.0)
@@ -1062,7 +1095,7 @@ func _test_orca_carousel() -> void:
 	# Swimming out (and diving) once the bubbles are up: held in, and lifted to the surface.
 	var swimmer := _spawn_swimmer(open_water, 0.0)
 	spawner = _spawn_pods()
-	pod = spawner.spawn(entry)[0] as PredatorPod
+	pod = _spawn_pod(spawner, entry)
 	ring = _only_attack(pod, "Carousel") as CarouselAttack
 	pod.set(&"_cooldown", 0.0)
 	var worst := 0.0
@@ -1091,7 +1124,7 @@ func _test_orca_carousel() -> void:
 	# A boost straight out early on breaks through the bubbles: the carousel is called off.
 	swimmer = _spawn_swimmer(open_water, 0.0)
 	spawner = _spawn_pods()
-	pod = spawner.spawn(entry)[0] as PredatorPod
+	pod = _spawn_pod(spawner, entry)
 	ring = _only_attack(pod, "Carousel") as CarouselAttack
 	pod.set(&"_cooldown", 0.0)
 	var called_off := [false]
@@ -1124,7 +1157,7 @@ func _test_orca_trap() -> void:
 	entry.start_angle_deg = -50.0
 	var fleeing := _spawn_swimmer(Vector3(0.0, -0.1, -berg_radius - 8.0), 0.0)
 	var spawner := _spawn_pods()
-	var pod := spawner.spawn(entry)[0] as PredatorPod
+	var pod := _spawn_pod(spawner, entry)
 	var kept: Array[PodAttack] = []
 	for attack in pod.attacks():
 		if attack is CutOffAttack or attack is CarouselAttack:
@@ -1158,7 +1191,7 @@ func _test_orca_trap() -> void:
 	# A wave washes a penguin in; when it swims off the edge, the pod cuts it off straight away.
 	entry.start_angle_deg = 180.0
 	spawner = _spawn_pods()
-	pod = spawner.spawn(entry)[0] as PredatorPod
+	pod = _spawn_pod(spawner, entry)
 	kept = []
 	for attack in pod.attacks():
 		if attack is WaveAttack or attack is CutOffAttack:
@@ -1196,6 +1229,396 @@ func _test_orca_trap() -> void:
 	await _frames(2)
 
 
+func _test_berg_field() -> void:
+	var world: World3D = (_level as Node3D).get_world_3d()
+	var space := world.direct_space_state
+	# The kinds of berg, each with its real height-to-draft ratio (the International Ice Patrol's
+	# averages), at penguin scale.
+	var ratios := {"TabularBerg": 5.0, "WedgeBerg": 5.0, "PinnacleBerg": 2.0, "DomeBerg": 4.0, "DrydockBerg": 1.0}
+	var kinds := {}
+	var notes: Array[String] = []
+	var real := true
+	var climbable := true
+	for node in get_nodes_in_group(&"bergs"):
+		var berg := node as IceBerg
+		var kind: String = berg.get_script().get_global_name()
+		if not ratios.has(kind):
+			continue
+		kinds[kind] = true
+		var tallest := berg.top_height()
+		if berg is PinnacleBerg:
+			tallest = (berg as PinnacleBerg).lookout().y
+		# The keel's bottom, straight under the middle (from below).
+		var mid := Vector3(berg.global_position.x, -29.0, berg.global_position.z)
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(mid, mid + Vector3.UP * 29.0, Penguin.WORLD_LAYER))
+		var draft := -(hit["position"] as Vector3).y if not hit.is_empty() else 0.0
+		var ratio := draft / tallest
+		real = real and absf(ratio - ratios[kind]) < 0.15 * ratios[kind]
+		climbable = climbable and tallest <= 6.05
+		notes.append("%s 1:%.1f" % [kind.trim_suffix("Berg").to_lower(), ratio])
+	_check(kinds.size() == ratios.size(), "the field has a berg of every kind: tabular, wedge, pinnacle, dome, drydock")
+	_check(real, "each sits as deep as the real kind does (%s)" % ", ".join(notes))
+	_check(climbable, "and they're penguin-sized: no more than 6 m above the water")
+
+	# Out of the water onto every berg: swim up its ramp or shelf, or launch onto its low edge.
+	var landed: Array[String] = []
+	var failed: Array[String] = []
+	for node in get_nodes_in_group(&"bergs"):
+		var berg := node as IceBerg
+		for exit in berg.exits():
+			var ok := await _try_exit(berg, exit)
+			(landed if ok else failed).append("%s %s" % [berg.name, "launch" if exit["launch"] else "ramp"])
+			if not exit["launch"]:
+				break # one ramp per berg is enough
+	_check(failed.is_empty(), "you can get out of the water onto every berg (%d ways tried%s)" % [landed.size() + failed.size(), "" if failed.is_empty() else "; failed: " + ", ".join(failed)])
+
+	# Fish keep clear of the ice, so a roaming fish doesn't swim into a keel.
+	var too_close := 0
+	for fish: Fish in _level.get_node("Fish").get_children():
+		if not _level.call(&"_clear_of_ice", fish.home, 5.0):
+			too_close += 1
+	_check(too_close == 0, "every fish lives at least 5 m from the ice (%d too close)" % too_close)
+
+
+## Tries one way out of the water onto `berg`: a ramp (swim straight up it) or a launch (come in
+## deep, pitch up, boost). True if it ends up standing on the berg.
+func _try_exit(berg: IceBerg, exit: Dictionary) -> bool:
+	var at: Vector3 = exit["at"]
+	var toward: Vector3 = exit["toward"]
+	var p := _spawn_swimmer(at - toward * 2.0 + Vector3.DOWN * (2.5 if exit["launch"] else 0.0), atan2(-toward.x, -toward.z))
+	p.brain_controlled = true
+	p.set(&"_pitch", deg_to_rad(52.0) if exit["launch"] else 0.0)
+	var boosted := false
+	var ok := false
+	for i in 12 * 60:
+		p.wish_dir = toward * cos(deg_to_rad(52.0)) + Vector3.UP * sin(deg_to_rad(52.0)) if exit["launch"] else toward
+		p.wish_brake = p.state == Penguin.State.SLIDE
+		if exit["launch"] and not boosted and p.global_position.distance_to(at) > 1.0 and p.get_heading().y > 0.6:
+			p.wish_action = true
+			boosted = true
+		await physics_frame
+		var flat := Vector2(p.global_position.x - berg.global_position.x, p.global_position.z - berg.global_position.z).length()
+		if p.state == Penguin.State.WALK and p.global_position.y > 0.4 and flat <= berg.reach() + 0.5:
+			ok = true
+			break
+	p.queue_free()
+	await _frames(2)
+	return ok
+
+
+func _test_gap_hops() -> void:
+	# The pack ice east of the home floe: a thin penguin hops floe to floe all the way to the
+	# wedge berg; a stuffed one hops the narrow gaps but stops at the first wide one.
+	var chain := _level.get_node("BergField/PackIceEast") as FloeChain
+	var dir := chain.end - chain.start
+	dir.y = 0.0
+	dir = dir.normalized()
+	var total := (chain.end - chain.start).length()
+	var results := {}
+	for energy in [10.0, 100.0]:
+		var p := load(PENGUIN_SCENE).instantiate() as Penguin
+		p.player_controlled = false
+		p.brain_controlled = true
+		p.infinite_energy = true
+		p.start_energy = energy
+		_level.add_child(p)
+		p.global_position = chain.global_transform * (chain.start - dir * 2.5) + Vector3.UP * 1.6
+		p.set(&"_yaw", atan2(-dir.x, -dir.z))
+		var hops := [0]
+		p.hopped.connect(func(_d: float, _cleared: bool) -> void: hops[0] += 1)
+		var wet := false
+		var along := 0.0
+		for i in 60 * 60:
+			p.energy = energy # (a fish it swims past mustn't fatten it up on the way)
+			p.wish_dir = dir
+			p.wish_brake = p.state == Penguin.State.SLIDE
+			await physics_frame
+			wet = wet or p.state == Penguin.State.SWIM
+			along = (p.global_position - chain.global_transform * chain.start).dot(dir)
+			if along > total + 1.0 and p.state == Penguin.State.WALK:
+				break
+		results[energy] = {"hops": hops[0], "along": along, "wet": wet, "reach": p.hop_distance()}
+		p.queue_free()
+		await _frames(2)
+	var thin: Dictionary = results[10.0]
+	var fat: Dictionary = results[100.0]
+	var tilt := 0.0
+	for floe in chain.floes():
+		tilt = maxf(tilt, rad_to_deg(floe.global_basis.y.angle_to(Vector3.UP)))
+	_check(thin["along"] > total and not thin["wet"], "a thin penguin hops the pack ice all the way to the wedge berg (%d hops, %.1f m gaps at most)%s" % [thin["hops"], thin["reach"],
+		"" if thin["along"] > total and not thin["wet"] else " [got %.1f of %.1f m, wet %s, floes tilted up to %.0f°]" % [thin["along"], total, thin["wet"], tilt]])
+	_check(fat["along"] < total * 0.5 and not fat["wet"] and fat["hops"] >= 1,
+		"a stuffed one (%.1f m hops) gets %d floes along and stops at the edge of the first wide gap, dry" % [fat["reach"], fat["hops"]])
+
+
+func _test_tunnels() -> void:
+	var mesa := _level.get_node("BergField/Mesa") as TabularBerg
+	var tunnel: Dictionary = mesa.tunnels()[0]
+	var from: Vector3 = tunnel["from"]
+	var to: Vector3 = tunnel["to"]
+	var dir := (to - from).normalized()
+	# A penguin swims through the tabular berg's keel, with air to spare.
+	var p := _spawn_swimmer(from, atan2(-dir.x, -dir.z))
+	p.brain_controlled = true
+	var through := false
+	var air_left := 99.0
+	for i in 25 * 60:
+		p.wish_dir = (to - p.global_position).normalized()
+		await physics_frame
+		air_left = minf(air_left, p.air)
+		if p.global_position.distance_to(to) < 1.5:
+			through = true
+			break
+	_check(through and air_left > 5.0, "a penguin swims through the tunnel in the tabular berg's keel (%.0f m, %.0f s of air left)" % [from.distance_to(to), air_left])
+	p.queue_free()
+
+	# A leopard seal fits through it; an orca doesn't.
+	var made_it := {}
+	for scene_path in [SEAL_SCENE, "res://actors/predators/orca.tscn"]:
+		var predator := load(scene_path).instantiate() as Predator
+		_level.add_child(predator)
+		predator.global_position = from - dir * 3.0
+		predator.hunger = 0.0
+		var t := predator.tuning.duplicate() as PredatorTuning
+		t.roam_chance = 0.0
+		t.ambush_chance = 0.0
+		predator.tuning = t
+		var deepest_in := 0.0
+		for i in 20 * 60:
+			predator.order_move(to + dir * 3.0, 4.0, Predator.MIN_DEPTH, Vector3.ZERO, false)
+			await physics_frame
+			var rel := predator.global_position - from
+			var along := Vector3(rel.x, 0.0, rel.z).dot(Vector3(dir.x, 0.0, dir.z).normalized())
+			if Vector3(rel.x, 0.0, rel.z).length() - absf(along) < 1.5 and absf(rel.y) < 2.0:
+				deepest_in = maxf(deepest_in, along)
+			if predator.global_position.distance_to(to + dir * 3.0) < 2.5:
+				deepest_in = INF
+				break
+		made_it[predator.tuning.display_name] = deepest_in
+		predator.queue_free()
+		await _frames(2)
+	_check(is_inf(made_it.get("Leopard seal", 0.0)), "a leopard seal can follow you through it")
+	_check(made_it.get("Orca", 0.0) < 2.0, "an orca can't: it's too big for the tunnel")
+
+	# The drydock's lagoon: too shallow for an orca, not for a seal.
+	var dock := _level.get_node("BergField/Drydock") as DrydockBerg
+	var lagoon: Dictionary = dock.tunnels()[0]
+	var mouth: Vector3 = lagoon["from"]
+	var shelf: Vector3 = lagoon["to"]
+	var into := (shelf - mouth)
+	into.y = 0.0
+	into = into.normalized()
+	var reached := {}
+	for scene_path in [SEAL_SCENE, "res://actors/predators/orca.tscn"]:
+		var predator := load(scene_path).instantiate() as Predator
+		_level.add_child(predator)
+		predator.global_position = mouth - into * 4.0 + Vector3.DOWN * 0.5
+		predator.hunger = 0.0
+		var t := predator.tuning.duplicate() as PredatorTuning
+		t.roam_chance = 0.0
+		t.ambush_chance = 0.0
+		predator.tuning = t
+		var furthest := -INF
+		for i in 15 * 60:
+			predator.order_move(shelf, 3.0, Predator.MIN_DEPTH, Vector3.ZERO, false)
+			await physics_frame
+			furthest = maxf(furthest, (predator.global_position - mouth).dot(into))
+		# How far its middle got past the mouth ('from' is 1.5 m outside it).
+		reached[predator.tuning.display_name] = furthest - 1.5
+		predator.queue_free()
+		await _frames(2)
+	_check(reached.get("Leopard seal", -INF) > 3.0 and reached.get("Orca", INF) < 1.0,
+		"the drydock's lagoon is too shallow for an orca (its middle got %.1f m past the mouth) but a seal swims in (%.1f m)" % [reached.get("Orca", 0.0), reached.get("Leopard seal", 0.0)])
+
+	# The cave through the pinnacle's spire: walk in one side and out the other.
+	var pin := _level.get_node("BergField/Pinnacle") as PinnacleBerg
+	var cave: Dictionary = pin.tunnels()[0]
+	var walker := await _spawn_standing((cave["from"] as Vector3) + Vector3.DOWN * 0.4, 50.0)
+	walker.brain_controlled = true
+	var out := false
+	for i in 15 * 60:
+		var aim: Vector3 = cave["to"] - walker.global_position
+		aim.y = 0.0
+		walker.wish_dir = aim.normalized()
+		await physics_frame
+		if Vector2(walker.global_position.x - (cave["to"] as Vector3).x, walker.global_position.z - (cave["to"] as Vector3).z).length() < 1.0:
+			out = true
+			break
+	_check(out and walker.state == Penguin.State.WALK, "you can walk through the cave in the pinnacle's spire")
+	walker.queue_free()
+	await _frames(2)
+
+
+func _test_spire_climb() -> void:
+	# Up the pinnacle's spiral (its own space): the shelf steps, round the first tier's ledge to
+	# the second flight, round the second tier's ledge to the third, up to the lookout. Each
+	# flight is taller than the last: a very thin penguin reaches the top, a middling one the
+	# second tier, a fat one only the first.
+	var pin := _level.get_node("BergField/Pinnacle") as PinnacleBerg
+	var route: Array[Vector3] = [Vector3(10.5, 0, -2.5), Vector3(4.25, 0, -2.5), Vector3(4.25, 0, -4.25), Vector3(-0.4, 0, -4.25),
+		Vector3(-0.4, 0, -2.75), Vector3(-2.75, 0, -2.75), Vector3(-2.75, 0, 0.95), Vector3(-1.0, 0, 0.95)]
+	var tops: Array[float] = []
+	for t in pin.tiers:
+		tops.append(t.y)
+	var reached := {}
+	for energy in [10.0, 37.0, 80.0]:
+		var p := load(PENGUIN_SCENE).instantiate() as Penguin
+		p.player_controlled = false
+		p.brain_controlled = true
+		p.infinite_energy = true
+		p.start_energy = energy
+		_level.add_child(p)
+		p.global_position = pin.to_global(Vector3(12.0, pin.shelf_height + 0.6, -2.5))
+		await _frames(30)
+		var next := 0
+		var since := 0
+		var highest := -INF
+		while next < route.size() and since < 8 * 60:
+			var to := pin.to_global(route[next]) - p.global_position
+			to.y = 0.0
+			if to.length() < 0.3:
+				next += 1
+				since = 0
+				continue
+			p.wish_dir = to.normalized()
+			p.wish_brake = p.state == Penguin.State.SLIDE
+			p.energy = energy
+			await physics_frame
+			since += 1
+			if p.state == Penguin.State.WALK:
+				highest = maxf(highest, pin.to_local(p.global_position).y - 0.4)
+		var tier := 0
+		for k in tops.size():
+			if highest >= tops[k] - 0.15:
+				tier = k + 1
+		reached[energy] = tier
+		p.queue_free()
+		await _frames(2)
+	_check(reached[10.0] == 3 and reached[37.0] == 2 and reached[80.0] == 1,
+		"the pinnacle's spiral gets harder going up: at energy 10 you reach tier %d (the lookout is 3), at 37 tier %d, at 80 tier %d" % [reached[10.0], reached[37.0], reached[80.0]])
+
+
+func _test_huddle() -> void:
+	# A colony of 8 on the home floe, not hungry: they huddle round its waddle spot, and the
+	# huddle keeps turning over.
+	var home := _level.get_node("BergField/HomeFloe") as IceBerg
+	var spot := home.waddle_spot()
+	var colony: Array[Penguin] = []
+	for i in 8:
+		var a := TAU * i / 8.0
+		colony.append(_spawn_npc(home, spot + Vector3(cos(a), 0.5, sin(a)) * 3.0, 60.0, true))
+	await _frames(25 * 60)
+	var tuning: NpcTuning = (colony[0].get_node("Brain") as PenguinBrain).tuning
+	var wind := Vector3(tuning.wind.x, 0.0, tuning.wind.z).normalized()
+	var core := {}
+	var edge := {}
+	var samples := 0
+	var spread := 0.0
+	var off_spot := 0.0
+	var drain := 0.0
+	for i in 90 * 60:
+		await physics_frame
+		if i % 30 != 0:
+			continue
+		samples += 1
+		var middle := Vector3.ZERO
+		for p in colony:
+			middle += p.global_position
+		middle /= colony.size()
+		off_spot = maxf(off_spot, Vector2(middle.x - spot.x, middle.z - spot.z).length())
+		for p in colony:
+			spread += Vector2(p.global_position.x - middle.x, p.global_position.z - middle.z).length()
+			drain += p.drain_mult
+			var near := 0
+			var sheltered := false
+			for other in colony:
+				var rel := other.global_position - p.global_position
+				rel.y = 0.0
+				if other == p:
+					continue
+				if rel.length() < tuning.neighbour_range:
+					near += 1
+				if rel.length() < tuning.neighbour_range * 1.3 and rel.dot(-wind) > 0.3 * rel.length():
+					sheltered = true
+			if near >= 3:
+				core[p] = core.get(p, 0) + 1
+			if not sheltered:
+				edge[p] = edge.get(p, 0) + 1
+	var mean_spread := spread / (samples * colony.size())
+	var took_turns := 0
+	var got_warm := 0
+	for p in colony:
+		if edge.get(p, 0) >= samples * 0.1:
+			took_turns += 1
+		if core.get(p, 0) >= samples * 0.05:
+			got_warm += 1
+	_check(mean_spread < 2.0 and off_spot < 3.0, "NPC penguins huddle in the middle of their berg (%.1f m from the huddle's middle on average, which stays within %.1f m of the spot)" % [mean_spread, off_spot])
+	_check(took_turns >= 6 and got_warm >= 6, "the huddle turns over: %d of 8 took turns on the windward edge, %d of 8 got in among the others" % [took_turns, got_warm])
+	_check(drain / (samples * colony.size()) < 0.6, "huddled, they burn energy slower (×%.2f on average)" % (drain / (samples * colony.size())))
+	for p in colony:
+		p.queue_free()
+	await _frames(2)
+
+
+func _test_npc_fishing() -> void:
+	# Four hungry NPCs on the home floe: they gather at the edge, go in together, eat and come
+	# home. And one knocked into the water swims back.
+	for fish: Fish in _level.get_node("Fish").get_children():
+		fish.monitoring = true
+	var home := _level.get_node("BergField/HomeFloe") as IceBerg
+	var spot := home.waddle_spot()
+	var party: Array[Penguin] = []
+	var went_in := {}
+	var best := {}
+	for i in 4:
+		var p := _spawn_npc(home, spot + Vector3(i * 0.9 - 1.3, 0.5, 0.0), 25.0, false)
+		party.append(p)
+		p.state_changed.connect(func(s: Penguin.State) -> void:
+			if s == Penguin.State.SWIM and not went_in.has(p):
+				went_in[p] = Engine.get_physics_frames())
+	var home_again := 0
+	for i in 150 * 60:
+		await physics_frame
+		for p in party:
+			best[p] = maxf(best.get(p, 0.0), p.energy)
+		if i % 60 == 0:
+			home_again = 0
+			for p in party:
+				var brain := p.get_node("Brain") as PenguinBrain
+				if went_in.has(p) and brain.mode == PenguinBrain.Mode.HUDDLE:
+					home_again += 1
+			if home_again >= 3:
+				break
+	var entries: Array = went_in.values()
+	entries.sort()
+	var together := entries.size() >= 3 and float(entries[2] - entries[0]) / 60.0 < 4.0
+	var fed := 0
+	for p in party:
+		if best.get(p, 0.0) > 50.0:
+			fed += 1
+	_check(together, "hungry NPCs gather at the edge and go in together (%d went in%s)" % [entries.size(), "" if entries.size() < 3 else ", the first three within %.1f s" % (float(entries[2] - entries[0]) / 60.0)])
+	_check(fed >= 3, "they catch fish out there (%d of 4 got past 50 energy)" % fed)
+	_check(home_again >= 3, "and come home to the huddle (%d of 4 back)" % home_again)
+	for p in party:
+		p.queue_free()
+
+	# Knocked in off the east side: it swims back, gets out and walks back to the huddle.
+	var swimmer := _spawn_npc(home, Vector3(38.0, -0.2, 8.0), 60.0, true)
+	swimmer.call(&"_set_state", Penguin.State.SWIM)
+	var brain := swimmer.get_node("Brain") as PenguinBrain
+	var out := false
+	for i in 60 * 60:
+		await physics_frame
+		if brain.mode == PenguinBrain.Mode.HUDDLE and swimmer.state == Penguin.State.WALK:
+			out = true
+			break
+	_check(out, "an NPC knocked into the water swims back, climbs out and rejoins the huddle")
+	swimmer.queue_free()
+	for fish: Fish in _level.get_node("Fish").get_children():
+		fish.monitoring = false
+	await _frames(2)
+
+
 # --- Helpers ----------------------------------------------------------------
 
 ## Leaves `pod` with just its attack called `attack_name`, and returns that attack.
@@ -1206,6 +1629,31 @@ func _only_attack(pod: PredatorPod, attack_name: String) -> PodAttack:
 			kept.append(attack)
 	pod.set(&"_attacks", kept)
 	return kept[0] if not kept.is_empty() else null
+
+
+## A computer penguin with a brain, living on `home`, at `at`.
+func _spawn_npc(home: IceBerg, at: Vector3, energy: float, endless: bool) -> Penguin:
+	var p := load(PENGUIN_SCENE).instantiate() as Penguin
+	p.player_controlled = false
+	p.start_energy = energy
+	p.infinite_energy = endless
+	p.position = at
+	var brain := PenguinBrain.new()
+	brain.name = "Brain"
+	brain.berg = home
+	p.add_child(brain)
+	_level.add_child(p)
+	return p
+
+
+## A pod from `entry`, kept round the home floe (no roaming off to other bergs mid-check).
+func _spawn_pod(spawner: PredatorSpawner, entry: PredatorSpawn) -> PredatorPod:
+	var pod := spawner.spawn(entry)[0] as PredatorPod
+	for member in pod.members():
+		var t := member.tuning.duplicate() as PredatorTuning
+		t.roam_chance = 0.0
+		member.tuning = t
+	return pod
 
 
 ## A spawner for pods, at the origin, around the berg.

@@ -1,6 +1,6 @@
 # Fat Penguin — Game Design Document
 
-Last updated: 2026-10-01 · Status: pre-production
+Last updated: 2026-10-05 · Status: pre-production
 
 Status tags used below:
 
@@ -162,6 +162,7 @@ The waddle is the group of penguins on the ice and the only real safety. It's sa
 - **Edge:** a faster drain, exposed to orca waves, and easy to bump off.
 - In multiplayer, players shove for the center. Because a hit on a crowd is shared across it (§4.5), getting in is a walking push, not a bump.
 - The waddle shrinks as the ice breaks up.
+- **Computer penguins huddle this way (built in the movement toy):** each berg's colony gathers in the middle of its berg. A cold penguin on the windward edge peels off and walks round to the sheltered lee side; a warm one in the middle stops pushing and gets moved toward the wind. So the huddle keeps turning over and everyone takes a turn on the cold edge, but it stays in the middle of its berg rather than creeping off. Sheltered, an NPC burns energy at 0.2 × the base rate; exposed, 0.6 × (TUNING, NPC penguins). The player's waddle drain isn't built yet.
 
 ### 4.7 Leaving the waddle: the core decision [Locked as intent, Proposed in detail]
 
@@ -185,7 +186,7 @@ The answer is one of: go now, wait, or go with someone else as bait.
 
 - **On ice:** walk (a slow waddle) or belly-slide (fast, momentum-based, hard to steer). Tap to flop onto your belly, tap mid-slide for a flipper push, and pull the stick back to dig in and brake. The ice is slick: an unbraked flop glides further than the iceberg is wide. Sliding is also how you bump (§4.5).
 - **Slopes:** anything steeper than you can stand on is a chute. Step onto one and you slip onto your belly. Gravity speeds a slide downhill and slows it uphill, so chutes are fast ways down, and you can't walk back up them.
-- **Hop:** walk into a ledge or a crack and you hop it automatically, if you can clear it. Hops get lower and shorter as you get fatter; at a ledge that's too tall you try and fall short. On your feet you stop at a gap you can't clear; on your belly you can't stop, so you slide in.
+- **Hop:** walk into a ledge or a crack and you hop it automatically, if you can clear it. Hops get lower and shorter as you get fatter; at a ledge that's too tall you try and fall short. On your feet you stop at a gap you can't clear; on your belly you can't stop, so you slide in. (Gap hops are built: the pack ice in the movement toy, §4.10.)
 - **In water:** one-thumb steering, plus porpoising (leaping in and out) at speed.
 - **Bubble boost:** a burst of speed that costs energy and leaves a trail of bubbles predators can follow. Boosting toward an ice edge launches you out of the water onto the ice. Fat penguins launch lower (§4.4).
 - **Air:** a separate breath meter, used only underwater. It forces you to surface, and breathing holes and ice edges are where leopard seals wait.
@@ -197,6 +198,23 @@ The answer is one of: go now, wait, or go with someone else as bait.
 - Thin penguins hop the gaps. Fat ones go the long way around, or swim across past whatever is in the water. Gap routes are the thin penguins' shortcuts.
 - The ice shrinks down to the **kill-screen floe** (multiplayer, and late campaign levels).
 - **Low exits:** every map needs at least one ramp or low shelf where a penguin can climb out without boosting. Otherwise a penguin with no energy is stuck in the water. Low exits are predictable, so they're also where leopard seals wait (Prototype 1).
+
+#### Bergs [Proposed]
+
+Maps are fields of bergs, and each berg is a platforming puzzle: a way up, routes across, and places only thin penguins reach. The puzzles use only the moves you already have (walk, hop, slide, launch, swim). The bergs are true to real ice (§10):
+
+- **Real shapes and drafts.** Each berg is one of the shapes ice services classify, and sits as deep as that kind does: draft about 5 × its height above water for tabular and wedge bergs, 4 × for domes, 2 × for pinnacles, 1 × for drydocks. Keels run deep, so the water round a berg is open sea, not shallows.
+- **Penguin-scale.** 1–6 m above the water, the size of bergy bits and small bergs. A boost launches you about 1.7 m up, so anything taller needs a ramp, a slope or steps.
+- **Each kind plays differently:**
+  - **Tabular:** flat on top and sheer all round. The only way up is the ice foot, a ramp along one side. A safe top to huddle on, too high for waves.
+  - **Wedge:** one long slope to walk up out of the water, to a crest that ends in a cliff.
+  - **Drydock:** a U with a sheltered lagoon too shallow for an orca. A seal can still get in.
+  - **Pinnacle:** a spire on a low shelf. Steps spiral round it, harder at each tier, up to a lookout, and a chute shoots you back down.
+  - **Dome:** too steep to stand on anywhere, so it's one big chute, apart from a worn stair up one side.
+- **Tunnels:** caves you walk through, and swim tunnels through keels. A swim tunnel is too narrow for an orca but not for a leopard seal, and it costs air. So it's a way to lose an orca, and a gamble with a seal behind you.
+- **Pack ice:** chains of small floes with gaps between them. Thin penguins hop across; fat ones swim.
+- **Every berg with a colony has a low exit** (a ramp, a slope or a shelf you can launch onto), per the rule above.
+- Built in the movement toy: the home floe plus one berg of each kind, with two chains of pack ice (TUNING, Berg field). Not yet: bergs that drift, roll over or calve, and breathing holes.
 
 ### 4.11 Fish and schools [Proposed]
 
@@ -273,7 +291,7 @@ Levels last 5–10 minutes [Locked]. Only the later levels have a kill screen [L
 
 - **Structure:** chapters follow a penguin's year (arrival → raising a chick → fledging → ice breakup). Each chapter introduces one new mechanic or predator, and later chapters end in a kill-screen finale. The campaign doubles as the multiplayer tutorial.
 - **Pacing:** with perishable energy, a level is a rhythm of about 4–8 trips. Each level has its own pulse schedule.
-- **Computer-controlled penguins** leave the waddle in groups. Going with them is safer (the seal has more targets) but you share the food. Going alone is riskier, but the food is all yours.
+- **Computer-controlled penguins** leave the waddle in groups. Going with them is safer (the seal has more targets) but you share the food. Going alone is riskier, but the food is all yours. Built in the movement toy: a hungry NPC waits at the edge facing the nearest school until three are ready (or 20 s have passed), and they go in together, eat, and swim home to their berg (TUNING, NPC penguins).
 - **Bumping:** computer-controlled penguins crowd the ice edge and jostle until one goes in (§10), and they bump you too. An early chapter teaches bumping this way.
 - **Level goals:**
   - **Journey:** reach a destination through predator territory.
@@ -311,7 +329,10 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | Hopping ledges and gaps | Penguins hop up rocks and ice ledges and across cracks; rockhopper penguins are named for it |
 | Food pulses | Krill rise toward the surface at night and sink by day, and diving seabirds mark where fish are |
 | Fish schooling by species | Forage fish school with others of their own kind and size. A fish that looks different from its school mates is the easiest one for a predator to pick out (the oddity effect), so mixed schools sort themselves out. Antarctic silverfish and lanternfish are staple penguin food |
-| Waddle rotation | Emperor-penguin huddles rotate, with penguins moving from the edge to the center and back |
+| Waddle rotation | Emperor-penguin huddles rotate, with penguins moving from the edge to the center and back. The cold penguins on the windward edge peel off and walk round to the sheltered lee side, so everyone takes turns in the wind, and the huddle slowly travels downwind |
+| Berg shapes and drafts | Icebergs are classed by shape (tabular, wedge, dome, pinnacle, drydock, blocky) and by size (growlers under 1 m above water, bergy bits 1–5 m, then small to very large bergs). Most of a berg is under water: the draft is about 1 × the height above water for a drydock, 2 × for a pinnacle, 4 × for a dome and 5 × for tabular and wedge bergs |
+| Ice caves and tunnels | Waves and melt carve caves, arches and notches into bergs. (Swim tunnels right through a keel are a game liberty built on this) |
+| NPC fishing parties | Adélie penguins crowd at the ice edge before going in, and once one goes, the rest follow, so they go to sea in groups |
 | Belly-slide | Penguins slide on their bellies, which is called tobogganing |
 | Knocking fish loose | Adélie penguins steal nest pebbles from each other |
 
@@ -361,3 +382,11 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | **Gap** | A crack between pieces of ice; thin penguins can hop it, fat ones may not |
 | **Chute** | A slope too steep to stand on: the way down from a plateau tier |
 | **Ledge** | A step up between tiers: hop it if your belly lets you |
+| **Berg field** | A map of several bergs, each a climbing puzzle, linked by pack ice and open water |
+| **Keel** | The part of a berg under the water, several times deeper than the berg is tall |
+| **Ice foot** | A ramp of ice along a berg's side, from the water up to its top |
+| **Swim tunnel** | A passage through a berg's keel: room for a penguin or a seal, not an orca |
+| **Lagoon** | Sheltered water inside a drydock berg, too shallow for an orca |
+| **Pack ice** | A chain of small floes with gaps to hop |
+| **Colony** | The NPC penguins that live on one berg and huddle there |
+| **Fishing party** | NPC penguins that go into the water together to feed |

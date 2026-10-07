@@ -54,6 +54,12 @@ const WORLD_LAYER := 1
 const PENGUIN_LAYER := 2
 ## A drop deeper than this below your feet counts as an edge you can teeter on.
 const EDGE_DROP := 0.6
+## Walking up to an edge, it looks this far across for more ice (m). Ice that close is a gap: you
+## hop it if you can, or stop at the edge if you can't. Farther than that it's open water, and
+## you walk off into it as usual.
+const GAP_SENSE := 3.0
+## ...and this far to either side of straight ahead (degrees).
+const GAP_SIDE_DEG := 25.0
 ## Ledges are measured up to this high; anything taller is a wall.
 const LEDGE_PROBE_HEIGHT := 1.6
 ## Hops clear the ledge by this much.
@@ -80,6 +86,17 @@ var energy := 50.0
 var air := 25.0
 ## How much attention this penguin has drawn lately, 0 to 1. Bumps make noise; it fades.
 var noise := 0.0
+## Energy drains this many times as fast as normal (1). A computer penguin sheltered in a huddle
+## drains slower (GDD §4.6, PenguinBrain).
+var drain_mult := 1.0
+
+## Steering from a PenguinBrain (computer penguins), used when brain_controlled is on: where it
+## wants to go (world space; on the ice only the flat part counts), whether it presses action this
+## frame (it's cleared after each frame), and whether it pulls back to brake a slide.
+var brain_controlled := false
+var wish_dir := Vector3.ZERO
+var wish_action := false
+var wish_brake := false
 
 var _yaw := 0.0
 var _pitch := 0.0
@@ -103,6 +120,7 @@ var _tumbling := false
 var _getup_time := 0.0
 var _hopping := false
 var _hop_dir := Vector3.ZERO
+var _hop_speed := 1.6
 var _hop_cooldown := 0.0
 var _immune_time := 0.0
 var _spin_time := 0.0
@@ -183,6 +201,11 @@ func mass() -> float:
 
 
 ## How high this penguin can hop right now.
+## How wide a gap you can hop across (m): a full belly is a bad jumper.
+func hop_distance() -> float:
+	return tuning.hop_distance * _fat(tuning.fat_hop_distance_mult)
+
+
 func hop_height() -> float:
 	return tuning.hop_height * _fat(tuning.fat_hop_height_mult)
 
@@ -361,9 +384,9 @@ func _swim(delta: float, input: Vector2) -> void:
 func _air(delta: float, input: Vector2) -> void:
 	velocity.y -= tuning.gravity * delta
 	if _hopping:
-		# Keep pressing forward so we land on the ledge once we're above it.
-		velocity.x = _hop_dir.x * tuning.hop_forward_speed
-		velocity.z = _hop_dir.z * tuning.hop_forward_speed
+		# Keep pressing forward so we land on the ledge (or across the gap) once we're over it.
+		velocity.x = _hop_dir.x * _hop_speed
+		velocity.z = _hop_dir.z * _hop_speed
 	var turn := -input.x * deg_to_rad(tuning.air_turn_rate_deg) * delta
 	if not is_zero_approx(turn) and not _hopping:
 		var h := Vector3(velocity.x, 0.0, velocity.z).rotated(Vector3.UP, turn)
@@ -404,6 +427,18 @@ func _walk(delta: float, input: Vector2) -> void:
 	if skidding and is_on_floor() and _edge_ahead(_knock):
 		_start_teeter(_knock)
 		return
+
+	if not skidding and is_on_floor() and _move_input.length() >= 0.3:
+		match _gap_ahead():
+			GapAhead.HOP:
+				return
+			GapAhead.TOO_FAR:
+				# A gap you can't clear: you stop at the edge (on your feet you can).
+				var out := get_facing()
+				var toward := _walk_vel.dot(out)
+				if toward > 0.0:
+					_walk_vel -= out * toward
+					h = _walk_vel + _knock
 
 	velocity.x = h.x
 	velocity.z = h.z
@@ -577,8 +612,75 @@ func _try_hop() -> void:
 	velocity = into * tuning.hop_forward_speed + Vector3.UP * sqrt(2.0 * tuning.gravity * rise)
 	_hopping = true
 	_hop_dir = into
+	_hop_speed = tuning.hop_forward_speed
 	_set_state(State.AIR)
 	hopped.emit(ledge, cleared)
+
+
+enum GapAhead { NONE, HOP, TOO_FAR }
+
+## Walking up to the edge of the ice: is there more ice just across (a gap)? If you can clear it,
+## you hop it now (HOP). If it's there but too wide or too high, TOO_FAR. Open water (or no edge),
+## NONE.
+func _gap_ahead() -> GapAhead:
+	if _hop_cooldown > 0.0:
+		return GapAhead.NONE
+	var dir := get_facing()
+	if not _edge_ahead(dir):
+		return GapAhead.NONE
+	var feet := global_position.y - _shape.radius
+	var reach := hop_distance()
+	var top := hop_height()
+	# Where our ice ends...
+	var edge := _shape.radius + 0.2
+	var d := 0.0
+	while d <= _shape.radius + 0.25:
+		var probe := global_position + dir * d
+		if _ray(Vector3(probe.x, feet + 0.3, probe.z), Vector3(probe.x, feet - EDGE_DROP, probe.z)).is_empty():
+			edge = d
+			break
+		d += 0.1
+	# ...and where the next ice starts: straight ahead (you hop that way), or a little to either
+	# side (still a gap, not open water, so you stop rather than walk off).
+	d = edge + 0.1
+	while d <= GAP_SENSE:
+		var probe := global_position + dir * d
+		var hit := _ray(Vector3(probe.x, feet + LEDGE_PROBE_HEIGHT, probe.z), Vector3(probe.x, feet - 1.0, probe.z))
+		if not hit.is_empty() and (hit.position as Vector3).y > WATER_LEVEL + 0.05:
+			var gap := d - edge
+			var rise: float = (hit.position as Vector3).y - feet
+			if gap > reach or rise > top - 0.05:
+				return GapAhead.TOO_FAR
+			_hop_across(dir, d + _shape.radius + 0.3, maxf(rise, 0.0))
+			return GapAhead.HOP
+		d += 0.1
+	# (Off to the side, the ice you're standing on doesn't count: walking off a round floe at a
+	# slant, the side probe runs back over the same floe.)
+	var under := _ray(global_position, global_position + Vector3.DOWN * (_shape.radius + EDGE_DROP))
+	var standing_on: Object = under.get("collider")
+	for side in [-1.0, 1.0]:
+		var aside := dir.rotated(Vector3.UP, side * deg_to_rad(GAP_SIDE_DEG))
+		d = edge + 0.1
+		while d <= GAP_SENSE:
+			var probe := global_position + aside * d
+			var hit := _ray(Vector3(probe.x, feet + LEDGE_PROBE_HEIGHT, probe.z), Vector3(probe.x, feet - 1.0, probe.z))
+			if not hit.is_empty() and hit.get("collider") != standing_on and (hit.position as Vector3).y > WATER_LEVEL + 0.05:
+				return GapAhead.TOO_FAR
+			d += 0.2
+	return GapAhead.NONE
+
+
+## Hops `distance` along `dir`, clearing `rise`.
+func _hop_across(dir: Vector3, distance: float, rise: float) -> void:
+	var up := sqrt(2.0 * tuning.gravity * (rise + HOP_CLEARANCE + 0.15))
+	var down := sqrt(maxf(up * up - 2.0 * tuning.gravity * rise, 0.0))
+	var flight := (up + down) / tuning.gravity
+	_hop_dir = dir
+	_hop_speed = distance / maxf(flight, 0.1)
+	velocity = dir * _hop_speed + Vector3.UP * up
+	_hopping = true
+	_set_state(State.AIR)
+	hopped.emit(distance, true)
 
 
 func _start_teeter(toward: Vector3) -> void:
@@ -805,7 +907,11 @@ func _ray(from: Vector3, to: Vector3) -> Dictionary:
 # --- Per-frame upkeep -------------------------------------------------------
 
 func _read_input() -> void:
-	if player_controlled:
+	if brain_controlled:
+		_move_input = _brain_input()
+		_action_pressed = wish_action
+		wish_action = false
+	elif player_controlled:
 		_move_input = Input.get_vector(&"move_left", &"move_right", &"move_down", &"move_up")
 		_action_pressed = Input.is_action_just_pressed(&"action")
 	else:
@@ -849,7 +955,7 @@ func _update_energy(delta: float) -> void:
 		# Spent below the floor: get your breath back, up to the floor.
 		energy = minf(energy + tuning.floor_recovery * delta, tuning.energy_floor)
 		return
-	var rate := tuning.base_drain
+	var rate := tuning.base_drain * drain_mult
 	if energy > tuning.overfill_threshold:
 		rate *= tuning.overfill_drain_mult
 	# The cold never takes you below the floor (a stand-in until there's a real exhausted state).
@@ -912,6 +1018,33 @@ func _debug_input() -> void:
 
 # --- Helpers ----------------------------------------------------------------
 
+## The stick a brain would push to steer toward wish_dir: on the ice it only needs the length
+## (_camera_relative() turns it into wish_dir); swimming and sliding, it turns and pitches the
+## penguin the way a player would.
+func _brain_input() -> Vector2:
+	var want := wish_dir
+	var strength := minf(want.length(), 1.0)
+	if strength < 0.05:
+		return Vector2(0.0, -1.0) if wish_brake and state == State.SLIDE else Vector2.ZERO
+	match state:
+		State.SWIM, State.SLIDE, State.AIR:
+			var flat := Vector2(want.x, want.z)
+			var turn := 0.0
+			if flat.length() > 0.01:
+				var target_yaw := atan2(-want.x, -want.z)
+				turn = clampf(-wrapf(target_yaw - _yaw, -PI, PI) * 3.0, -1.0, 1.0)
+			var pitch := 0.0
+			if state == State.SWIM:
+				var target_pitch := asin(clampf(want.normalized().y, -1.0, 1.0))
+				pitch = clampf((target_pitch - _pitch) * 3.0, -1.0, 1.0)
+				if tuning.invert_pitch:
+					pitch = -pitch
+			if state == State.SLIDE and wish_brake:
+				pitch = -1.0
+			return Vector2(turn, pitch)
+	return Vector2(0.0, strength)
+
+
 func _starting_energy() -> float:
 	return start_energy if start_energy >= 0.0 else tuning.starting_energy
 
@@ -943,6 +1076,8 @@ func _belly_down_basis(dir: Vector3, up: Vector3 = Vector3.UP) -> Basis:
 
 
 func _camera_relative(input: Vector2) -> Vector3:
+	if brain_controlled:
+		return Vector3(wish_dir.x, 0.0, wish_dir.z).limit_length(1.0) if input.length() >= 0.05 else Vector3.ZERO
 	var cam := get_viewport().get_camera_3d()
 	if cam == null or input.length() < 0.05:
 		return Vector3.ZERO

@@ -4,6 +4,31 @@ Newest first. Each entry records what was decided and why. To reverse a decision
 
 ---
 
+## 2026-10-05: A berg field to climb, ice tunnels, and colonies of NPC penguins
+
+- **Change:** the movement toy grows from one berg into a berg field about 200 m across: the home floe, five new bergs, two chains of pack ice, and 25 computer penguins living in colonies on four of the bergs. See GDD §4.6, §4.10 and §8, and TUNING (Berg field, NPC penguins).
+- **True to real ice:** each new berg is one of the real shapes that ice services classify (tabular, wedge, drydock, pinnacle, dome), and sits as deep as that kind really does: draft about 5 × the height above water for tabular and wedge bergs, 4 × for domes, 2 × for pinnacles, 1 × for drydocks. They're penguin-sized, 1–6 m above the water (bergy bits and small bergs), with footprints of 16–32 m, a little long for their height so there's room to walk and huddle.
+- **A platformer and a maze:** each berg is a climbing puzzle built only from moves the game already has (walk, hop, slide, launch, swim), and each has its own way up:
+  - **Mesa (tabular, 3 m):** sheer all round and too tall to launch onto. The one way up is its ice foot, a ramp along one long side. Waves can't wash a top this high.
+  - **Wedge (4 m):** a 12° slope you swim onto and walk up, to a crest that ends in a cliff.
+  - **Drydock (2.5 m):** a U-shaped berg with a lagoon 1.3 m deep (a seal can swim in, an orca can't), a shelf out of the water at the back, steps up the back wall, and an ice bridge across the mouth.
+  - **Pinnacle (shelf 1 m, spire 6 m):** a low shelf you can launch onto from anywhere, and a spire in three tiers. Steps spiral round it, and each flight is harder than the last: 0.4 m (anyone), 0.7 m (energy about 50 or less), 0.8 m (about 25 or less). There's a lookout on top, a 28° chute back down, and a cave through the base.
+  - **Dome (4 m):** about 22° all round, too steep to stand on, so the whole berg is one chute except a stair of 0.4 m ledges up its east side.
+- **Tunnels, both kinds:**
+  - **Walk-through:** the pinnacle's cave, 2.4 × 1.8 m.
+  - **Swim tunnels** through the keels of the mesa (3 m down) and the wedge (2.5 m down): 2.2 m wide and 1.8 m high. A leopard seal (1.2 m across) can follow you through; an orca (2 m) can't. The mesa's is 35 m end to end, about 8 s of your 25 s of air. So a tunnel loses an orca but not a seal.
+- **Pack ice, and gap hops are built:** two chains of small floes run from the home floe, one to the wedge and one to the pinnacle, with gaps of 0.5–1.4 m. Walk at a gap and you hop it if you can reach (1.5 m thin, down to 0.6 m stuffed); on your feet you stop at one you can't, as GDD §4.9 has it. The chains are a thin penguin's shortcut; a fat one swims.
+- **NPC colonies:** 10 penguins on the home floe, 6 on the mesa, 5 on the pinnacle and 4 on the wedge.
+  - **They huddle** in the middle of their berg and the huddle turns over the way emperor huddles do: a cold penguin on the windward edge peels off and walks round to the sheltered lee side, and a warm one in the middle stops pushing and gets moved toward the wind. Everyone takes turns on the cold edge. Sheltered, an NPC burns energy at 0.2 × the base rate; exposed, 0.6 ×.
+  - **They go fishing in parties:** a hungry one (energy under 35) walks to the edge facing the nearest school and waits for others. Three go in together, like Adélies crowding at the ice edge until one goes and the rest follow. They eat until they're at 70, or for 50 s at most, then swim home to a ramp, or boost and launch onto a low edge. One knocked in swims home too. Predators hunt them the same as you, so a party is cover.
+- **Predators in a field:** seals and orcas patrol round one berg at a time, and now and then head off to another one nearby (a quarter of a seal's patrol legs, a third of an orca's). A predator can't swim into water too shallow for it (it stops, as at a wall), and one pressed against ice slides along it rather than pushing head-on, which is how a seal finds a tunnel mouth. The wave only washes ice up to 1.5 m above the water.
+- **Why:** routes and climbing give the ice something to do between trips, and the real shapes keep it believable. NPCs make the waddle a real crowd before there's multiplayer, and tunnels and lagoons give the seal and the orca a difference you can use.
+- **Reuse:**
+  - `IceBerg` (`levels/bergs/ice_berg.gd`) is the base for every berg. It builds its collision and meshes in code (`box`, `slope`, `steps`, `keel` with a tunnel through it, `frustum`) and answers what predators, fish and NPCs need to know: `reach()`, `top_height()`, `waddle_spot()`, `exits()` (ways out of the water) and `tunnels()`. A new berg is a short script. `HomeFloe` describes the original berg; `FloeChain` builds pack ice.
+  - `PenguinBrain` (`actors/penguin/penguin_brain.gd`) drives an NPC through `Penguin.wish_dir`, the same input a stick gives, so NPCs move by exactly the player's rules. Its numbers are in `NpcTuning` (`tuning/npc_default.tres`).
+- **Not yet:** bergs that drift, roll or calve; NPCs that bump you, or each other, on purpose; breathing holes.
+- Proposed.
+
 ## 2026-10-04: Seals lie in ambush; orcas trap penguins in the water
 
 - **The plan:** the remaining predator attacks for the movement toy. Leopard seals get one: the edge ambush. Orcas focus on trapping a penguin rather than chasing it, so they get two attacks in the water, the cut-off and the carousel, and their attacks now chain into one trap. Left for later: the seal's haul-out lunge onto the ice and its strike from below, and the orcas' strand lunge (the kill-screen lunge) and relay chase. See GDD §5.3 and TUNING, Predators.

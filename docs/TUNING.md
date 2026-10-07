@@ -1,12 +1,12 @@
 # Fat Penguin — Tuning Values
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 **Every number here is a starting guess for playtesting.** Change them freely, but keep this file in step with the game.
 
 **The live copy is in Godot:** `tuning/penguin_tuning_default.tres` (the class is `tuning/penguin_tuning.gd`). Edit the values in the Inspector, then copy the ones that work back here.
 
-**In the game so far (Prototype 0, plus the leopard seal from Prototype 1):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops, bumping (except bump credit), bump noise, air, fish schooling, the leopard seal (with its edge ambush), and the orca pod with its wave, ram, cut-off and carousel (from Prototype 2). Waddle drain, the other action costs, food pulses, the orcas' kill-screen lunges, rounds and campaign values arrive with later prototypes.
+**In the game so far (Prototype 0, plus the leopard seal from Prototype 1):** base and overfill drain, fish value, boost, flop and scramble costs, fat vs. thin, movement, slopes and hops (including hops across gaps), bumping (except bump credit), bump noise, air, fish schooling, the berg field (its bergs, tunnels and pack ice), NPC penguins (huddling and fishing parties), the leopard seal (with its edge ambush), and the orca pod with its wave, ram, cut-off and carousel (from Prototype 2). Waddle drain, the other action costs, food pulses, the orcas' kill-screen lunges, rounds and campaign values arrive with later prototypes.
 
 Units: energy runs from 0 (empty) to 100 (full). Time is in seconds, distance in meters.
 
@@ -59,12 +59,12 @@ Each value scales in a straight line from energy 0 to energy 100. Swap in curves
 | Collision radius | ×1.00 | ×1.30 |
 | Mass (for bumps) | ×1.00 | ×2.00 |
 | Hop height (up ledges) | ×1.00 | ×0.55 |
-| Hop distance (across gaps; not built yet) | ×1.00 | ×0.40 |
+| Hop distance (across gaps) | ×1.00 | ×0.40 |
 | Get-up time (belly to feet) | ×1.00 | ×2.00 |
 
 Nothing has a hard threshold: ice never breaks under a penguin's weight (see DECISIONS, 2026-10-01).
 
-**Check, hops across gaps** (crack widths are under Multiplayer round): a thin penguin hops 1.5 m and clears every crack. At the starting 50 energy it hops 1.05 m, clearing up to the 1.0 m cracks. At the overfill threshold (70) it's 0.87 m, and when full it's 0.6 m, so an overfed penguin only clears the narrowest cracks. ✓
+**Check, hops across gaps** (crack widths are under Multiplayer round; the pack ice gaps are under Berg field): a thin penguin hops 1.5 m and clears every crack. At the starting 50 energy it hops 1.05 m, clearing up to the 1.0 m cracks. At the overfill threshold (70) it's 0.87 m, and when full it's 0.6 m, so an overfed penguin only clears the narrowest cracks. ✓
 
 ## Movement (base values for a thin penguin)
 
@@ -87,7 +87,7 @@ Nothing has a hard threshold: ice never breaks under a penguin's weight (see DEC
 | Hop height | 0.9 m | Walk into a ledge this high or lower and you hop it. Taller (up to 1.6 m) and you try and fall short |
 | Hop forward speed | 1.6 m/s | |
 | Hop cooldown | 0.3 s | After landing |
-| Hop distance | 1.5 m | Across cracks. Not built yet (gaps come with ice breakup) |
+| Hop distance | 1.5 m | Walk at a gap this wide or narrower and you hop it; on your feet you stop at a wider one. You look 3 m ahead (and 25° to each side) for ice across a gap |
 | Ice edge height above water | 1.0 m | |
 | Speed needed to launch onto ice | 7.0 m/s | A boost can reach it; cruising can't |
 
@@ -186,6 +186,53 @@ The iceberg in the movement toy has a plateau on top (`levels/movement_toy/ice_p
 
 **Check, a chute is a bump booster:** a 9.5 m/s slide off the south chute is a hard bump (≥ 4 m/s) on anyone at the bottom, with knockback capped at 6 m/s.
 
+## Berg field (movement toy)
+
+Each berg is a script in `levels/bergs/` (the base class is `levels/bergs/ice_berg.gd`), and every value is editable in the Inspector. The berg rebuilds itself as you change them. They sit round the home floe (the original berg, 60 m across and 1 m high) in a field about 200 m across.
+
+| Berg | Kind (draft) | Top | Above water | Keel | Way up | Also |
+|---|---|---|---|---|---|---|
+| Mesa | Tabular (5 ×) | 32 × 22 m | 3 m | 15 m | The ice foot: an 11° ramp, 3 m wide, along one long side | A swim tunnel through the keel. Colony of 6 |
+| Wedge | Wedge (5 ×) | about 30 × 16 m | 4 m at the crest | 20 m | Its 12° slope, from 1 m under the water to the crest | A 6 m crest, then a cliff. A swim tunnel under the crest. Colony of 4 |
+| Drydock | Drydock (1 ×) | two towers 5 × 20 m, 6 m apart | 2.5 m | 2.5 m | Up the lagoon, onto a 10° shelf at the back, then 0.4 m steps up the back wall | The lagoon is 1.3 m deep. A bridge 2.5 m wide spans the mouth |
+| Pinnacle | Pinnacle (2 ×) | a 26 m shelf; tiers 10, 7 and 4 m across | shelf 1 m; tiers 3, 4.4 and 6 m | 12 m | Launch onto the shelf anywhere, or an 11° ramp on the west | Spiral steps up the spire, a 28° chute down from the lookout, a cave. Colony of 5 |
+| Dome | Dome (4 ×) | 28 m across at the water, 8 m on top | 4 m | 16 m | A stair of 0.4 m ledges up the east side | About 22° everywhere else: one big chute |
+| Home floe | Floe | 60 m across | 1 m | – | Launch anywhere, or the ramp | The plateau. Colony of 10 |
+
+| Spire flight | Steps | Who can hop it |
+|---|---|---|
+| Shelf to tier 1 (east) | 5 × 0.4 m | Anyone |
+| Tier 1 to tier 2 (north ledge) | 2 × 0.7 m | Energy about 50 or less |
+| Tier 2 to the lookout (west ledge) | 2 × 0.8 m | Energy about 25 or less |
+
+The two higher flights run along the 1.5 m ledges round the spire, so you walk the ledge and hop each step as you come to it.
+
+| Tunnel | Size | Where |
+|---|---|---|
+| Mesa swim tunnel | 2.2 m wide × 1.8 m high, 35 m end to end | Through the keel along its length, 3 m down |
+| Wedge swim tunnel | 2.2 × 1.8 m, about 16 m | Through the keel across the berg under the crest, 2.5 m down |
+| Pinnacle cave | 2.4 × 1.8 m, 10 m | Through the spire's first tier from north to south, at shelf level |
+| Drydock lagoon | 6 m wide, 1.3 m deep | From the mouth to the shelf |
+
+| Pack ice | Gaps (in order from the home floe) | Floes |
+|---|---|---|
+| East chain, to the wedge | about 0.6 off the home floe, then 0.5, 0.9, 1.2, 0.6, 1.4, 0.8, 1.0, 0.7 m | 9 floes about 6 m across, 0.4–0.8 m high |
+| West chain, to the pinnacle | about 0.6 off the home floe, then 0.6, 1.0, 0.5, 1.3, 0.8, 1.1, 0.6, 1.4, 0.9 m | 10 floes about 5 m across, 0.4–0.8 m high |
+
+Each floe is 2 m deep and tips when an orca rams it, like the original three floes.
+
+**Check, true to real bergs:** the smoke test measures each berg's height above water and its keel: tabular 1:5.0, wedge 1:5.0, pinnacle 1:2.0, dome 1:4.0, drydock 1:1.0, and none taller than 6 m. ✓
+
+**Check, a way out of the water onto every berg:** a boost lifts you about 1.7 m, so the mesa (3 m), the wedge's crest (4 m), the dome (4 m) and the drydock (2.5 m) need their ramp, slope, stair or shelf; the home floe and the pinnacle's shelf (1 m) take a launch anywhere. The smoke test gets a penguin out of the water by each berg's way up (6 ways). ✓
+
+**Check, who reaches the lookout:** hop height is 0.9 m × (1 − 0.45 × fatness), and you need a hop at least as tall as the step. The smoke test walks penguins up the spiral: at energy 10 you reach the lookout, at 37 you get to tier 2 and no higher, and at 80 only tier 1. ✓
+
+**Check, tunnels sort the predators:** a tunnel 1.8 m high fits a leopard seal (1.2 m across) but not an orca (2 m), and the lagoon's 1.3 m of water is too shallow for an orca. The smoke test sends a seal and an orca after a penguin through the mesa tunnel (the seal gets through, the orca doesn't get 2 m in) and both into the lagoon (the seal swims 5–7 m in; the orca's middle gets no farther than the mouth). ✓
+
+**Check, air in the long tunnel:** 35 m at the 4 m/s cruise takes about 9 s of your 25 s of air. In the smoke test a penguin comes out with 17 s left. Boosting through is quicker, but no use with a seal behind you. ✓
+
+**Check, pack ice is a thin penguin's route:** a thin penguin (1.5 m hops) crosses the whole east chain. At the starting 50 energy (1.05 m) you stop at the 1.2 m gap; stuffed (0.6 m) you get two floes out and stop at the 0.9 m gap, dry. The smoke test checks the thin and stuffed cases. ✓
+
 ## Air
 
 | Value | Start |
@@ -238,6 +285,46 @@ The first schooling layout clumped the same food into fewer, farther spots, so s
 
 **Check, cost:** a schooling fish near the camera costs ~8 µs per physics frame on a desktop CPU. Fish more than 40 m from the camera (lost in the fog) take a step every 4th frame and look for school mates 4× less often, which cuts them to ~3–4 µs. With ~80% of the toy's fish that far away, 131 fish cost ~0.6 ms per frame, about what 72 cost before. ⚠ Check on a phone.
 
+## NPC penguins
+
+The live values are in `tuning/npc_default.tres` (the class is `tuning/npc_tuning.gd`). Each NPC is an ordinary penguin driven by `PenguinBrain` (`actors/penguin/penguin_brain.gd`), so it moves by exactly the player's rules (the same speeds, hops, boosts and fatness). The movement toy has 25: 10 on the home floe, 6 on the mesa, 5 on the pinnacle and 4 on the wedge, starting with 40–80 energy. They have their own body tint (`npc_tint` on the level), so you can tell them from the player.
+
+**Huddle**
+
+| Value | Start | Notes |
+|---|---|---|
+| Counts as a neighbour | Within 1.1 m | |
+| Fully sheltered | 4 neighbours | Plus shelter from whoever's upwind |
+| Warmth | Drops 0.05 /s fully exposed, rises 0.04 /s fully sheltered | From 0 (frozen) to 1 |
+| Peels off | Warmth under 0.35, on the windward edge | Walks round the outside to the lee side |
+| Stops pushing in | Warmth over 0.75 | Then gives way upwind at 15% of a walk, but no farther than the windward edge |
+| Drain huddled | ×0.2 sheltered to ×0.6 exposed | Of the base drain (1.5 /s) |
+| Drain out of the huddle | ×0.5 | Fishing, or walking home |
+| Wind | Toward +x, a little toward +z | |
+
+**Fishing**
+
+| Value | Start | Notes |
+|---|---|---|
+| Hungry below | 35 | Then it waits at the edge facing the nearest school (within 70 m) |
+| Party | 3 | Goes in once 3 are waiting, or 20 s after the first got there, with whoever's there |
+| Swims at | 1.2 m down | Comes up for air with 8 s left |
+| Heads home | At 70 energy, or after 50 s out | Or when a predator hunts it, or when there are no fish within 45 m |
+
+**Coming home**
+
+| Value | Start | Notes |
+|---|---|---|
+| Way out | The quickest: swim time, plus the walk from there to the huddle | A ramp or slope, or a launch spot on a low edge (only if it can afford the boost) |
+| Launch | From 6.5 m off the edge, 2.5 m down, pitched up 52° | The same launch the smoke test checks for the player |
+| Flees | A predator hunting it within 8 m | Boosts away if it can afford to, and heads home |
+
+**Check, the huddle:** in the smoke test, 8 NPCs with endless energy stay on average 1.0 m from the middle of their huddle, and the middle stays within about 1.7 m of the floe's waddle spot. Over 90 s, 7 or 8 of the 8 take turns on the windward edge, every one of them gets in among the others, and they drain at ×0.33–0.37 on average. ✓
+
+**Check, a fishing party:** 4 NPCs at energy 25 go in within 0.5 s of each other, all 4 get past 50 energy, and they're home in about 50 s. One knocked in off the east side swims back, climbs out and rejoins the huddle (smoke test). ✓
+
+**Check, how a colony spends its time:** home at 70, an NPC drains to 35 in about a minute in the huddle (at ×0.3–0.5), and a trip takes 30–50 s. In a 3-minute headless run of the whole field, a colony had about half its penguins huddled at any time, with no NPC stuck anywhere. ⚠ Playtest whether that feels like a busy colony or an empty one.
+
 ## Food pulses (multiplayer)
 
 Fish counts scale with the number of players.
@@ -280,7 +367,8 @@ The live values are in `tuning/predators/leopard_seal.tres` (the class is `tunin
 | Speed after a lunge | 2.0 m/s | Until the lunge cooldown ends |
 | Acceleration | 8 m/s² | Up to chase speed in under half a second |
 | Turn rate | 85 °/s | A thin penguin (120 °/s) out-turns it; a stuffed one (66 °/s) can't |
-| Patrol loop | 4 m off the ice edge, 1.5–3.5 m deep | 40% of legs swing past a school within 30 m |
+| Patrol loop | 4 m off the ice edge, 1.5–3.5 m deep | 40% of legs swing past a school within 30 m. Each leg is 17–30 m round the berg |
+| Roams | 25% of patrol legs | In a berg field it patrols round one berg; now and then it heads off to one of the 3 nearest others instead |
 | Sees penguins in the water | 20 m | Underwater fog hides things past ~20–25 m |
 | Sees penguins out of the water | 6 m | The edge ambush. Never through ice; never up on the plateau |
 | Gives up a chase | Beyond 25 m, or after 12 s | Then ignores that penguin for 4 s |
@@ -356,6 +444,7 @@ Each orca is a predator like the seal, with its own values in `tuning/predators/
 | Acceleration | 5 m/s² | Big and heavy |
 | Turn rate | 55 °/s | Any penguin out-turns it |
 | Patrol loop | 12 m off the ice edge, 3–6 m deep | 25% of legs swing past a school within 40 m |
+| Roams | 35% of patrol legs | The pod follows its leader to another berg |
 | Sees penguins in the water | 8 m | Orcas don't chase in open water (GDD §5.3) |
 | Sees penguins out of the water | – | Never: on the ice, the wave is its attack |
 | Gives up a chase | Beyond 14 m, or after 6 s | |
@@ -397,6 +486,7 @@ Every attack runs the same steps: pick a target, line up, warn, charge, strike, 
 | Charge | 8 m/s, the wave breaks 3.5 m from the edge | About 2 s |
 | Wave zone | 12 m along the edge × 3 m in | Penguins up to 0.4 m outside it are caught too (about a body width) |
 | Wave shove | 8 m/s toward the water | On your feet you take half (grip), on your belly all of it |
+| Washes ice up to | 1.5 m above the water | Higher tops (the mesa's 3 m, the wedge's crest) are out of reach |
 
 **Check, can you get out of the way?** In the smoke test the wave hits 4–5 s after the pod lines up (2 s of fins and swell, then the charge), on top of however long the line-up takes. Walking (1.8 m/s) gets you out of a 3 m zone in under 2 s, and the zone is on screen for at least 3 s. ✓
 

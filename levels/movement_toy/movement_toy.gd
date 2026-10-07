@@ -1,11 +1,15 @@
 extends Node3D
-## Prototype 0 test level: an iceberg with a plateau on top (chutes to slide down, steps to hop up),
-## a few floes, a low ramp out of the water, fish to eat, dummy penguins to bump, and predators:
-## leopard seals hunting the water and lying in wait under the ice edge, and an orca pod that
-## washes penguins off the ice edge, tips floes and traps penguins in the water (early pieces of
-## Prototypes 1 and 2). No goals yet.
+## Prototype 0 test level, grown into a berg field: the home floe with a plateau on top (chutes to
+## slide down, steps to hop up), a few floes and a low ramp out of the water, and around it five
+## bergs of the real kinds (tabular, wedge, pinnacle, dome, drydock) joined by chains of pack ice
+## to hop across, with swim tunnels, a cave and a lagoon (BergField; GDD §4.10). Colonies of NPC
+## penguins huddle on the bergs and go fishing in parties (PenguinBrain). Fish school round every
+## berg; dummy penguins to bump; and predators: leopard seals hunting the water and lying in wait
+## under the ice edge, and an orca pod that washes penguins off low ice, tips floes and traps
+## penguins in the water (early pieces of Prototypes 1 and 2). No goals yet.
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
+const PENGUIN_SCENE := preload("res://actors/penguin/penguin.tscn")
 
 @export var fish_seed := 7
 ## The kinds of fish in the level. Each gets at least one school; the rest are picked by
@@ -16,23 +20,29 @@ const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 	preload("res://tuning/fish/icefish.tres"),
 ]
 ## Single-species schools placed as practice targets (a preview of food pulses). They're spread
-## evenly around the berg, so every edge has a school within reach.
-@export var schools := 12
+## round the bergs (more round the bigger ones), within an easy swim of the ice.
+@export var schools := 20
 ## Fish on their own between the schools. Lone fish that drift within school range of their
 ## own kind join up and stay.
-@export var loose_fish := 16
+@export var loose_fish := 24
+## The home floe's radius (its shape is the Iceberg node).
 @export var berg_radius := 30.0
-## Fish homes sit this far from the middle of the berg (min, max). The inner edge leaves room
-## for fish roaming out from their homes without swimming into the ice.
-@export var fish_ring := Vector2(36.0, 70.0)
-## Schools sit in the inner part of the ring, within an easy swim of the ice edge (min, max).
-@export var school_ring := Vector2(36.0, 50.0)
+## Schools sit this far out from a berg's edge (min, max; m)...
+@export var school_distance := Vector2(6.0, 18.0)
+## ...and loose fish this far.
+@export var loose_distance := Vector2(6.0, 40.0)
+## No fish's home is closer to ice than this (m), so roaming fish don't swim into a keel.
+@export var fish_clearance := 7.0
 ## The ice orcas can tip with a ram (TippableIce): the berg with its plateau and ramp, and each
 ## floe. Their size comes from their collision shapes.
 @export var berg_bodies: Array[NodePath] = [^"Iceberg", ^"Plateau", ^"Ramp"]
 @export var floes: Array[NodePath] = [^"FloeEasy", ^"FloeMedium", ^"FloeHard"]
 ## A dummy knocked into the water pops back to its spot after this long.
 @export var dummy_respawn_seconds := 2.0
+## The colonies' NPC penguins start with energy in this range, and are tinted this way so they're
+## easy to tell from the player (and from the blue dummies).
+@export var npc_energy := Vector2(40.0, 80.0)
+@export var npc_tint := Color(0.42, 0.38, 0.34, 1.0)
 ## The predators: what spawns, how many and where (PredatorSpawn entries, placed around the berg
 ## by a PredatorSpawner). They start away from the player's spawn on the south side.
 @export var predator_spawns: Array[PredatorSpawn] = [
@@ -47,11 +57,10 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = fish_seed
 	var container := $Fish
+	var bergs := _bergs()
 	for s in schools:
 		var species := fish_species[s] if s < fish_species.size() else _pick_species(rng)
-		# One school per slice of the ring, at a random spot within its slice.
-		var angle := (s + rng.randf_range(0.15, 0.85)) / schools * TAU
-		var centre := _random_spot(rng, species, angle, school_ring)
+		var centre := _spot_near(rng, species, _pick_berg(rng, bergs), school_distance)
 		var size := rng.randi_range(species.school_size.x, species.school_size.y) if species else 6
 		for i in size:
 			var jitter := Vector3(rng.randf_range(-1.5, 1.5), rng.randf_range(-0.8, 0.8), rng.randf_range(-1.5, 1.5))
@@ -61,8 +70,9 @@ func _ready() -> void:
 			fish.home = centre
 	for i in loose_fish:
 		var species := _pick_species(rng)
-		container.add_child(_make_fish(_random_spot(rng, species, rng.randf() * TAU, fish_ring), species))
+		container.add_child(_make_fish(_spot_near(rng, species, _pick_berg(rng, bergs), loose_distance), species))
 	_make_tippable_ice()
+	_spawn_colonies(rng, bergs)
 	var spawner := PredatorSpawner.new()
 	spawner.name = "Predators"
 	spawner.spawns = predator_spawns
@@ -72,6 +82,7 @@ func _ready() -> void:
 
 
 ## Marks the berg and each floe as ice that can be tipped, pivoting at its middle at the waterline.
+## The pack-ice floes in the chains can be tipped too; the bigger bergs can't.
 func _make_tippable_ice() -> void:
 	_add_tippable(&"TippableBerg", berg_bodies, Vector3.ZERO, berg_radius)
 	for path in floes:
@@ -80,6 +91,85 @@ func _make_tippable_ice() -> void:
 			continue
 		var shape := (floe.get_node("CollisionShape3D") as CollisionShape3D).shape as CylinderShape3D
 		_add_tippable(StringName("Tippable" + floe.name), [path], Vector3(floe.position.x, 0.0, floe.position.z), shape.radius if shape else 4.0)
+	for node in find_children("*", "FloeChain", true, false):
+		var chain := node as FloeChain
+		for floe in chain.floes():
+			_add_tippable(StringName("Tippable%s%s" % [chain.name, floe.name]), [get_path_to(floe)], Vector3(floe.global_position.x, 0.0, floe.global_position.z), chain.floe_radius())
+
+
+## The bergs in the field (and the home floe), for fish and colonies.
+func _bergs() -> Array[IceBerg]:
+	var list: Array[IceBerg] = []
+	for node in get_tree().get_nodes_in_group(&"bergs"):
+		var berg := node as IceBerg
+		if berg != null and is_ancestor_of(berg):
+			list.append(berg)
+	return list
+
+
+## A berg picked at random, bigger ones more often.
+func _pick_berg(rng: RandomNumberGenerator, bergs: Array[IceBerg]) -> IceBerg:
+	var total := 0.0
+	for berg in bergs:
+		total += berg.reach()
+	var roll := rng.randf() * total
+	for berg in bergs:
+		roll -= berg.reach()
+		if roll <= 0.0:
+			return berg
+	return bergs.back() if not bergs.is_empty() else null
+
+
+## A fish home in the water `distance` (min, max) off `berg`'s edge, at the species' depth, and
+## clear of all ice.
+func _spot_near(rng: RandomNumberGenerator, species: FishSpecies, berg: IceBerg, distance: Vector2) -> Vector3:
+	var depths := species.depth_range if species else Vector2(1.0, 8.0)
+	var centre := berg.global_position if berg != null else Vector3.ZERO
+	var reach := berg.reach() if berg != null else berg_radius
+	var spot := Vector3.ZERO
+	for attempt in 16:
+		var angle := rng.randf() * TAU
+		var d := reach + rng.randf_range(distance.x, distance.y)
+		spot = centre + Vector3(cos(angle) * d, -rng.randf_range(depths.x, depths.y), sin(angle) * d)
+		if _clear_of_ice(spot, fish_clearance):
+			return spot
+	return spot
+
+
+func _clear_of_ice(spot: Vector3, clearance: float) -> bool:
+	var ball := SphereShape3D.new()
+	ball.radius = clearance
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = ball
+	query.transform = Transform3D(Basis.IDENTITY, spot)
+	query.collision_mask = Penguin.WORLD_LAYER
+	for hit in get_world_3d().direct_space_state.intersect_shape(query, 4):
+		if hit["collider"] != $Seafloor and hit["collider"] != $Bounds:
+			return false
+	return true
+
+
+## Each berg's colony of NPC penguins, standing round its waddle spot.
+func _spawn_colonies(rng: RandomNumberGenerator, bergs: Array[IceBerg]) -> void:
+	var colonies := Node3D.new()
+	colonies.name = "Colonies"
+	add_child(colonies)
+	for berg in bergs:
+		var spot := berg.waddle_spot()
+		for i in berg.colony:
+			var npc := PENGUIN_SCENE.instantiate() as Penguin
+			npc.name = "%sNpc%d" % [berg.name, i]
+			npc.player_controlled = false
+			npc.start_energy = rng.randf_range(npc_energy.x, npc_energy.y)
+			npc.body_tint = npc_tint
+			var angle := rng.randf() * TAU
+			npc.position = spot + Vector3(cos(angle), 0.0, sin(angle)) * rng.randf_range(0.5, 3.0) + Vector3.UP * 0.5
+			var brain := PenguinBrain.new()
+			brain.name = "Brain"
+			brain.berg = berg
+			npc.add_child(brain)
+			npc.add_to_group(&"npcs")
+			colonies.add_child(npc)
 
 
 func _add_tippable(ice_name: StringName, paths: Array[NodePath], at: Vector3, radius: float) -> void:
@@ -103,13 +193,6 @@ func _pick_species(rng: RandomNumberGenerator) -> FishSpecies:
 		if roll <= 0.0:
 			return species
 	return fish_species.back() if not fish_species.is_empty() else null
-
-
-func _random_spot(rng: RandomNumberGenerator, species: FishSpecies, angle: float, ring: Vector2) -> Vector3:
-	var dist := rng.randf_range(ring.x, ring.y)
-	var depths := species.depth_range if species else Vector2(1.0, 8.0)
-	var depth := rng.randf_range(depths.x, depths.y)
-	return Vector3(cos(angle) * dist, -depth, sin(angle) * dist)
 
 
 func _make_fish(at: Vector3, species: FishSpecies) -> Fish:

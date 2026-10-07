@@ -34,6 +34,8 @@ extends Resource
 @export var school_visit_chance := 0.4
 ## Only schools this close are on the way (m).
 @export var school_visit_range := 30.0
+## In a berg field, the share of patrol legs that head off to patrol another berg nearby.
+@export var roam_chance := 0.25
 
 @export_group("Hunting")
 ## Penguins in the water are noticed this far away (m). Underwater fog hides things past ~20 m.

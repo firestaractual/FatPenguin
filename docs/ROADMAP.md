@@ -1,6 +1,6 @@
 # Fat Penguin — Roadmap
 
-Last updated: 2026-10-01
+Last updated: 2026-10-05
 
 Each prototype answers one question. Don't move on until the current one's answer is "yes," or until you've changed the design and written down why in [DECISIONS.md](DECISIONS.md).
 
@@ -8,7 +8,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 
 ## Prototype 0: Movement toy (1–2 weeks)
 
-**Status: in progress.** A placeholder version is playable (`levels/movement_toy`), with every verb below working and covered by the headless smoke test. Next steps: playtest on a phone, tune the feel, and swap in a real penguin model.
+**Status: in progress.** A placeholder version is playable (`levels/movement_toy`), with every verb below working and covered by the headless smoke test. The toy has grown into a berg field: five more bergs of real shapes to climb (ramps, slopes, spiral steps, a lagoon, caves and swim tunnels), pack ice with gaps to hop, and colonies of NPC penguins that huddle and go fishing. Next steps: playtest on a phone, tune the feel, and swap in a real penguin model.
 
 **Question:** is swimming, boosting and launching onto the ice fun with no goals at all?
 
@@ -37,7 +37,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 
 ## Prototype 1: Energy loop + leopard seal
 
-**Status: started early.** The leopard seal is in the movement toy: patrol, targeting rule, visible lock-on, lunge warning with a strike line, sated state, plus hunger (starving seals eat fish). Bump noise is built. Still to do: the energy loop, food pulses, the waddle, breathing holes, chum, exhaustion and a goal level.
+**Status: started early.** The leopard seal is in the movement toy: patrol (round one berg at a time, roaming between them), targeting rule, visible lock-on, lunge warning with a strike line, sated state, plus hunger (starving seals eat fish). Bump noise is built. NPC colonies huddle in the middle of their bergs, turning over like emperor huddles, and leave in fishing parties, which is a start on the waddle. Still to do: the energy loop, food pulses, the waddle as a safe zone for the player (and its drain), breathing holes, chum, exhaustion and a goal level.
 
 **Question:** does deciding when to leave the waddle create real tension?
 
@@ -61,7 +61,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 
 ## Prototype 2: Shrinking ice + orcas + kill screen + coop
 
-**Status: started early.** An orca pod is in the movement toy: formation, and four attacks with their warnings that chain into a trap. On the ice, the wave washes penguins off the edge and the ram tips floes and rocks the berg; in the water, the cut-off keeps a penguin from getting home and the carousel rings it in and strikes. Leopard seals (Prototype 1) also lie in ambush under the ice edge. Predators are built from shared parts (`Predator`, `PredatorPod`, `PodAttack`, `PredatorSpawner`, `IceEdges`), and ice that can tip is marked with `TippableIce`, so the kill-screen orcas and breaking ice can reuse them. Still to do: ice breakup, kill-screen lunges, the hunger meter, the last meal and coop.
+**Status: started early.** An orca pod is in the movement toy: formation, and four attacks with their warnings that chain into a trap. On the ice, the wave washes penguins off the edge and the ram tips floes and rocks the berg; in the water, the cut-off keeps a penguin from getting home and the carousel rings it in and strikes. Leopard seals (Prototype 1) also lie in ambush under the ice edge. Predators are built from shared parts (`Predator`, `PredatorPod`, `PodAttack`, `PredatorSpawner`, `IceEdges`), and ice that can tip is marked with `TippableIce`, so the kill-screen orcas and breaking ice can reuse them. Gap hops are built (the pack ice in the berg field). Still to do: ice breakup, kill-screen lunges, the hunger meter, the last meal and coop.
 
 **Question:** does the kill screen feel fair and exciting, and does coop make people laugh?
 

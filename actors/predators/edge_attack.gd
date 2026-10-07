@@ -102,9 +102,10 @@ func cancel() -> void:
 # --- Shared parts -----------------------------------------------------------
 
 ## Picks the most tempting penguin standing on the ice within `reach` of the edge that faces the
-## leader, and within scan range of it. `accept` can rule penguins out (it gets the penguin).
-## Sets target, impact and out; returns the score, or -1.
-func best_target_near_edge(lead: Predator, reach: float, accept := Callable()) -> float:
+## leader, and within scan range of it, on ice no higher than `max_height` above the water.
+## `accept` can rule penguins out (it gets the penguin). Sets target, impact and out; returns the
+## score, or -1.
+func best_target_near_edge(lead: Predator, reach: float, accept := Callable(), max_height := INF) -> float:
 	var best_score := -1.0
 	for node in pod.get_tree().get_nodes_in_group(&"penguins"):
 		var p := node as Penguin
@@ -118,7 +119,7 @@ func best_target_near_edge(lead: Predator, reach: float, accept := Callable()) -
 			continue
 		var dir := to_pod.normalized()
 		var edge := IceEdges.edge_toward(pod.get_world_3d(), p.global_position, dir, reach)
-		if edge.is_empty():
+		if edge.is_empty() or (edge["point"] as Vector3).y > Penguin.WATER_LEVEL + max_height:
 			continue
 		var score := lead.temptation(p)
 		if score > best_score:

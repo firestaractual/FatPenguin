@@ -13,7 +13,7 @@ var _swell: IceWave = null
 
 
 func find_target(lead: Predator) -> float:
-	return best_target_near_edge(lead, _t().wave_reach)
+	return best_target_near_edge(lead, _t().wave_reach, Callable(), _t().max_freeboard)
 
 
 func lineup_distance() -> float:

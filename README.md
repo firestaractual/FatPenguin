@@ -6,7 +6,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 ## Status
 
-**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, slide down chutes, hop up steps, bump other penguins, eat fish and get fat. Two leopard seals (the first piece of Prototype 1) hunt the water. There are no goals yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, slide down chutes, hop up steps and across gaps, bump other penguins, eat fish and get fat. The ice is a field of bergs of real shapes to climb, with ice tunnels and pack ice, and colonies of computer penguins huddle on them and go fishing. Two leopard seals (the first piece of Prototype 1) and a pod of orcas hunt the water. There are no goals yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - **Engine:** Godot 4.7.2 (standard build), GDScript
 - **Renderer:** Mobile
@@ -39,17 +39,21 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 - **The plateau** in the middle of the iceberg: walk into the small east steps to hop up (anyone can), or the big north steps (thin penguins only; press Q to slim down). Slide back down the gentle south chute or the steep west one. The south chute will shoot you into the sea unless you dig in (pull back) at the bottom.
 - **Leopard seals:** two patrol the water around the berg. An orange ring around you means one has locked on. When the ring flashes and a line appears, that line is where it's about to lunge: turn off it or boost. If you're caught you're eaten, and you start again on the ice. Seals go for the fattest penguin they can see, and noisy bumps draw them. Don't stand right at the ice edge: a lunge reaches about a metre onto the ice. A starving seal goes off to eat from a school, which is your chance to slip past (F1 shows the nearest seal's state and hunger). Stand near the edge and a seal may lie in wait right under it: a still, dark shape. Go in there and it lunges almost at once. Slide across the berg and go in somewhere else, or, coming home, boost and launch from 6–7 m out so you fly over it.
 - **Orcas:** a pod of three swims farther out. They won't chase you in open water unless you swim right up to them, but stand near an ice edge they're passing and they'll line up with their fins showing, raise a swell and charge. The ice you're on turns orange: walk out of it before the wave breaks. On your feet the wave skids you to the edge, where you can still scramble back; on your belly it washes you straight in, where the orcas are waiting. Stand on a floe (or near the berg's edge) and they may ram it instead: dark shadows gather under the ice, the water bulges and the floe turns orange, then it tips and you slide off into the water. Pull back to dig in and hold on until it rights itself. Rammed, the big berg only rocks, but the jolt can still shove you in if you're right at the edge. In the water the pod traps you. Near the ice, fins race to get between you and home: beat them back, or swim round the end of the wall with a boost; swim at the wall and you're lunged at. Out in open water they circle you and blow a ring of bubbles that you can't swim through (but you can boost through) and that keeps you at the surface. Then the ring squeezes, a tail slap stuns you if you're in the orange middle, and an orca lunges. Get washed in by a wave and the pod goes straight on to the next step. F1 shows which attack is coming, how long until it hits, and which step of the trap it is.
+- **The berg field:** five more bergs sit round the home berg, each a real kind of iceberg and each its own climb. The **mesa** (flat-topped, 3 m high) is too tall to launch onto: find its ice foot, the ramp along one side. The **wedge** is a long slope to swim onto and walk up, to a cliff. The **pinnacle** has a low shelf and a spire with steps spiralling up it, each flight taller than the last (slim down with Q to reach the lookout), and a chute back down. The **dome** is too steep to stand on except for a stair up its east side. The **drydock** is a U with a lagoon too shallow for orcas.
+- **Ice tunnels:** walk through the cave in the pinnacle's spire, or swim through the tunnels in the keels of the mesa and the wedge (dive about 3 m down at either end of the berg and look for the opening). An orca can't follow you in; a leopard seal can. The mesa's is long, so watch your air.
+- **Pack ice:** two chains of small floes lead from the home berg to the wedge and the pinnacle. Walk at a gap and you hop it if you're thin enough; fat, you stop at the edge, and the only way on is to swim.
+- **Colonies:** computer penguins (tinted differently from you) huddle in the middle of their bergs, the cold ones on the windward edge walking round to the sheltered side. When they get hungry they wait at the edge for a few others and go fishing together, then swim home and climb out by the same ramps and launches you use. Predators hunt them as they hunt you, so going out with a party is cover.
 - **Fish schools:** fish come in three species, and each schools only with its own kind: silver Antarctic silverfish in big tight schools, small dark lanternfish deeper down, and big pale icefish in loose little groups. Swim through a school to grab several in one pass. An eaten fish comes back beside its school.
 - **Bumping:** belly-slide into the blue dummy penguins. A thin one standing skids about a metre; one lying on its belly flies. Get stuffed (E) and you hit like a bowling ball; slide into the fat dummy while thin and you bounce off, but knock a fish loose. The dummy near the south-west edge teeters before it falls in. Get knocked to an edge yourself and pull the stick back to scramble to safety (costs a little energy).
 
 ## Tuning
 
-Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, each fish species is in **`tuning/fish/`**, and the predators are in **`tuning/predators/`** (`leopard_seal.tres`, `orca.tres`, `orca_pod.tres`, and the pod's attacks `orca_wave.tres`, `orca_ram.tres`, `orca_cut_off.tres` and `orca_carousel.tres`). What spawns in the movement toy is in `levels/movement_toy/predators/`. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
+Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, the NPC penguins' behaviour is in **`tuning/npc_default.tres`**, each fish species is in **`tuning/fish/`**, and the predators are in **`tuning/predators/`** (`leopard_seal.tres`, `orca.tres`, `orca_pod.tres`, and the pod's attacks `orca_wave.tres`, `orca_ram.tres`, `orca_cut_off.tres` and `orca_carousel.tres`). What spawns in the movement toy is in `levels/movement_toy/predators/`. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. Each berg's size and shape are on its node under `BergField` in the movement toy scene: select it and edit them in the Inspector, and the berg rebuilds as you go. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
 
 ## Project layout
 
 ```
-actors/penguin/     Penguin controller (penguin.gd) + placeholder model scene
+actors/penguin/     Penguin controller (penguin.gd) + placeholder model scene; penguin_brain.gd drives NPCs
 actors/fish/        Fish pickup (schools with its own species)
 actors/predators/   Predators: predator.gd (every kind), leopard seal and orca scenes, pods (predator_pod.gd,
                     orca_pod.gd), pod attacks (pod_attack.gd; on the ice edge_attack.gd, wave_attack.gd,
@@ -57,10 +61,13 @@ actors/predators/   Predators: predator.gd (every kind), leopard seal and orca s
                     bubble_wall.gd), and spawning (PredatorSpawn + PredatorSpawner)
 camera/             Follow camera (also switches on the underwater fog)
 levels/             tippable_ice.gd (ice that orcas can tip), ice_edges.gd (where the ice ends, for predators)
-levels/movement_toy Prototype 0 test level (iceberg + plateau, ramp, floes, fish, dummy penguins)
+levels/bergs/       IceBerg (ice_berg.gd, the base class) and each kind of berg: tabular, wedge, drydock,
+                    pinnacle, dome; home_floe.gd (the original berg) and floe_chain.gd (pack ice)
+levels/movement_toy Prototype 0 test level (home berg + plateau, ramp, floes, berg field, fish, colonies,
+                    dummy penguins)
 tuning/             PenguinTuning resource class + default values; FishSpecies class + species in tuning/fish/;
-                    PredatorTuning / PodTuning / PodAttackTuning classes + the seal, orca, orca pod
-                    and its attacks in tuning/predators/
+                    NpcTuning + npc_default.tres (NPC penguins); PredatorTuning / PodTuning /
+                    PodAttackTuning classes + the seal, orca, orca pod and its attacks in tuning/predators/
 ui/                 Debug HUD (air bar, numbers) and touch controls
 art/materials/      Placeholder materials
 tests/              Headless smoke test

@@ -11,6 +11,13 @@
 [ext_resource type="Script" uid="uid://bmd7n0r6p6brl" path="res://levels/movement_toy/ice_plateau.gd" id="9_plat1"]
 [ext_resource type="Material" path="res://art/materials/ice_slick.tres" id="10_slick"]
 [ext_resource type="Material" path="res://art/materials/ice_plateau.tres" id="11_platm"]
+[ext_resource type="Script" path="res://levels/bergs/home_floe.gd" id="12_home"]
+[ext_resource type="Script" path="res://levels/bergs/tabular_berg.gd" id="13_tab"]
+[ext_resource type="Script" path="res://levels/bergs/wedge_berg.gd" id="14_wedge"]
+[ext_resource type="Script" path="res://levels/bergs/pinnacle_berg.gd" id="15_pin"]
+[ext_resource type="Script" path="res://levels/bergs/dome_berg.gd" id="16_dome"]
+[ext_resource type="Script" path="res://levels/bergs/drydock_berg.gd" id="17_dry"]
+[ext_resource type="Script" path="res://levels/bergs/floe_chain.gd" id="18_chain"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_r75tr"]
 sky_top_color = Color(0.38, 0.6, 0.85, 1)
@@ -188,6 +195,49 @@ shape = SubResource("CylinderShape3D_x0esy")
 
 [node name="Mesh" type="MeshInstance3D" parent="FloeHard" unique_id=1562129385]
 mesh = SubResource("CylinderMesh_rbbxl")
+
+[node name="BergField" type="Node3D" parent="."]
+
+[node name="HomeFloe" type="StaticBody3D" parent="BergField"]
+script = ExtResource("12_home")
+colony = 10
+
+[node name="Mesa" type="StaticBody3D" parent="BergField"]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 80, 0, -70)
+script = ExtResource("13_tab")
+colony = 6
+
+[node name="Wedge" type="StaticBody3D" parent="BergField"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 93, 0, 35)
+script = ExtResource("14_wedge")
+colony = 4
+
+[node name="Pinnacle" type="StaticBody3D" parent="BergField"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -100, 0, -30)
+script = ExtResource("15_pin")
+colony = 5
+
+[node name="Dome" type="StaticBody3D" parent="BergField"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -75, 0, 85)
+script = ExtResource("16_dome")
+
+[node name="Drydock" type="StaticBody3D" parent="BergField"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -15, 0, -100)
+script = ExtResource("17_dry")
+
+[node name="PackIceEast" type="Node3D" parent="BergField"]
+script = ExtResource("18_chain")
+start = Vector3(28.73, 0, 10.52)
+end = Vector3(83.5, 0, 39)
+gaps = PackedFloat32Array(0.5, 0.9, 1.2, 0.6, 1.4, 0.8, 1, 0.7)
+heights = PackedFloat32Array(0.6, 0.5, 0.8, 0.4, 0.7, 0.5, 0.8, 0.6, 0.7)
+
+[node name="PackIceWest" type="Node3D" parent="BergField"]
+script = ExtResource("18_chain")
+start = Vector3(-29.32, 0, -8.74)
+end = Vector3(-87.6, 0, -26)
+gaps = PackedFloat32Array(0.6, 1, 0.5, 1.3, 0.8, 1.1, 0.6, 1.4, 0.9)
+heights = PackedFloat32Array(0.5, 0.7, 0.4, 0.8, 0.6, 0.5, 0.7, 0.4, 0.6, 0.7)
 
 [node name="Fish" type="Node3D" parent="." unique_id=733513361]
 

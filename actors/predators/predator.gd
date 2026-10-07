@@ -9,7 +9,8 @@ extends CharacterBody3D
 ##
 ## States
 ##   PATROL  - swims a loop around the ice, patrol_offset out from its edge, swinging past
-##             schools now and then.
+##             schools now and then. In a berg field it patrols round one berg at a time and now
+##             and then (roam_chance) heads off to patrol another one nearby.
 ##   CHASE   - locked on to the most tempting penguin in sight. A ring marks the target.
 ##   WARN    - in lunge range: it lines up its strike. The ring flashes and a line marks exactly
 ##             where the lunge will go, for lunge_warning s. Get off the line (turn or boost).
@@ -79,8 +80,11 @@ const DANGER_MATERIAL := preload("res://art/materials/danger.tres")
 
 @export var tuning: PredatorTuning
 ## The patrol loop runs around this point, patrol_offset outside ice_radius. The spawner sets both.
+## In a level with bergs (IceBerg, group "bergs") it patrols round those instead.
 @export var patrol_centre := Vector3.ZERO
 @export var ice_radius := 30.0
+## The berg it's patrolling round right now (in a berg field), or null.
+var patrol_berg: IceBerg = null
 
 var state: State = State.PATROL
 var hunger := 0.0
@@ -98,6 +102,8 @@ var _lunge_dir := Vector3.ZERO
 var _lunge_cooldown := 0.0
 var _dive_time := 0.0
 var _hit_wall := false
+## The last wall it bumped into (its normal), to slide along it.
+var _wall_normal := Vector3.ZERO
 ## Penguins it gave up on, and for how much longer it ignores them.
 var _ignored := {}
 var _meal: Fish = null
@@ -657,11 +663,51 @@ func _next_waypoint() -> void:
 			_waypoint = fish.home
 			_waypoint.y = minf(_waypoint.y, Penguin.WATER_LEVEL - MIN_DEPTH)
 			return
-	var out := global_position - patrol_centre
-	var angle := atan2(out.z, out.x) + _patrol_dir * randf_range(0.5, 0.9)
-	var radius := ice_radius + tuning.patrol_offset + randf_range(-1.0, 1.0)
-	_waypoint = patrol_centre + Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
+	var centre := patrol_centre
+	var ice := ice_radius
+	var was := patrol_berg
+	var berg := _pick_patrol_berg()
+	if berg != null:
+		centre = Vector3(berg.global_position.x, 0.0, berg.global_position.z)
+		ice = berg.reach()
+	var out := global_position - centre
+	var radius := ice + tuning.patrol_offset + randf_range(-1.0, 1.0)
+	# On round the ice, a leg of 17–30 m; or, off to a new berg some way off, to the side of it
+	# facing here. (Already beside it, say just spawned there, it carries straight on round.)
+	var angle := atan2(out.z, out.x)
+	var arriving := berg != null and berg != was and Vector2(out.x, out.z).length() > radius + 6.0
+	if not arriving:
+		angle += _patrol_dir * randf_range(17.0, 30.0) / radius
+	_waypoint = centre + Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
 	_waypoint.y = Penguin.WATER_LEVEL - depth
+
+
+## Which berg to patrol round next: the one it's on, or now and then (roam_chance) one of the
+## few nearest others. Null when the level has no bergs (then it uses patrol_centre).
+func _pick_patrol_berg() -> IceBerg:
+	var bergs: Array[IceBerg] = []
+	for node in get_tree().get_nodes_in_group(&"bergs"):
+		var berg := node as IceBerg
+		if berg != null:
+			bergs.append(berg)
+	if bergs.is_empty():
+		return null
+	var me := global_position
+	if not is_instance_valid(patrol_berg):
+		patrol_berg = null
+		var best := INF
+		for berg in bergs:
+			var d := Vector2(me.x - berg.global_position.x, me.z - berg.global_position.z).length() - berg.reach()
+			if d < best:
+				best = d
+				patrol_berg = berg
+		return patrol_berg
+	if randf() < tuning.roam_chance and bergs.size() > 1:
+		var here := patrol_berg.global_position
+		var others := bergs.filter(func(b: IceBerg) -> bool: return b != patrol_berg)
+		others.sort_custom(func(a: IceBerg, b: IceBerg) -> bool: return a.global_position.distance_to(here) < b.global_position.distance_to(here))
+		patrol_berg = others[randi() % mini(3, others.size())]
+	return patrol_berg
 
 
 ## Steers toward `point` at up to `speed`. With slow_to_turn it slows down while the point is
@@ -671,28 +717,55 @@ func _swim_toward(point: Vector3, speed: float, delta: float, slow_to_turn := fa
 	if _dive_time > 0.0:
 		to.y = minf(to.y, 0.0) - 3.0 # ice in the way: go under it
 	var want := to.normalized() if to.length() > 0.01 else _heading
+	if _hit_wall and _wall_normal != Vector3.ZERO and want.dot(_wall_normal) < 0.0:
+		# Pressed against ice: slide along it the way it wants to go (round a corner, into a
+		# tunnel mouth) rather than pushing head-on.
+		var along := want.slide(_wall_normal)
+		if along.length() > 0.05:
+			want = (along.normalized() * 0.8 + want * 0.2).normalized()
 	if slow_to_turn:
 		speed *= clampf(_heading.dot(want), 0.25, 1.0)
 	_heading = _turn_toward(_heading, want, deg_to_rad(tuning.turn_rate_deg) * delta)
 	_speed = move_toward(_speed, speed, tuning.acceleration * delta)
 	velocity = _heading * _speed
 	_move(min_depth)
-	# Bumped into ice on the way somewhere farther off? Dive under it. (Not while lining up a
-	# strike: pressed against the ice edge is exactly where an edge ambush happens.)
+	# Bumped into ice on the way somewhere farther off? Dive under it, if there's open water
+	# below to dive into. (Not while lining up a strike: pressed against the ice edge is exactly
+	# where an edge ambush happens. And not in a tunnel or a lagoon, with ice right underneath:
+	# there it just slides along the wall.)
 	var flat := Vector2(to.x, to.z).length()
-	if _hit_wall and state != State.WARN and flat > tuning.lunge_range + 1.0:
+	if _hit_wall and _dive_time <= 0.0 and state != State.WARN and flat > tuning.lunge_range + 1.0 and _open_below():
 		_dive_time = DIVE_SECONDS
+
+
+## Open water for a few metres under it (no tunnel floor, no lagoon bed).
+func _open_below() -> bool:
+	var from := global_position
+	var query := PhysicsRayQueryParameters3D.create(from, from + Vector3.DOWN * 4.0, Penguin.WORLD_LAYER, [get_rid()])
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 ## move_and_slide, kept in the water (no shallower than min_depth below the surface).
 func _move(min_depth: float) -> void:
+	var before := global_position
 	move_and_slide()
 	_hit_wall = false
+	var grounded := false
 	for i in get_slide_collision_count():
-		if absf(get_slide_collision(i).get_normal().y) < 0.5:
+		var normal := get_slide_collision(i).get_normal()
+		if absf(normal.y) < 0.5:
 			_hit_wall = true
+			_wall_normal = normal
+		elif normal.y > 0.5:
+			grounded = true
 	var p := global_position
 	var top := Penguin.WATER_LEVEL - min_depth
+	if grounded and p.y > top + 0.05:
+		# Ice underneath pushing it up out of the water: too shallow for it to swim here (an orca
+		# in a lagoon). It can't go on; it stays where it was, like at a wall.
+		global_position = Vector3(before.x, minf(before.y, top), before.z)
+		_hit_wall = true
+		return
 	if p.y > top or p.y < -MAX_DEPTH:
 		p.y = clampf(p.y, -MAX_DEPTH, top)
 		global_position = p

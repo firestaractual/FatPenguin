@@ -16,6 +16,9 @@ extends PodAttackTuning
 @export var surface_depth := 0.5
 ## The wave breaks when the pod is this close to the edge (m).
 @export var break_distance := 3.5
+## Only ice this low gets washed (m above the water): orcas wash seals off low floes, and a
+## wave can't reach the top of a taller berg.
+@export var max_freeboard := 1.5
 ## The shove toward the water (m/s). On your feet grip halves it (you skid, and teeter if it takes
 ## you to the edge); on your belly you take all of it.
 @export var wave_push := 8.0

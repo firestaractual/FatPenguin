@@ -43,6 +43,8 @@ extends Resource
 @export var fat_mass_mult := 2.0
 ## A full belly is a bad jumper: hop height at full energy.
 @export var fat_hop_height_mult := 0.55
+## ...and the gap you can hop across at full energy.
+@export var fat_hop_distance_mult := 0.4
 ## Fat penguins take longer to get back on their feet after a slide.
 @export var fat_getup_mult := 2.0
 
@@ -98,6 +100,9 @@ extends Resource
 @export var slide_max_speed := 18.0
 ## Walk into a ledge this high or lower and you hop up it (thin penguin; fat scales it down).
 @export var hop_height := 0.9
+## Walk up to a gap between pieces of ice this wide or narrower and you hop across it (thin
+## penguin; fat scales it down). Wider, you stop at the edge.
+@export var hop_distance := 1.5
 @export var hop_forward_speed := 1.6
 @export var hop_cooldown := 0.3
 
