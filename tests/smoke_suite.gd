@@ -56,8 +56,6 @@ func _only_attack(pod: PredatorPod, attack_name: String) -> PodAttack:
 
 
 ## A computer penguin with a brain, living on `home`, at `at`.
-
-## A computer penguin with a brain, living on `home`, at `at`.
 func _spawn_npc(home: IceBerg, at: Vector3, energy: float, endless: bool) -> Penguin:
 	var p := load(PENGUIN_SCENE).instantiate() as Penguin
 	p.player_controlled = false
@@ -73,8 +71,6 @@ func _spawn_npc(home: IceBerg, at: Vector3, energy: float, endless: bool) -> Pen
 
 
 ## A pod from `entry`, kept round the home floe (no roaming off to other bergs mid-check).
-
-## A pod from `entry`, kept round the home floe (no roaming off to other bergs mid-check).
 func _spawn_pod(spawner: PredatorSpawner, entry: PredatorSpawn) -> PredatorPod:
 	var pod := spawner.spawn(entry)[0] as PredatorPod
 	for member in pod.members():
@@ -85,17 +81,12 @@ func _spawn_pod(spawner: PredatorSpawner, entry: PredatorSpawn) -> PredatorPod:
 
 
 ## A spawner for pods, at the origin, around the berg.
-
-## A spawner for pods, at the origin, around the berg.
 func _spawn_pods() -> PredatorSpawner:
 	var spawner := PredatorSpawner.new()
 	spawner.ice_radius = _level.berg_radius
 	_level.add_child(spawner)
 	return spawner
 
-
-## A computer penguin swimming at the surface at `at`, facing `yaw` (0 faces -Z). It swims
-## straight ahead at cruise speed unless a test holds it (set _speed to 0 each frame).
 
 ## A computer penguin swimming at the surface at `at`, facing `yaw` (0 faces -Z). It swims
 ## straight ahead at cruise speed unless a test holds it (set _speed to 0 each frame).
@@ -111,16 +102,12 @@ func _spawn_swimmer(at: Vector3, yaw: float) -> Penguin:
 
 
 ## Drops `p` into the water at `at` (on the surface).
-
-## Drops `p` into the water at `at` (on the surface).
 func _put_in_water(p: Penguin, at: Vector3) -> void:
 	p.global_position = Vector3(at.x, -0.2, at.z)
 	p.velocity = Vector3.ZERO
 	p.force_state(Penguin.State.SWIM)
 	p.reset_physics_interpolation()
 
-
-## Where a seal with tuning `t` would wait for `p`: off the nearest edge, ambush_depth down.
 
 ## Where a seal with tuning `t` would wait for `p`: off the nearest edge, ambush_depth down.
 func _ambush_spot_for(world: World3D, p: Penguin, t: PredatorTuning) -> Vector3:
@@ -133,8 +120,6 @@ func _ambush_spot_for(world: World3D, p: Penguin, t: PredatorTuning) -> Vector3:
 
 
 ## Waits until `predator` is lying still close to `spot`, in ambush. False if it never does.
-
-## Waits until `predator` is lying still close to `spot`, in ambush. False if it never does.
 func _wait_settled(predator: Predator, spot: Vector3, max_frames: int) -> bool:
 	for i in max_frames:
 		await tree.physics_frame
@@ -144,12 +129,12 @@ func _wait_settled(predator: Predator, spot: Vector3, max_frames: int) -> bool:
 
 
 ## Is the pod showing the danger marker called `marker_name`?
-
-## Is the pod showing the danger marker called `marker_name`?
 func _marker_shown(pod: PredatorPod, marker_name: String) -> bool:
 	var marker := pod.get_node_or_null(marker_name) as Node3D
 	return marker != null and marker.visible
 
+
+## A leopard seal at `at`, not hungry, patrolling round the berg.
 func _spawn_seal(at: Vector3) -> Predator:
 	var seal := load(SEAL_SCENE).instantiate() as Predator
 	seal.ice_radius = _level.berg_radius
@@ -158,8 +143,6 @@ func _spawn_seal(at: Vector3) -> Predator:
 	seal.hunger = 0.0
 	return seal
 
-
-## A penguin floating still in the water: bait that doesn't swim off.
 
 ## A penguin floating still in the water: bait that doesn't swim off.
 func _spawn_bait(at: Vector3, with_energy: float) -> Penguin:
@@ -172,6 +155,8 @@ func _spawn_bait(at: Vector3, with_energy: float) -> Penguin:
 	p.set_physics_process(false)
 	return p
 
+
+## A fish of `species` at `at`.
 func _spawn_fish(species: FishSpecies, at: Vector3) -> Fish:
 	var fish := load("res://actors/fish/fish.tscn").instantiate() as Fish
 	fish.species = species
@@ -179,6 +164,8 @@ func _spawn_fish(species: FishSpecies, at: Vector3) -> Fish:
 	root.add_child(fish)
 	return fish
 
+
+## How many fish of `fish`'s species in `all` are within its school range.
 func _school_mates_in_range(fish: Fish, all: Array) -> int:
 	var mates := 0
 	for other: Fish in all:
@@ -187,17 +174,19 @@ func _school_mates_in_range(fish: Fish, all: Array) -> int:
 			mates += 1
 	return mates
 
+
+## The middle of a group of fish.
 func _middle_of(fishes: Array[Fish]) -> Vector3:
 	var sum := Vector3.ZERO
 	for fish in fishes:
 		sum += fish.global_position
 	return sum / fishes.size()
 
+
+## Puts the test penguin in the water at `pos`, swimming at cruise speed.
 func _place_swimming(pos: Vector3, yaw: float, pitch_deg: float) -> void:
 	_penguin.place(pos, yaw, Penguin.State.SWIM, deg_to_rad(pitch_deg), _penguin.tuning.swim_cruise_speed)
 
-
-## Stand a penguin on the ice at `ground` (a point on the surface) and wait until it's on its feet.
 
 ## Stand a penguin on the ice at `ground` (a point on the surface) and wait until it's on its feet.
 func _place_on_ice(p: Penguin, ground: Vector3, yaw: float, with_energy: float) -> void:
@@ -234,8 +223,6 @@ func _wait_for_bump(p: Penguin, max_frames: int) -> bool:
 	p.bumped.disconnect(cb)
 	return got[0]
 
-
-## Waits until `p` stops moving; returns how far it ended up from `from` (horizontally).
 
 ## Waits until `p` stops moving; returns how far it ended up from `from` (horizontally).
 func _wait_until_still(p: Penguin, from: Vector3) -> float:

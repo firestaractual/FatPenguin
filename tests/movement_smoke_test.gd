@@ -3,7 +3,7 @@ extends SceneTree
 ## Loads the movement toy and runs the suites in tests/suites/, each driving the penguin and the
 ## predators and checking the results: movement (every verb, the plateau's chutes and steps),
 ## bumping, fish schools, leopard seals (hunting and the edge ambush), the orca pod's attacks and
-## traps, the berg field (ways up, gap hops, tunnels, the lagoon, the spire), the NPC colonies,
+## traps, whales (bumps that daze, orcas pressing an attack, the humpback), the berg field (ways up, gap hops, tunnels, the lagoon, the spire), the NPC colonies,
 ## players (each reads only its own controls; the level decides what a catch does), and the UI
 ## (HUD, pause menu, settings, the title screen).
 ## Shared helpers are in tests/smoke_suite.gd.
@@ -11,8 +11,8 @@ extends SceneTree
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --path . --script res://tests/movement_smoke_test.gd
 ## Options (after a lone --):
-##   --only=orcas,npcs   run only these suites (movement, bumping, fish, seals, orcas, bergs, npcs,
-##                       players, ui)
+##   --only=orcas,npcs   run only these suites (movement, bumping, fish, seals, orcas, whales,
+##                       bergs, npcs, players, ui)
 ##   --seed=12345        replay a run: predators, NPCs and fish make random choices, and every run
 ##                       prints the seed it used
 ## Exit code 0 = all checks passed.
@@ -24,6 +24,7 @@ const SUITES: Array[Script] = [
 	preload("res://tests/suites/fish_suite.gd"),
 	preload("res://tests/suites/seals_suite.gd"),
 	preload("res://tests/suites/orcas_suite.gd"),
+	preload("res://tests/suites/whales_suite.gd"),
 	preload("res://tests/suites/bergs_suite.gd"),
 	preload("res://tests/suites/npcs_suite.gd"),
 	preload("res://tests/suites/players_suite.gd"),
@@ -69,6 +70,12 @@ func _run() -> void:
 		"the level spawns its predators from its spawn list (%s)" % str(kinds))
 	for spawned in level.get_node("Predators").get_children():
 		spawned.queue_free()
+	# The humpbacks would wander through the other checks (and see the orcas off). The whale
+	# checks bring their own.
+	var whales := get_nodes_in_group(&"humpbacks").size()
+	_check(whales == level.humpback_count and whales > 0, "the level spawns its humpbacks (%d)" % whales)
+	for whale in level.get_node("Whales").get_children():
+		whale.queue_free()
 	# The colonies' NPC penguins would get in the way too. The NPC checks bring their own.
 	var npcs := get_nodes_in_group(&"npcs").size()
 	_check(npcs > 0, "the level spawns its colonies of NPC penguins (%d)" % npcs)

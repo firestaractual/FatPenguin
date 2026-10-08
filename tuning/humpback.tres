@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="HumpbackTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/humpback_tuning.gd" id="1_htune"]
+
+[resource]
+script = ExtResource("1_htune")
+display_name = "Humpback"
+acceleration = 2.5
+turn_rate_deg = 45.0
+body_length = 12.0
+body_radius = 1.5
+bump_daze_seconds = 2.0
+bump_push = 7.0
+travel_speed = 2.5
+travel_depth = Vector2(3, 7)
+roam_offset = Vector2(14, 45)
+breath_interval = Vector2(25, 40)
+surface_seconds = 6.0
+surface_depth = 0.7
+blows = 3
+blow_interval = 1.8
+dive_seconds = 2.5
+dive_pitch_deg = 50.0
+feed_interval = Vector2(50, 80)
+feed_range = 45.0
+net_clearance = 5.0
+approach_seconds = 25.0
+net_depth = 8.0
+net_radius = Vector2(7, 3.5)
+net_turns = 1.0
+net_seconds = 8.0
+herd_reach = 10.0
+aim_seconds = 1.0
+lunge_speed = 8.0
+lunge_pitch_deg = 75.0
+lunge_height = 2.5
+gulp_radius = 4.0
+fish_gone_seconds = 45.0
+scoop_radius = 4.5
+scoop_up_speed = 7.0
+scoop_out_speed = 4.0
+scoop_daze_seconds = 2.5
+fall_seconds = 1.5
+rest_seconds = 8.0
+mob_range = 35.0
+mob_speed = 4.0
+mob_seconds = 20.0
+guard_seconds = 10.0
+guard_offset = 4.5
+shelter_radius = 10.0

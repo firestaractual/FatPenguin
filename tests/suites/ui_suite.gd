@@ -1,6 +1,7 @@
 extends "res://tests/smoke_suite.gd"
 ## The UI: the debug layer (hidden unless asked for), the HUD's air meter and control prompts, the
-## pause menu and settings, invert pitch, the game waiting while paused, and the title screen's
+## pause menu and settings, invert pitch, the game waiting while paused, the screen effects
+## (anxiety, tunnel vision, hits, black-out, queasy, and their setting), and the title screen's
 ## feeding gag.
 
 const TITLE_SCENE := "res://ui/title/title_screen.tscn"
@@ -24,6 +25,7 @@ func run() -> void:
 	await _test_pause_menu()
 	await _test_invert_pitch()
 	await _test_paused_fish_wait()
+	await _test_screen_fx()
 	await _test_title_screen()
 
 
@@ -154,6 +156,81 @@ func _test_paused_fish_wait() -> void:
 	await _frames(40)
 	_check(waited and fish.visible, "an eaten fish's respawn waits while the game is paused")
 	fish.queue_free()
+
+
+func _test_screen_fx() -> void:
+	var fx := _hud.screen_fx()
+	var p := _penguin
+	p.infinite_energy = true
+	var open_water := Vector3(-70.0, -0.3, -70.0)
+	p.place(open_water, 0.0, Penguin.State.SWIM, 0.0, 0.0)
+	await _frames(30)
+	_check(fx.anxiety() < 0.05 and fx.shown()["darkness"] < 0.01, "with no predator near, the screen is clear")
+	# A seal 10 m off: the edges close in, slowly.
+	var seal := _spawn_seal(p.global_position + Vector3(10.0, -2.0, 0.0))
+	await _frames(30)
+	var early := fx.anxiety()
+	await _frames(150)
+	var later := fx.anxiety()
+	_check(early < 0.4 and later > 0.6 and fx.shown()["darkness"] > 0.3,
+		"a predator near (and hunting you) darkens the edges, slowly (%.2f after 0.5 s, %.2f after 3 s)" % [early, later])
+	seal.queue_free()
+	p.reset()
+	p.place(open_water, 0.0, Penguin.State.SWIM, 0.0, 0.0)
+	await _frames(60)
+	var fading := fx.anxiety()
+	await _frames(240)
+	_check(fading > 0.2 and fx.anxiety() < 0.05, "and it fades back out slowly once you're clear (%.2f a second later)" % fading)
+	# Boosting narrows the view a little.
+	p.place(open_water, 0.0, Penguin.State.SWIM, 0.0, p.tuning.swim_cruise_speed)
+	p.boost()
+	await _frames(10)
+	_check(fx.boost_tunnel() > 0.6 and fx.shown()["reach"] > 0.1, "boosting gives a mild tunnel vision")
+	await _frames(90)
+	# A hit closes the screen in hard, then opens it back up.
+	p.disorient(1.5)
+	await _frames(2)
+	var hit := fx.hit_level()
+	await _frames(120)
+	_check(hit > 0.8 and fx.hit_level() < 0.05, "a hit (a whale's bump) closes the screen in, then it opens back up (%.2f)" % hit)
+	# Caught: black, then back.
+	p.get_caught(null)
+	await _frames(2)
+	var black := fx.blackout()
+	await _frames(90)
+	_check(black > 0.95 and fx.blackout() < 0.05, "getting caught blacks the screen out, then it comes back")
+	# The setting: Reduced is about half as strong, Off is off.
+	p.place(open_water, 0.0, Penguin.State.SWIM, 0.0, 0.0)
+	var shown := []
+	for setting in [GameSettings.ScreenEffects.FULL, GameSettings.ScreenEffects.REDUCED, GameSettings.ScreenEffects.OFF]:
+		GameSettings.current().screen_effects = setting
+		p.disorient(1.5)
+		await _frames(2)
+		shown.append(fx.shown()["darkness"])
+		await _frames(120)
+	GameSettings.current().screen_effects = GameSettings.ScreenEffects.FULL
+	_check(shown[1] < shown[0] * 0.6 and shown[1] > shown[0] * 0.4 and shown[2] == 0.0,
+		"Screen effects Reduced halves them, Off turns them off (%.2f, %.2f, %.2f)" % shown)
+	# Queasy: the picture swims and goes green.
+	p.sicken(2.0)
+	await _frames(40)
+	var queasy := fx.get_node("Queasy") as CanvasItem
+	_check(queasy.visible, "queasy, the picture swims and goes green")
+	await _frames(150)
+	_check(not queasy.visible, "and clears once it wears off")
+	# The settings sheet's Screen effects button steps through Full, Reduced and Off.
+	var panel := _menu.get_node("%SettingsPanel") as SettingsPanel
+	var button := panel.get_node("%ScreenEffects") as Button
+	panel.open()
+	var steps: Array[int] = []
+	for i in 3:
+		button.pressed.emit()
+		steps.append(GameSettings.current().screen_effects)
+	panel.close()
+	_check(steps == [GameSettings.ScreenEffects.REDUCED, GameSettings.ScreenEffects.OFF, GameSettings.ScreenEffects.FULL] and button.text.ends_with("Full"),
+		"the Screen effects setting steps Full, Reduced, Off (\"%s\")" % button.text)
+	p.reset()
+	await _frames(30)
 
 
 func _test_title_screen() -> void:

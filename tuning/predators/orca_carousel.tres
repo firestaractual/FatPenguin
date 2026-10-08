@@ -9,3 +9,4 @@ scan_range = 30.0
 warning_seconds = 5.0
 zone_shows_at = 0.6
 hunt_seconds = 4.0
+cooldown = 12.0

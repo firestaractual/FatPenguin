@@ -3,8 +3,8 @@ extends PanelContainer
 ## Short prompts at the bottom of the screen, at the moment they're useful: "TAP belly-slide" the
 ## first times you stand on the ice, "SPACE boost" in the water, "PULL BACK scramble back!" at the
 ## edge. Each tutorial prompt stops once you've done the thing a few times (GameSettings keeps
-## count, so it doesn't come back next session); warnings (out of breath, teetering, a seal locked
-## on) are always shown, above tutorials. The key named matches the device the player last used
+## count, so it doesn't come back next session); warnings (out of breath, teetering, dazed, a
+## predator locked on, inside a humpback's bubble net) are always shown, above tutorials. The key named matches the device the player last used
 ## (InputDevice). The "Hints" setting hides them all.
 ##
 ## The PromptPanel holds a KeyChip (the control) and the words.
@@ -20,6 +20,8 @@ const SHORE_CHECK := 0.5
 ## warning, and how many times the player has to do the thing before it stops (0 = never stops).
 const PROMPTS := {
 	&"teeter": {"key": &"back", "text": "scramble back!", "warning": true, "learn": 0},
+	&"net": {"key": &"", "text": "Bubble net! Swim clear before the whale comes up", "warning": true, "learn": 0},
+	&"dazed": {"key": &"", "text": "Dazed! No boost for a moment", "warning": true, "learn": 0},
 	&"air": {"key": &"", "text": "Low on air: swim up!", "warning": true, "learn": 0},
 	&"seal": {"key": &"", "text": "Locked on! Turn off its line, or boost", "warning": true, "learn": 3},
 	&"leap": {"key": &"action", "text": "aim up and boost to leap onto the ice", "warning": false, "learn": 2},
@@ -131,6 +133,10 @@ func _wanted(id: StringName, p: Penguin, hunted: bool) -> bool:
 	match id:
 		&"teeter":
 			return p.is_teetering()
+		&"net":
+			return p.state == Penguin.State.SWIM and Humpback.net_closing_on(p.global_position) != null
+		&"dazed":
+			return p.is_dazed()
 		&"air":
 			return p.state == Penguin.State.SWIM and p.air < p.tuning.air_seconds * 0.35
 		&"seal":

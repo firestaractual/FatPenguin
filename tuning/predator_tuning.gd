@@ -1,10 +1,11 @@
 class_name PredatorTuning
-extends Resource
+extends SwimmerTuning
 ## One kind of predator's balance numbers (see Predator). Mirrors the Predators section of
 ## docs/TUNING.md. The defaults here are the leopard seal; each kind is a resource in
 ## res://tuning/predators/ (leopard_seal.tres, orca.tres). Edit them in the inspector, then copy
 ## the winners back into TUNING.md. Group behaviour (orca pods) is in PodTuning and the pod's
-## attacks (PodAttackTuning).
+## attacks (PodAttackTuning). Steering (acceleration, turn rate) and a whale's body are in the
+## parent class, SwimmerTuning.
 ##
 ## Hunger runs from 0 (just ate) to 100. A predator hunts penguins unless it's starving; a
 ## starving one goes to a school and eats fish instead (it still lunges at a penguin that
@@ -20,10 +21,6 @@ extends Resource
 @export var sated_speed := 1.5
 ## Getting its breath back after a lunge.
 @export var recover_speed := 2.0
-## Speeding up and slowing down (m/s²).
-@export var acceleration := 8.0
-## A thin penguin (120 °/s) can out-turn it; a stuffed one (66 °/s) can't.
-@export var turn_rate_deg := 85.0
 ## Patrol depth below the surface (min, max).
 @export var patrol_depth := Vector2(1.5, 3.5)
 
@@ -39,14 +36,17 @@ extends Resource
 
 @export_group("Hunting")
 ## Penguins in the water are noticed this far away (m). Underwater fog hides things past ~20 m.
-@export var detect_range := 20.0
+@export var detect_range := 24.0
+## ...and a noisy one farther, up to this far at full noise (m): it hears the splash of a penguin
+## going in, or a bump (Penguin.noise).
+@export var hear_range := 35.0
 ## Penguins out of the water (on the ice, or in the air) are only noticed this close (m):
 ## the ambush at the ice edge.
 @export var edge_detect_range := 6.0
 ## A chase is given up beyond this distance (m)...
-@export var lose_range := 25.0
+@export var lose_range := 30.0
 ## ...or after this long without a catch (s).
-@export var chase_give_up_seconds := 12.0
+@export var chase_give_up_seconds := 15.0
 ## Ignores a penguin it gave up on for this long (s).
 @export var give_up_ignore_seconds := 4.0
 ## Targeting score (GDD §5.1): weights for body size, noise and closeness, each 0 to 1.
@@ -55,6 +55,9 @@ extends Resource
 @export var closeness_weight := 0.2
 ## A new target has to score this many times higher to steal the lock-on.
 @export var switch_threshold := 1.25
+## Starving, it still breaks off from feeding (or from setting off to feed) to chase a penguin in
+## the water this close (m).
+@export var feeding_break_range := 10.0
 
 @export_group("Lunge")
 ## Starts the lunge warning this close to its target (m).
@@ -75,6 +78,18 @@ extends Resource
 ## standing right at the ice edge.
 @export var lunge_rise := 0.6
 
+@export_group("Pressing the attack")
+## Aims each lunge this far ahead of where its target is going (0: at where it is now; 1: where
+## it'll be when the jaws get there, if it keeps going the way it is, straight or round the curve
+## it's turning; Penguin.turning()). The strike line shows the aimed line, so the warning stays
+## honest: change what you're doing and the lunge misses.
+@export var lunge_lead := 0.0
+## A penguin that touches its body (and is dazed by it, SwimmerTuning) gets a lunge straight away.
+@export var strikes_when_bumped := false
+## Humpbacks see it off: it won't go after a penguin within a humpback's shelter_radius
+## (HumpbackTuning), and its pod calls off an attack on one. A hunted penguin can hide by a humpback.
+@export var shy_of_humpbacks := false
+
 @export_group("Ambush")
 ## At the end of each patrol leg, the chance it lies in wait at the ice edge instead (0 to 1; 0
 ## never). It also waits where a penguin it was chasing climbed out.
@@ -93,6 +108,9 @@ extends Resource
 ## (lunge_speed × lunge_seconds). Out of the water, only within reach of its jaws (jaw_reach +
 ## catch_radius).
 @export var ambush_strike_range := 6.0
+## A penguin in the water farther off than that but within this (m) brings it out of hiding: it
+## gives up the ambush and chases.
+@export var ambush_break_range := 14.0
 ## The warning before a lunge from an ambush (s): shorter than a normal lunge_warning, because
 ## it's already lined up. The shadow under the edge is the first warning.
 @export var ambush_warning := 0.4
@@ -101,7 +119,7 @@ extends Resource
 
 @export_group("Hunger")
 ## Per second.
-@export var hunger_rate := 1.0
+@export var hunger_rate := 0.6
 ## Starting hunger is random in this range, so predators don't all get hungry at once.
 @export var start_hunger := Vector2(10.0, 40.0)
 ## Hungrier than this, it's starving: it goes off to eat fish from a school.

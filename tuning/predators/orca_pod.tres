@@ -11,3 +11,6 @@
 script = ExtResource("1_pod")
 display_name = "Orca pod"
 attacks = Array[ExtResource("2_attack")]([ExtResource("3_wave"), ExtResource("4_ram"), ExtResource("5_cutoff"), ExtResource("6_carousel")])
+relay_strikes = true
+relay_max = 3
+first_attack_delay = 6.0

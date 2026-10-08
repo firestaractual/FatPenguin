@@ -43,6 +43,12 @@ signal spilled_fish(at: Vector3)
 signal teetered
 signal scrambled
 signal caught(by: Node3D)
+## Dazed for `seconds` (a whale's body bumped it: disorient()).
+signal dazed(seconds: float)
+## Ate a sick fish: queasy for `seconds` (no boost, no belly-slide, slow and wobbly).
+signal sickened(seconds: float)
+## Threw a sick fish back up, from its beak at `at`.
+signal threw_up(at: Vector3)
 ## Feathers flew (a bump, at the contact point, or a catch). For the look: PenguinLook puffs.
 signal feathers_flew(at: Vector3, strength: float)
 
@@ -76,6 +82,9 @@ const HOP_CLEARANCE := 0.15
 const SKID_CONTROL_LOSS := 0.6
 ## The same two penguins can't bump again this soon (stops one contact counting twice).
 const PAIR_COOLDOWN := 0.25
+## turning(): how quickly it reads a change of turn (per second), and the fastest it reports (rad/s).
+const TURNING_SMOOTHING := 8.0
+const MAX_TURNING := 4.0
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 
@@ -164,6 +173,18 @@ var _hop_cooldown := 0.0
 var _immune_time := 0.0
 var _spin_time := 0.0
 var _stun_time := 0.0
+## Dazed: how long the heading keeps wandering, and where in its wander it is.
+var _daze_time := 0.0
+var _daze_clock := 0.0
+## Queasy (a sick fish): how long it lasts, how long it lasted from the start, where in its wobble
+## it is, and how long until the fish comes back up (negative: it has).
+var _queasy_time := 0.0
+var _queasy_length := 0.0
+var _queasy_clock := 0.0
+var _throw_up_in := -1.0
+## How fast its path is curving (turning()), and which way it moved last frame (NAN: not moving).
+var _turning := 0.0
+var _moved_yaw := NAN
 var _teeter_time := 0.0
 var _teeter_dir := Vector3.ZERO
 var _recent_bumps := {}
@@ -214,6 +235,7 @@ func _physics_process(delta: float) -> void:
 	var underwater := state == State.SWIM and GameWorld.WATER_LEVEL - global_position.y > BREATH_DEPTH
 	vitals.tick(delta, underwater)
 	_update_collider()
+	_track_turning(delta)
 
 
 # --- Public API -------------------------------------------------------------
@@ -239,7 +261,44 @@ func hop_height() -> float:
 
 
 func eat_fish() -> void:
-	ate_fish.emit(vitals.gain(tuning.fish_value))
+	eat(tuning.fish_value)
+
+
+## Eats something worth `energy` (a fish, krill, a squid).
+func eat(energy: float) -> void:
+	ate_fish.emit(vitals.gain(energy))
+
+
+## Ate a sick fish (diseased, or full of parasites): queasy for queasy_seconds, and it comes back
+## up soon after, so it's worth nothing (sick_fish_cost lost instead).
+func eat_sick_fish() -> void:
+	sicken(tuning.queasy_seconds)
+	_throw_up_in = tuning.throw_up_delay
+
+
+## Queasy for `seconds`: you can't boost or belly-slide, you're slow, you turn slowly and your
+## heading wanders. A longer spell replaces a shorter one.
+func sicken(seconds: float) -> void:
+	if _queasy_time <= 0.0:
+		_queasy_clock = randf() * 10.0
+		_queasy_length = seconds
+	else:
+		_queasy_length += maxf(seconds - _queasy_time, 0.0)
+	_queasy_time = maxf(_queasy_time, seconds)
+	sickened.emit(seconds)
+
+
+func is_queasy() -> bool:
+	return _queasy_time > 0.0
+
+
+## How queasy it is right now, 0 to 1: it comes on over half a second and wears off over the
+## last second and a half (what the screen and the look show).
+func queasiness() -> float:
+	if _queasy_time <= 0.0:
+		return 0.0
+	var since := _queasy_length - _queasy_time
+	return clampf(minf(since / 0.5, _queasy_time / 1.5), 0.0, 1.0)
 
 
 func is_boosting() -> bool:
@@ -326,6 +385,13 @@ func get_speed() -> float:
 	return velocity.length()
 
 
+## How fast its path is curving, seen from above (rad/s, smoothed; positive = to its left): read
+## from how it really moved, so pushing at ice or being shoved counts as it looks. Predators lead
+## their lunges round the curve.
+func turning() -> float:
+	return _turning
+
+
 ## An outside shove (an orca's wave, GDD §5.3). It works like the knockback from a bump: on your
 ## feet grip halves it and you skid (and teeter if it takes you to the edge); on your belly you
 ## take all of it. It stacks with any knockback you already have.
@@ -337,6 +403,38 @@ func push(dv: Vector3) -> void:
 ## (stun_turn_mult, stun_speed_mult). A longer stun replaces a shorter one.
 func stun(seconds: float) -> void:
 	_stun_time = maxf(_stun_time, seconds)
+
+
+## Dazed for `seconds` (a whale's body bumped you, or a humpback scooped you up): stunned (no
+## boost, slow turns, slow swimming), and your heading wanders (daze_drift_deg), as if the whale's
+## wake spun you round. A longer daze replaces a shorter one.
+func disorient(seconds: float) -> void:
+	stun(seconds)
+	if _daze_time <= 0.0:
+		_daze_clock = randf() * 10.0
+	_daze_time = maxf(_daze_time, seconds)
+	dazed.emit(seconds)
+
+
+func is_dazed() -> bool:
+	return _daze_time > 0.0
+
+
+## Thrown into the air at `launch` (a humpback's lunge scooped it up): out of the water as if it
+## had breached, landing wherever that takes it.
+func toss(launch: Vector3) -> void:
+	_boost_time = 0.0
+	_knock = Vector3.ZERO
+	_set_state(State.AIR)
+	_hopping = false
+	velocity = launch
+
+
+## A fish comes back up and floats off to one side (it costs one fish's worth of energy): what a
+## hard bump does to an overfed penguin, and a humpback's gulp to anyone.
+func lose_fish() -> void:
+	var side := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
+	_spill_fish(side.normalized() if side.length() > 0.01 else Vector3.FORWARD)
 
 
 ## A current in the water (an orca pod's bubble wall): adds `dv` to your drift. Unlike push(),
@@ -439,6 +537,11 @@ func reset() -> void:
 	_immune_time = 0.0
 	_spin_time = 0.0
 	_stun_time = 0.0
+	_daze_time = 0.0
+	_queasy_time = 0.0
+	_throw_up_in = -1.0
+	_turning = 0.0
+	_moved_yaw = NAN
 	_knock = Vector3.ZERO
 	_recent_bumps.clear()
 	noise = 0.0
@@ -453,7 +556,11 @@ func _swim(delta: float, stick: Vector2) -> void:
 	var turn := deg_to_rad(tuning.swim_turn_rate_deg) * _turn_mult()
 	if _stun_time > 0.0:
 		turn *= tuning.stun_turn_mult
+	if _queasy_time > 0.0:
+		turn *= tuning.queasy_turn_mult
 	_yaw -= stick.x * turn * delta
+	if _queasy_time > 0.0:
+		_yaw += _queasy_wander() * delta
 
 	var pitch_input := stick.y
 	if air <= 0.0:
@@ -461,6 +568,10 @@ func _swim(delta: float, stick: Vector2) -> void:
 	_pitch += pitch_input * turn * delta
 	if is_zero_approx(pitch_input):
 		_pitch = move_toward(_pitch, 0.0, deg_to_rad(tuning.swim_pitch_return_deg) * delta)
+	if _daze_time > 0.0:
+		# Spun round in a whale's wake: the heading wanders.
+		_yaw += _daze_drift(0.0) * delta
+		_pitch += _daze_drift(1.7) * 0.35 * delta
 
 	var depth := GameWorld.WATER_LEVEL - global_position.y
 	var max_pitch := deg_to_rad(tuning.swim_max_pitch_deg)
@@ -475,6 +586,8 @@ func _swim(delta: float, stick: Vector2) -> void:
 	var cruise := tuning.swim_cruise_speed * _fat(tuning.fat_cruise_speed_mult)
 	if _stun_time > 0.0:
 		cruise *= tuning.stun_speed_mult
+	if _queasy_time > 0.0:
+		cruise *= tuning.queasy_speed_mult
 	if _boost_time > 0.0:
 		_boost_time -= delta
 	elif _speed > cruise:
@@ -544,9 +657,14 @@ func _walk(delta: float, stick: Vector2) -> void:
 		var move := _ground_dir(stick)
 		if move.length() > 0.05:
 			var target_yaw := atan2(-move.x, -move.z)
-			_yaw = rotate_toward(_yaw, target_yaw, deg_to_rad(tuning.walk_turn_rate_deg) * _turn_mult() * delta)
+			var walk_turn := deg_to_rad(tuning.walk_turn_rate_deg) * _turn_mult() * (tuning.queasy_turn_mult if _queasy_time > 0.0 else 1.0)
+			_yaw = rotate_toward(_yaw, target_yaw, walk_turn * delta)
+		if _daze_time > 0.0:
+			_yaw += _daze_drift(0.0) * delta # staggering
+		if _queasy_time > 0.0:
+			_yaw += _queasy_wander() * delta
 		# Penguins walk where they face, so a fat (slow-turning) penguin really feels clumsy.
-		target_vel = get_facing() * tuning.walk_speed * minf(move.length(), 1.0)
+		target_vel = get_facing() * tuning.walk_speed * minf(move.length(), 1.0) * (tuning.queasy_speed_mult if _queasy_time > 0.0 else 1.0)
 	_walk_vel = _walk_vel.move_toward(target_vel, tuning.walk_acceleration * _accel_mult() * delta)
 	# Knocked while on your feet: grip skids you to a stop.
 	_knock = _knock.move_toward(Vector3.ZERO, tuning.foot_skid_friction * delta)
@@ -589,6 +707,8 @@ func _walk(delta: float, stick: Vector2) -> void:
 func _slide(delta: float, stick: Vector2) -> void:
 	if not _tumbling:
 		_yaw -= stick.x * deg_to_rad(tuning.slide_turn_rate_deg) * _turn_mult() * delta
+		if _daze_time > 0.0:
+			_yaw += _daze_drift(0.0) * 0.5 * delta
 	var on_floor := is_on_floor()
 	if on_floor:
 		_floor_normal = get_floor_normal()
@@ -675,7 +795,7 @@ func _teeter(delta: float, stick: Vector2) -> void:
 func _try_boost() -> bool:
 	if _boost_cooldown > 0.0 or air <= 0.0:
 		return false
-	if _stun_time > 0.0:
+	if _stun_time > 0.0 or _queasy_time > 0.0:
 		boost_denied.emit()
 		return false
 	if not vitals.spend(tuning.boost_energy_cost):
@@ -690,7 +810,7 @@ func _try_boost() -> bool:
 
 ## Dive onto your belly. Costs a little energy; returns false if you can't afford it.
 func _try_flop(h: Vector3) -> bool:
-	if not vitals.spend(tuning.slide_energy_cost):
+	if _queasy_time > 0.0 or not vitals.spend(tuning.slide_energy_cost):
 		boost_denied.emit()
 		return false
 	var speed := maxf(tuning.slide_start_speed, h.length())
@@ -925,6 +1045,8 @@ func _bump(other: Penguin, my_velocity: Vector3) -> void:
 	var dv_me := -n * (impulse / m1) * _knock_share()
 	var dv_them := n * (impulse / m2) * other._knock_share()
 	if is_bump:
+		dv_me *= t.bump_knock_mult
+		dv_them *= t.bump_knock_mult
 		if is_immune():
 			dv_me = Vector3.ZERO
 		if other.is_immune():
@@ -1049,6 +1171,17 @@ func _tick_timers(delta: float) -> void:
 	_immune_time = maxf(_immune_time - delta, 0.0)
 	_spin_time = maxf(_spin_time - delta, 0.0)
 	_stun_time = maxf(_stun_time - delta, 0.0)
+	_daze_time = maxf(_daze_time - delta, 0.0)
+	if _daze_time > 0.0:
+		_daze_clock += delta
+	_queasy_time = maxf(_queasy_time - delta, 0.0)
+	if _queasy_time > 0.0:
+		_queasy_clock += delta
+	if _throw_up_in >= 0.0:
+		_throw_up_in -= delta
+		if _throw_up_in < 0.0:
+			vitals.lose(tuning.sick_fish_cost)
+			threw_up.emit(global_position + get_facing() * _shape.radius)
 	noise = maxf(noise - delta / tuning.noise_fade_seconds, 0.0)
 	for other: Variant in _recent_bumps.keys():
 		if not is_instance_valid(other):
@@ -1078,12 +1211,40 @@ func _ground_dir(stick: Vector2) -> Vector3:
 	return input.ground_dir(self, stick) if input != null else Vector3.ZERO
 
 
+## Dazed: how fast the heading is wandering right now (rad/s). A smooth, wobbling drift that
+## eases off at the end of the daze. `offset` gives a second, different wobble (for the pitch).
+func _daze_drift(offset: float) -> float:
+	var c := _daze_clock + offset
+	var wobble := (sin(c * 2.1) + 0.6 * sin(c * 4.7 + 1.3)) / 1.6
+	return deg_to_rad(tuning.daze_drift_deg) * wobble * clampf(_daze_time / 0.5, 0.0, 1.0)
+
+
+## Queasy: how fast the heading is wandering right now (rad/s), a slow, rolling sway.
+func _queasy_wander() -> float:
+	var c := _queasy_clock
+	return deg_to_rad(tuning.queasy_wander_deg) * (sin(c * 1.3) + 0.5 * sin(c * 3.1 + 0.7)) / 1.5 * queasiness()
+
+
 func _starting_energy() -> float:
 	return start_energy if start_energy >= 0.0 else tuning.starting_energy
 
 
 func _fat(mult_at_full: float) -> float:
 	return lerpf(1.0, mult_at_full, fatness())
+
+
+func _track_turning(delta: float) -> void:
+	var going := get_real_velocity()
+	var flat := Vector2(going.x, going.z)
+	if flat.length() < 0.5:
+		_turning = move_toward(_turning, 0.0, MAX_TURNING * TURNING_SMOOTHING * delta)
+		_moved_yaw = NAN
+		return
+	var yaw := atan2(-flat.x, -flat.y)
+	if not is_nan(_moved_yaw):
+		var rate := clampf(angle_difference(_moved_yaw, yaw) / maxf(delta, 0.001), -MAX_TURNING, MAX_TURNING)
+		_turning = lerpf(_turning, rate, clampf(TURNING_SMOOTHING * delta, 0.0, 1.0))
+	_moved_yaw = yaw
 
 
 func _turn_mult() -> float:
@@ -1098,6 +1259,7 @@ func _heading_dir() -> Vector3:
 	return Vector3(-sin(_yaw) * cos(_pitch), sin(_pitch), -cos(_yaw) * cos(_pitch))
 
 
-## A splash on the water where it is (PenguinLook plays it).
+## A splash on the water where it is (PenguinLook plays it). Predators hear it (noise).
 func _make_splash(strength: float) -> void:
+	noise = maxf(noise, tuning.splash_noise)
 	splashed.emit(Vector3(global_position.x, GameWorld.WATER_LEVEL, global_position.z), strength)

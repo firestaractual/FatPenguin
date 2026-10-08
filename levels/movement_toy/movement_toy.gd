@@ -11,6 +11,9 @@ extends Node3D
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 const PENGUIN_SCENE := preload("res://actors/penguin/penguin.tscn")
+const HUMPBACK_SCENE := preload("res://actors/whales/humpback.tscn")
+const KRILL_SCRIPT := preload("res://actors/food/krill_swarm.gd")
+const SQUID_SCRIPT := preload("res://actors/food/squid.gd")
 
 @export var fish_seed := 7
 ## The kinds of fish in the level. Each gets at least one school; the rest are picked by
@@ -22,10 +25,19 @@ const PENGUIN_SCENE := preload("res://actors/penguin/penguin.tscn")
 ]
 ## Single-species schools placed as practice targets (a preview of food pulses). They're spread
 ## round the bergs (more round the bigger ones), within an easy swim of the ice.
-@export var schools := 20
+@export var schools := 28
 ## Fish on their own between the schools. Lone fish that drift within school range of their
 ## own kind join up and stay.
-@export var loose_fish := 24
+@export var loose_fish := 36
+## This share of the fish (schools and loose) are sick: diseased or full of parasites, and they
+## look it. Eating one makes a penguin queasy (Fish.sick, Penguin.eat_sick_fish()).
+@export var sick_fish_share := 0.1
+## Krill swarms (pink clouds of snacks near the surface) this far out from a berg's edge (m)...
+@export var krill_swarms := 8
+@export var krill_distance := Vector2(4.0, 20.0)
+## ...and squid (a big meal that jets away) this far out.
+@export var squid := 6
+@export var squid_distance := Vector2(8.0, 30.0)
 ## The home floe's radius (its shape is the Iceberg node).
 @export var berg_radius := 30.0
 ## Schools sit this far out from a berg's edge (min, max; m)...
@@ -50,6 +62,10 @@ const PENGUIN_SCENE := preload("res://actors/penguin/penguin.tscn")
 	preload("res://levels/movement_toy/predators/leopard_seals.tres"),
 	preload("res://levels/movement_toy/predators/orca_pod.tres"),
 ]
+## Humpbacks (GDD §5.5): how many roam round the berg, and where the first starts (degrees: 0 is
+## +X, 90 is +Z; the others are spread evenly round). They go under the Whales node.
+@export var humpback_count := 2
+@export var humpback_start_deg := 45.0
 
 var _wet_time := {}
 
@@ -72,14 +88,58 @@ func _ready() -> void:
 	for i in loose_fish:
 		var species := _pick_species(rng)
 		container.add_child(_make_fish(_spot_near(rng, species, _pick_berg(rng, bergs), loose_distance), species))
+	# Which fish are sick, where the krill and squid are, and the colonies each get their own
+	# random numbers, so changing one doesn't move the others.
+	var sick_rng := RandomNumberGenerator.new()
+	sick_rng.seed = fish_seed + 1000
+	for fish: Fish in container.get_children():
+		if sick_rng.randf() < sick_fish_share:
+			fish.make_sick()
+	var food_rng := RandomNumberGenerator.new()
+	food_rng.seed = fish_seed + 2000
+	_spawn_food(food_rng, bergs)
 	_make_tippable_ice()
-	_spawn_colonies(rng, bergs)
+	var colony_rng := RandomNumberGenerator.new()
+	colony_rng.seed = fish_seed + 3000
+	_spawn_colonies(colony_rng, bergs)
 	var spawner := PredatorSpawner.new()
 	spawner.name = "Predators"
 	spawner.spawns = predator_spawns
 	spawner.ice_centre = Vector3.ZERO
 	spawner.ice_radius = berg_radius
 	add_child(spawner)
+	_spawn_humpbacks()
+
+
+## Krill swarms and squid round the bergs, under a Food node.
+func _spawn_food(rng: RandomNumberGenerator, bergs: Array[IceBerg]) -> void:
+	var food := Node3D.new()
+	food.name = "Food"
+	add_child(food)
+	for i in krill_swarms:
+		var swarm := KRILL_SCRIPT.new() as KrillSwarm
+		swarm.name = "Krill%d" % i
+		swarm.position = _spot_at_depth(rng, swarm.tuning.depth, _pick_berg(rng, bergs), krill_distance)
+		food.add_child(swarm)
+	for i in squid:
+		var one := SQUID_SCRIPT.new() as Squid
+		one.name = "Squid%d" % i
+		one.position = _spot_at_depth(rng, one.tuning.depth, _pick_berg(rng, bergs), squid_distance)
+		food.add_child(one)
+
+
+func _spawn_humpbacks() -> void:
+	var whales := Node3D.new()
+	whales.name = "Whales"
+	add_child(whales)
+	for i in humpback_count:
+		var whale := HUMPBACK_SCENE.instantiate() as Humpback
+		var angle := deg_to_rad(humpback_start_deg) + TAU * i / maxf(humpback_count, 1)
+		var d := berg_radius + whale.tuning.roam_offset.x + 10.0
+		whale.roam_centre = Vector3.ZERO
+		whale.ice_radius = berg_radius
+		whale.position = Vector3(cos(angle) * d, GameWorld.WATER_LEVEL - whale.tuning.travel_depth.x, sin(angle) * d)
+		whales.add_child(whale)
 
 
 ## Marks the berg and each floe as ice that can be tipped, pivoting at its middle at the waterline.
@@ -124,7 +184,12 @@ func _pick_berg(rng: RandomNumberGenerator, bergs: Array[IceBerg]) -> IceBerg:
 ## A fish home in the water `distance` (min, max) off `berg`'s edge, at the species' depth, and
 ## clear of all ice.
 func _spot_near(rng: RandomNumberGenerator, species: FishSpecies, berg: IceBerg, distance: Vector2) -> Vector3:
-	var depths := species.depth_range if species else Vector2(1.0, 8.0)
+	return _spot_at_depth(rng, species.depth_range if species else Vector2(1.0, 8.0), berg, distance)
+
+
+## A spot in the water `distance` (min, max) off `berg`'s edge, `depths` (min, max) down, and clear
+## of all ice.
+func _spot_at_depth(rng: RandomNumberGenerator, depths: Vector2, berg: IceBerg, distance: Vector2) -> Vector3:
 	var centre := berg.global_position if berg != null else Vector3.ZERO
 	var reach := berg.reach() if berg != null else berg_radius
 	var spot := Vector3.ZERO

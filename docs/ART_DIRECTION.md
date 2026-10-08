@@ -1,6 +1,6 @@
 # Fat Penguin — Art Direction
 
-Last updated: 2026-10-01
+Last updated: 2026-10-08
 
 ## Tone
 
@@ -26,12 +26,16 @@ The climate theme stays in the background, through the environment: ice breaking
 4. **Bumps read instantly.** A penguin on its belly (a puck that will fly far) must look clearly different from one on its feet (braced). A hard bump gets a honk, a feather puff and a brief hit-stop; a soft one is just a nudge. Cracks come in a few clearly different widths, so players can judge which ones their current body can hop.
 5. **Food pulses are visible from far away.** Seabirds circling and diving over a pulse can be seen from anywhere on the map.
 6. **Water depth is readable.** Shallow water is light and deep water is dark. Predators under the surface show up as shadows, not as clear models.
+7. **Danger you can feel.** The screen's edges darken, closing in from the sides, when a predator is near; they close in hard on a hit and black out on a catch; a boost narrows the view a little. Always a deep navy black, never the danger colour, and never hiding the middle of the screen or the HUD. Queasy (a sick fish) is the one green: the picture swims and doubles. All of it can be turned down or off.
+8. **Sick fish look sick.** Sickly yellow-green and dull against the silver, bloated, with dark blotches, listing on their side and swimming lamely: spot one in a school at a glance.
 
 ## Characters
 
 - **Penguins:** silhouettes accurate to the species, with exaggerated round bodies. [Open] The hero species. Adélie is the comedy favorite: the white eye ring reads well and gives expressive faces.
 - **Leopard seal:** long, smiling, reptile-like head. Creepy-cute, not horrifying.
-- **Orcas:** big and graceful. Mostly seen as fins and shadows until they lunge.
+- **Orcas:** big and graceful. Mostly seen as fins and shadows until they lunge. Glossy black, a tall dorsal fin standing straight up mid-back.
+- **Humpbacks:** not a threat, and meant to be mistaken for one at a glance. At the surface from afar: a dark back, a fin and a big dark shadow, like an orca. The tells, from far to near: the **bushy blow** when it breathes; the **flukes** rising out of the water as it dives (dark on top, white underneath); its **size** (about 12 m, twice an orca); a **little fin far back on a hump** instead of a tall one; **long white flippers**, a third of its length, swept back; knobs on its head; a slow, rolling pace. Dark slate rather than glossy black, with a grey throat that balloons when it gulps. Its bubble net is white foam and bubbles, never the danger colour: it isn't an attack, and the scoop never kills.
+- **Dazed** (a whale's body hit you, or a humpback threw you): a big lolling roll and a wandering heading, distinct from a stun's slow woozy sway.
 - **Seabirds:** mostly background, used as food signals.
 
 ## Camera
@@ -48,4 +52,4 @@ The climate theme stays in the background, through the environment: ice breaking
 | Ice | White and pale cyan (the title screen's thin ice can be gray-blue and see-through) |
 | Penguins | Black and white, with warm accents on the beak and feet |
 | Danger | One saturated warning color (e.g. hot red-orange), reserved |
-| Food | Silver shimmer for fish; pink-orange for krill |
+| Food | Silver shimmer for fish; pink for krill (pink, not orange: clear of the danger colour); mauve squid; sickly yellow-green for sick fish |

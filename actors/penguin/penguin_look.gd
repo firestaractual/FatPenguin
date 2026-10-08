@@ -3,9 +3,9 @@ extends Node3D
 ## How a penguin looks: the script on its Model node. The body (a sphere that never rotates) does
 ## the physics; this node only shows it. Each physics frame, right after the penguin moves, it
 ## turns the model to match what the penguin is doing (standing, lying belly-down to slide or
-## swim, hopping, windmilling at an edge, spinning out, dazed), widens it with fat and keeps its
+## swim, hopping, windmilling at an edge, spinning out, dazed, queasy), widens it with fat and keeps its
 ## feet on the ice as the collider grows. It plays the bubbles, splashes and feather puffs from the
-## penguin's signals.
+## penguin's signals (and a sick fish coming back up).
 ##
 ## It only reads the penguin (its state, its public getters and signals), so a real model can
 ## bring its own look script (with an AnimationTree, say) without touching the physics.
@@ -30,6 +30,7 @@ var _spin_angle := 0.0
 var _bubbles: CPUParticles3D
 var _splash: CPUParticles3D
 var _puff: CPUParticles3D
+var _sick: CPUParticles3D
 
 
 func _ready() -> void:
@@ -50,6 +51,8 @@ func _ready() -> void:
 		body.material_override = mat
 	_penguin.splashed.connect(_on_splashed)
 	_penguin.feathers_flew.connect(_on_feathers_flew)
+	_penguin.threw_up.connect(_on_threw_up)
+	_sick = _make_sick_spray()
 
 
 func _physics_process(delta: float) -> void:
@@ -78,8 +81,17 @@ func _physics_process(delta: float) -> void:
 		target = Basis(Vector3.UP, _spin_angle) * target
 	else:
 		_spin_angle = 0.0
-	if p.is_stunned():
-		# Dazed: a slow, woozy roll from side to side.
+	if p.is_dazed():
+		# Spun round by a whale: a big, lolling roll, and the head bobbing about.
+		var t := Time.get_ticks_msec() * 0.001
+		target = target * Basis(Vector3.UP, 0.9 * sin(t * 9.0)) * Basis(Vector3.RIGHT, 0.25 * sin(t * 6.3))
+	elif p.is_queasy():
+		# Queasy: hunched, swaying slowly, head nodding.
+		var q := p.queasiness()
+		var t := Time.get_ticks_msec() * 0.001
+		target = target * Basis(Vector3.UP, 0.35 * q * sin(t * 2.2)) * Basis(Vector3.RIGHT, 0.18 * q * (1.0 + sin(t * 3.4)))
+	elif p.is_stunned():
+		# Stunned: a slow, woozy roll from side to side.
 		var roll := 0.5 * sin(Time.get_ticks_msec() * 0.012)
 		target = target * Basis(Vector3.UP, roll)
 	var current := basis.get_rotation_quaternion()
@@ -110,6 +122,41 @@ func _on_splashed(at: Vector3, strength: float) -> void:
 	_splash.global_position = at
 	_splash.amount = clampi(int(strength * 4.0), 8, 48)
 	_splash.restart()
+
+
+func _on_threw_up(at: Vector3) -> void:
+	_sick.global_position = at
+	_sick.direction = _penguin.get_facing() + Vector3.UP * 0.4
+	_sick.restart()
+
+
+## A sick fish coming back up: a spurt of sickly green-yellow bits. Built here, so the penguin
+## scene doesn't need it.
+func _make_sick_spray() -> CPUParticles3D:
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(0.62, 0.74, 0.22)
+	var bit := SphereMesh.new()
+	bit.radius = 0.05
+	bit.height = 0.1
+	bit.radial_segments = 6
+	bit.rings = 3
+	bit.material = mat
+	var spray := CPUParticles3D.new()
+	spray.name = &"SickSpray"
+	spray.emitting = false
+	spray.one_shot = true
+	spray.explosiveness = 0.85
+	spray.amount = 18
+	spray.lifetime = 0.8
+	spray.mesh = bit
+	spray.spread = 25.0
+	spray.gravity = Vector3(0.0, -6.0, 0.0)
+	spray.initial_velocity_min = 1.5
+	spray.initial_velocity_max = 3.0
+	spray.top_level = true
+	add_child(spray)
+	return spray
 
 
 func _on_feathers_flew(at: Vector3, strength: float) -> void:

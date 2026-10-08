@@ -22,7 +22,10 @@ func _test_orcas() -> void:
 	_level.add_child(spawner)
 	var entry: PredatorSpawn = load("res://levels/movement_toy/predators/orca_pod.tres")
 	var pod := _spawn_pod(spawner, entry)
-	var t := _only_attack(pod, "Wave").settings as WaveAttackTuning
+	var wave_attack := _only_attack(pod, "Wave")
+	var t := wave_attack.settings as WaveAttackTuning
+	# No attacks until the wave check below (it attacks soon after it spawns).
+	pod.set_attacks([])
 	_check(pod.members().size() == entry.pod_size, "a spawn entry puts %d orcas in a pod" % pod.members().size())
 
 	# On patrol the pod swims together (after a few seconds to fall in behind the leader).
@@ -38,7 +41,7 @@ func _test_orcas() -> void:
 	var mean := total / samples
 	_check(mean < pod.tuning.spacing * 2.5, "the pod swims together (followers %.1f m from the leader on average)" % mean)
 
-	# Orcas don't chase in open water: a fat penguin that keeps 12 m from the pod isn't hunted.
+	# Orcas don't chase far in open water: a fat penguin that keeps 16 m from the pod isn't hunted.
 	var bait := _spawn_bait(Vector3(0.0, -1.0, -110.0), 100.0)
 	var hunted := [false]
 	var bait_id := bait.get_instance_id()
@@ -50,9 +53,9 @@ func _test_orcas() -> void:
 			if outermost == null or member.global_position.length() > outermost.global_position.length():
 				outermost = member
 		var out := Vector3(outermost.global_position.x, 0.0, outermost.global_position.z).normalized()
-		bait.global_position = Vector3(outermost.global_position.x, -1.0, outermost.global_position.z) + out * 12.0
+		bait.global_position = Vector3(outermost.global_position.x, -1.0, outermost.global_position.z) + out * 16.0
 		await tree.physics_frame
-	_check(not hunted[0], "orcas don't chase a penguin 12 m away in open water")
+	_check(not hunted[0], "orcas don't chase a penguin 16 m away in open water")
 	bait.queue_free()
 
 	# The wave: a penguin standing near the edge the pod is passing gets washed off; one 6 m in
@@ -61,6 +64,7 @@ func _test_orcas() -> void:
 	var at_edge := await _spawn_standing(facing * (berg_radius - 1.5) + Vector3.UP, 0.0)
 	var inland := await _spawn_standing(facing * (berg_radius - 6.0) + Vector3.UP, 0.0)
 	var inland_start := inland.global_position
+	pod.set_attacks([wave_attack])
 	var wave := {"coming": -1, "hit": -1, "washed": [], "surfaced": true}
 	pod.attack_coming.connect(func(_a: PodAttack) -> void: wave["coming"] = Engine.get_physics_frames())
 	pod.attack_hit.connect(func(_a: PodAttack, washed: Array[Penguin]) -> void:

@@ -10,3 +10,4 @@ weight = 1.5
 chains_into = Array[Resource]([ExtResource("3_cutoff")])
 warning_seconds = 1.5
 charge_speed = 9.0
+cooldown = 12.0

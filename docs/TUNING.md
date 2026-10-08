@@ -122,11 +122,13 @@ Knockback follows a simple collision: the target's push-off speed is (1 + bounci
 |---|---|---|
 | Bump speed | 2.0 m/s closing | Below this, penguins just push each other |
 | Hard-bump speed | 4.0 m/s closing | Causes spin-outs (side hits) and fish spills |
-| Bounciness | 0.8 | 1.0 would be perfect billiard balls |
+| Bounciness | 0.85 | 1.0 would be perfect billiard balls. Was 0.8 |
+| Bump knock | ×1.5 | Penguin-on-penguin bumps hit this much harder than the collision maths alone (DECISIONS, 2026-10-08: easier to dislodge). Outside shoves (waves, rams, whales) aren't scaled |
 | Grip on your feet | ×0.5 knockback | Penguins on their belly take ×1.0 |
+| Skid friction (knocked on your feet) | 2.5 m/s² | |
 | Tumble friction (knocked onto your belly) | 2.0 m/s² | Higher than a normal slide (0.45), so one hit can't send someone across the whole iceberg |
 | Max knockback speed | 6.0 m/s | |
-| Knockback in water | ×0.35 | Drag soaks it up; water bumps are short shoves |
+| Knockback in water | ×0.35 | Drag soaks it up; water bumps are short shoves (×1.5 for a bump) |
 | Water drag on knockback | 6.0 m/s² | |
 | Chain transfer | 50% | Share of a hit passed on when a knocked penguin hits another |
 | Crowd mass | Masses of all touching penguins add | Why nobody gets knocked out of the middle of the waddle. Not built yet (no waddle) |
@@ -141,20 +143,31 @@ Knockback follows a simple collision: the target's push-off speed is (1 + bounci
 
 | Hitter → target | Target on its feet | Target on its belly |
 |---|---|---|
-| Thin → thin | ~2.3 m | ~9 m (capped) |
-| Fat → thin | ~4.1 m | ~9 m (capped) |
-| Thin → fat | ~1.0 m | ~5 m |
-| Fat → fat | ~2.3 m | ~9 m (capped) |
+| Thin → thin | ~5.4 m (was ~2.3) | ~9 m (capped) |
+| Fat → thin | ~7.2 m (capped; was ~4.1) | ~9 m (capped) |
+| Thin → fat | ~1.1 m (was ~1.0) | ~5 m |
+| Fat → fat | ~5.4 m (was ~2.3) | ~9 m (capped) |
 
-At the old 5 m/s flop these were 1.0, 1.8, 0.5 and 1.0 m on feet. The ×1.5 land speed (DECISIONS, 2026-10-01) roughly doubles how far a full-speed hit knocks a standing penguin.
+The smoke test launches its hitters at a fixed 5 m/s (from 3 m away, so they arrive a little slower) and measures thin → thin on its feet **2.2 m** (was 0.9), fat → thin on its belly **8.9 m**, thin → fat on its feet **0.96 m** (was 0.4). ✓
 
-The smoke test launches its hitters at a fixed 5 m/s (from 3 m away, so they arrive a little slower) and measures thin → thin on its feet **0.9 m**, fat → thin on its belly **8.7 m**, thin → fat on its feet **0.4 m**. ✓
-
-- The kill-screen floe is ≈8 m across, so its edge is ~4 m from the middle. ⚠ At 7.5 m/s a fat penguin's full-speed hit skids a standing thin one ~4 m, about the whole radius, so standing is a weaker defense than intended. Before the kill screen is built, pick one: a bigger floe, more skid friction on feet, or a lower knockback cap. A penguin on its belly goes in from anywhere either way.
+- The kill-screen floe is ≈8 m across, so its edge is ~4 m from the middle. Since the playtest (DECISIONS, 2026-10-08) a full-speed hit from anyone puts a standing penguin of the same size or smaller in the water from the middle of it: knocks are meant to be substantial. Standing still beats lying down by far, and a fat penguin is hard to shift. ⚠ Playtest whether standing is now too weak a defense on the big berg.
 - A lunge line only needs a ~1 m shove, which any full-speed hit gives. ✓
 - A thin penguin moves a standing fat one ~1 m. Its main tool against fat is still the fish spill. ✓
 
 **Check, sliding on the kill-screen floe:** a missed 7.5 m/s slide glides ~62 m if you let it, so on the 8 m floe a miss ends in the water unless you dig in: the brake stops it in ~4.4 m (the smoke test measures 4.3). A hit soaks up the hitter's speed instead. After a full-speed hit the hitter is left with ~0.75 m/s (thin on thin, fat on fat) or bounces back (thin on fat), and stops almost at once. Fat on thin is the exception: the fat penguin keeps sliding at 3 m/s for about another 9 m, so it has to dig in too. ✓ A miss means braking hard or swimming.
+
+### Queasy (a sick fish)
+
+In `tuning/penguin_tuning.gd` (the Queasy group; not overridden in `penguin_tuning_default.tres`).
+
+| Value | Start | Notes |
+|---|---|---|
+| Lasts | 6 s | |
+| Boost and belly-slide | None | |
+| Speed | × 0.55 swimming and walking | |
+| Turn rate | × 0.5 | |
+| Heading wander | up to 40 °/s | A slow sway, gentler than dazed |
+| Throws it back up | 1 s after eating | The fish gives nothing; you're 3 energy down instead |
 
 ### Stunned (an orca's tail slap)
 
@@ -165,6 +178,18 @@ The live values are in `tuning/penguin_tuning_default.tres` (the Stunned group).
 | Boost | None | |
 | Turn rate | × 0.35 | A thin penguin turns 42 °/s, slower than an orca |
 | Swim speed | × 0.6 of cruise | 2.4 m/s thin |
+
+### Dazed (a whale's body, a humpback's scoop)
+
+Dazed is stunned (above, for the same time) plus a heading that wanders. `daze_drift_deg` is in `tuning/penguin_tuning.gd` (the Dazed group); how long and how hard come from the whale (`SwimmerTuning`, the Body group, in each whale's `.tres`).
+
+| Value | Start | Notes |
+|---|---|---|
+| Heading drift | up to 110 °/s | A wobble, not a spin: it swings both ways and eases off in the last 0.5 s. A third of it pitches you up and down too |
+| Orca body | 6 m long, 0.9 m thick; 1.8 s dazed, shoved off at 6 m/s | The shove is a bump's (water takes some of it). The orca then strikes at once (`strikes_when_bumped`) |
+| Humpback body | 12 m long, 1.5 m thick; 2.0 s dazed, shoved off at 7 m/s | Not the penguin it's guarding |
+| Humpback scoop | 2.5 s dazed | Thrown up at 7 m/s and out at 4 m/s, and a fish comes back up |
+| The same whale again | Not within 1 s | |
 
 ## Plateau (movement toy)
 
@@ -265,7 +290,9 @@ Each species is a resource in `tuning/fish/` (the class is `tuning/fish_species.
 | Fish value | +10 | +10 | +10 | Same for every species for now (GDD §11) |
 | Respawn after being eaten | 8 s | 8 s | 8 s | Comes back beside its school |
 
-**Movement toy spawning** (`levels/movement_toy/movement_toy.gd`): 12 schools, one in each slice of the ring around the berg (every species gets at least one, the rest by abundance), with homes 36–50 m from the middle of the berg, 6–20 m off the ice edge. 16 loose fish anywhere 36–70 m out. About 130 fish in all.
+**Movement toy spawning** (`levels/movement_toy/movement_toy.gd`): 28 schools (was 20) round the bergs of the field, more round the bigger ones (every species gets at least one, the rest by abundance), 6–18 m off a berg's edge; 36 loose fish (was 24) 6–40 m off. About 300 fish in all. 10% of them are sick (`sick_fish_share`). Plus 8 krill swarms 4–20 m off a berg's edge and 6 squid 8–30 m off (see below).
+
+**Sick fish** (`Fish.sick`): 10% of the toy's fish. Sickly yellow-green, bloated (×1.15 wide, ×1.3 deep), three dark blotches, listing 65° on their side and rocking, swimming at 0.55 × their species' speed with a twitch about every 1.7 s. Eating one: queasy (see Queasy). NPC penguins choose healthy fish (`Fish.nearest_in_school(..., healthy_only)`); predators don't care.
 
 **Check, do schools hold together?** Measured headless over 2 minutes: schools keep their size, the nearest school mate sits ~0.52 m away (personal space 0.5 m), and school mates swim almost exactly the same way (polarisation 0.99). The smoke test measures the widest fish of a 6-fish school **0.7 m** from its middle after 15 s. ✓
 
@@ -284,6 +311,33 @@ The first schooling layout clumped the same food into fewer, farther spots, so s
 **Check, fish stay out of the ice:** a fish can roam up to ~8 m from its home while it joins a school, so homes start 36 m out from the middle of the 30 m berg. The closest a fish came in shallow water (above the berg's 3 m draft) was ~31 m. ✓
 
 **Check, cost:** a schooling fish near the camera costs ~8 µs per physics frame on a desktop CPU. Fish more than 40 m from the camera (lost in the fog) take a step every 4th frame and look for school mates 4× less often, which cuts them to ~3–4 µs. With ~80% of the toy's fish that far away, 131 fish cost ~0.6 ms per frame, about what 72 cost before. ⚠ Check on a phone.
+
+## Krill
+
+`tuning/krill.tres` (the class is `tuning/krill_tuning.gd`).
+
+| Value | Start | Notes |
+|---|---|---|
+| Krill in a swarm | 80, in a ball 2.2 m across (radius), flattened | Pink |
+| Depth | 0.6–3 m | Near the surface, easy to reach |
+| Eating | 12 a second while your beak's in the cloud, 0.75 energy each | 9 energy a second; a whole swarm is 60 (six fish) and takes about 7 s |
+| Drifts | 0.35 m/s, within 6 m of where it formed | |
+| Eaten out | Forms again within 6 m after 40 s | |
+
+## Squid
+
+`tuning/squid.tres` (the class is `tuning/squid_tuning.gd`).
+
+| Value | Start | Notes |
+|---|---|---|
+| Energy | 25 | Two and a half fish |
+| Cruises | 1.5 m/s within 8 m of home, 2–8 m deep | |
+| Jets away | From a penguin in the water within 4.5 m: 9 m/s for 0.5 s (~4.5 m), squirting ink | About as fast as a boost |
+| Between jets | 1.4 s | |
+| Spent | After 3 jets in a row, none for 6 s | So a cruising penguin that keeps after it catches it; a boost does it sooner |
+| Eaten | Another turns up at its home after 30 s | |
+
+**Check (smoke test):** a cruising thin penguin chasing a squid sets it jetting at 9 m/s, and catches it once it's spent, after 3 jets: +25 energy. ✓
 
 ## NPC penguins
 
@@ -324,6 +378,24 @@ The live values are in `tuning/npc_default.tres` (the class is `tuning/npc_tunin
 **Check, a fishing party:** 4 NPCs at energy 25 go in within 0.5 s of each other, all 4 get past 50 energy, and they're home in about 50 s. One knocked in off the east side swims back, climbs out and rejoins the huddle (smoke test). ✓
 
 **Check, how a colony spends its time:** home at 70, an NPC drains to 35 in about a minute in the huddle (at ×0.3–0.5), and a trip takes 30–50 s. In a 3-minute headless run of the whole field, a colony had about half its penguins huddled at any time, with no NPC stuck anywhere. ⚠ Playtest whether that feels like a busy colony or an empty one.
+
+## Screen effects
+
+`tuning/screen_fx.tres` (the class is `tuning/screen_fx_tuning.gd`). Feel numbers, not balance. The player's Screen effects setting scales them: Full ×1, Reduced ×0.5 (no swimming picture when queasy), Off. A black-out is on at Full and Reduced.
+
+| Value | Start | Notes |
+|---|---|---|
+| Senses a predator within | 25 m | In sight or not. Closer is stronger (0 at 25 m, 1 on top of you) |
+| One hunting you | at least 0.85 | Locked on, lining up a lunge, lunging, getting its breath back. A pod's attack on you: 0.95 |
+| Sated predator / out of the water | × 0.35 / × 0.5 | A hunt always counts in full |
+| Anxiety comes on / fades | 0.4 / 0.25 a second | So 2.5 s to full, 4 s to clear |
+| At full anxiety | Edges 60% dark, reaching 30% in | Plus a heartbeat throb (up to +15%, 96 a minute) at its worst |
+| Boost | Edges 30% dark, reaching 25% in; in 0.12 s, out 0.45 s | |
+| A hit closes it to | 92% dark, reaching 60% in, × its strength | Dazed 0.9 (opens back up over the daze), stunned 0.75 (1.2 s), a lunge at you from within 8 m 0.45 (0.6 s), a hard bump 0.35 (0.6 s) |
+| Caught | Black for 0.35 s, back over 0.9 s | |
+| Queasy | A green tint, the picture swimming (0.8% of the screen) and doubled | Only while queasy: it reads the screen back, which costs a little every frame |
+
+**Check (smoke test):** with a hunting seal 10 m off, anxiety is 0.20 after 0.5 s and 0.97 after 3 s; a second after it's gone it's still 0.72, and 4 s later clear. Reduced shows a hit at half the darkness (0.40 to 0.81); Off shows nothing. ✓
 
 ## Food pulses (multiplayer)
 
@@ -369,14 +441,15 @@ The live values are in `tuning/predators/leopard_seal.tres` (the class is `tunin
 | Turn rate | 85 °/s | A thin penguin (120 °/s) out-turns it; a stuffed one (66 °/s) can't |
 | Patrol loop | 4 m off the ice edge, 1.5–3.5 m deep | 40% of legs swing past a school within 30 m. Each leg is 17–30 m round the berg |
 | Roams | 25% of patrol legs | In a berg field it patrols round one berg; now and then it heads off to one of the 3 nearest others instead |
-| Sees penguins in the water | 20 m | Underwater fog hides things past ~20–25 m |
+| Sees penguins in the water | 24 m (was 20) | Underwater fog hides things past ~20–25 m |
+| Hears a noisy penguin | up to 35 m | Its noise (a splash going in or bursting out sets it to 0.8, a bump up to 1; it fades over 2 s) stretches how far off it notices you, from 24 m toward 35 m |
 | Sees penguins out of the water | 6 m | The edge ambush. Never through ice; never up on the plateau |
-| Gives up a chase | Beyond 25 m, or after 12 s | Then ignores that penguin for 4 s |
+| Gives up a chase | Beyond 30 m, or after 15 s | Was 25 m and 12 s. Then ignores that penguin for 4 s |
 | Lunge warning | 0.6 s | Ring flashes; the strike line shows where the lunge will go. Starts 5 m out; during it the seal stops closing in and matches its target's speed |
 | Lunge | 12 m/s for 0.5 s (~6 m) | Straight along the strike line, then 2 s before the next |
 | Catch reach | 1.3 m from the jaws | The jaws are 1 m ahead of the body; the lunge can rear 0.6 m out of the water |
-| Hunger | +1 /s, starts at 10–40 | Out of 100 |
-| Starving at | 70 | Goes to the nearest school (within 80 m) and eats fish |
+| Hunger | +0.6 /s (was +1), starts at 10–40 | Out of 100. So it starts starving about 50–100 s in, and then every 50 s or so |
+| Starving at | 70 | Goes to the nearest school (within 80 m) and eats fish, unless a penguin in the water is within 10 m: then it chases that instead (`feeding_break_range`) |
 | Fed at | 40 | Each fish takes 8 off. About 4 fish |
 | Sated after eating a penguin | 8 s | Hunger drops to 0 |
 
@@ -400,6 +473,8 @@ So a seal now runs you down fast, and dodging lunges only buys time: to get away
 
 Spot the warning early and a turn gets you off the line for free; spot it late and it's a coin flip unless you boost. ✓ The smoke test checks that a 0.2 s turn dodges. This only holds because the seal stops closing in during the warning; when it kept closing (the first version), a faster seal made turns useless.
 
+**Check, does it come for you?** (After the playtest, DECISIONS 2026-10-08.) Headless trials: the player's penguin is put on the ice at the edge nearest a seal (wherever it is at a random moment) and jumps off toward it. Before: 12 of 16 times a seal locked on and lined up a lunge; the misses were a seal lying in wait elsewhere (it ignored anyone more than 6 m off), a feeding seal, and seals out of sight. Now: 15 of 16, including one 23 m away that heard the splash. Dropped into open water 6–12 m from a seal: 13 of 16. The smoke test checks hearing a splash at 28 m (and not a quiet swimmer there), an ambush breaking for a penguin going in 10 m along the edge, and a starving seal breaking off for a penguin 8 m off. ✓
+
 **Check, the ice edge:** the lunge reaches about 1 m onto the ice. A penguin standing at the edge gets grabbed; 4 m in, the seal may lunge at you but can't reach (smoke test). ✓
 
 **Check, how often a seal goes off to feed:** with no catches, a seal starts starving 30–60 s into the toy and then about every 30 s, and one school (about 4 fish) feeds it. In a 2-minute headless run, each of the two seals went feeding three times, and they ate 25 fish between them, out of ~130. ✓
@@ -415,7 +490,8 @@ In `tuning/predators/leopard_seal.tres` too (the Ambush group). The orca has it 
 | Where | 1.6 m out from the edge nearest that penguin, 1.2 m down | Holds still, facing the ice: a dark shadow just past the edge. Shallow enough to peek over it |
 | Follows | Moves to a new spot when the penguin's nearest edge has moved 6 m | |
 | Gives up | After waiting 15 s at one spot, or when nobody's near that edge | Moving to a new spot starts the 15 s again |
-| Strikes | Anyone in the water within 6 m (about as far as a lunge carries), or out of the water within reach of its jaws | It lets swimmers farther off come to it |
+| Strikes | Anyone in the water within 6 m (about as far as a lunge carries), or out of the water within reach of its jaws | |
+| Breaks cover | For anyone in the water within 14 m | It gives up the ambush and chases (`ambush_break_range`). Farther off, it lets them come |
 | Warning | 0.4 s | Instead of the usual 0.6 s: it's already lined up |
 
 **Check, can you see it?** Within 3 m of the surface every predator casts a dark shadow on the water (darkest down to 1.5 m). From the ice, a seal lying in wait shows as a shadow just past the edge. (A screenshot from the movement toy's ice camera.) ✓
@@ -445,11 +521,14 @@ Each orca is a predator like the seal, with its own values in `tuning/predators/
 | Turn rate | 55 °/s | Any penguin out-turns it |
 | Patrol loop | 12 m off the ice edge, 3–6 m deep | 25% of legs swing past a school within 40 m |
 | Roams | 35% of patrol legs | The pod follows its leader to another berg |
-| Sees penguins in the water | 8 m | Orcas don't chase in open water (GDD §5.3) |
+| Sees penguins in the water | 12 m (was 8); hears a noisy one up to 20 m | Orcas don't chase from far off in open water (GDD §5.3) |
 | Sees penguins out of the water | – | Never: on the ice, the wave is its attack |
-| Gives up a chase | Beyond 14 m, or after 6 s | |
-| Lunge | from 6 m, 13 m/s for 0.5 s | Same 0.6 s warning and strike line as the seal; every 2.5 s |
-| Catch reach | 1.8 m from the jaws, 2.4 m ahead of the body | A big mouth |
+| Gives up a chase | Beyond 18 m, or after 8 s | Was 14 m and 6 s |
+| Lunge | from 8 m, 13 m/s for 0.6 s | Was from 6 m for 0.5 s. A 0.7 s warning (the seal's is 0.6) and the strike line; every 2.5 s |
+| Aims | where you'll be when the jaws get there (`lunge_lead` 1) | If you keep going the way you are, straight or round the turn you're making. Was: at where you are |
+| Catch reach | 1.2 m from the jaws, 2.4 m ahead of the body | Was 1.8 m: aiming ahead, it doesn't need the slack |
+| Body | 6 m long, 0.9 m thick | Touch it and you're dazed (Dazed, above), and it lunges at once |
+| Humpbacks | Shy of them | Won't hunt a penguin within 10 m of one (see Humpback) |
 | Hunger | +0.5 /s; each fish takes 4 off | Starving and fed at 70 and 40, like the seal |
 | Sated after eating a penguin | 12 s | |
 
@@ -462,7 +541,33 @@ The pod's values are in `tuning/predators/orca_pod.tres` (`tuning/pod_tuning.gd`
 | Formation spacing | 4 m | A V behind the leader. Followers lagging behind swim up to 0.8 m/s faster per metre they're off |
 | Attacks | On the ice: the wave and the ram. In the water: the cut-off (4–10 m from the ice) and the carousel (farther out) | When more than one has a target, one is picked at random by weight: ram 1.5, the others 1 |
 | Traps | Wave or ram → cut-off → carousel | Right after a strike, the pod tries the attacks it leads into (`chains_into`), with no cooldown. At most 4 in a row |
-| First attack | No sooner than 10 s in | |
+| First attack | No sooner than 6 s in | Was 10 s |
+| Relay strikes | Up to 3 in a row | When an orca's lunge misses (or it gives up, or a penguin bumps one that's out of breath), the nearest other orca within 16 m that can strike goes in straight away. Each keeps the hunt after an attack going 2 s longer; they start again after 8 s without one. Not while an attack is lining up or under way |
+| Shadowing a hunt | 10 m off the penguin, 110° round either side | While one orca hunts, the free ones keep this close, ready to take over |
+
+**Check, what each lunge does (orcas).** Headless trials (`tests/trials/whale_trials.gd`): one orca, 9–12 m away on a random side, strikes once at a thin bot penguin out in open water, 24–30 runs per row. The bot either swims straight on or circles (0.4–1 rad/s), and at the warning does nothing, turns square off the line at its real turn rate after a delay, or ("smart") boosts across the line if it was heading into it and turns away and boosts otherwise.
+
+| At the warning | Swimming straight | Circling |
+|---|---|---|
+| Nothing | caught 81% | caught 75% |
+| Turns away after 0.2 s | 19% | 38% |
+| Turns away after 0.4 s | 43% | – |
+| Boosts (smart), after 0.3 s | 10% | 13% |
+
+Before this change (aimed at where you are, 1.8 m reach), a penguin just swimming in a circle was caught by 2 lunges in 10. Now doing nothing gets you eaten; reacting early, and boosting, gets you off the line. A turn alone helps less when you're already circling: the orca reads the curve, so turn the other way or boost. ✓
+
+**Check, a whole hunt (orcas).** The same bot, 9–14 m from the pod, swimming about for 14 s after one orca goes for it, with relays, 24 runs per row:
+
+| At each warning | Caught | Lunges per run | Relay strikes per run |
+|---|---|---|---|
+| Nothing | 96% | 1.9 | 1.0 |
+| Turns away after 0.2 s | 92% | 2.7 | 1.5 |
+| Boosts (smart) | 50% | 3.6 | 2.3 |
+| Boosts, with a humpback 25 m off | 30% | 2.4 | 1.2 |
+
+After the playtest changes (DECISIONS, 2026-10-08: orcas notice you from 12 m and hear a splash from 20 m) the same trials give: nothing 100%, turning after 0.2 s 96%, boosting 71% (54% re-measured on the whale build with the same runs, so roughly +15%). Open water near a pod is deadly now unless you boost (and boosts cost fish), get to the ice, or reach a humpback. The bot never heads for the ice; a player would. ⚠ Playtest whether a hunt lasts too long: `chase_give_up_seconds` and `relay_max` are the levers.
+
+**Check, the carousel.** Holding still in the middle: caught 24/24. Swimming round inside it: 88% caught doing nothing, 50% boosting at each warning. Keeping to the ring's edge and turning: 79%. Leave before the bubbles go up. ✓
 
 Every attack runs the same steps: pick a target, line up, warn, charge, strike, then hunt the water. These are the shared values, the same for every attack unless the attack's table says otherwise:
 
@@ -473,7 +578,7 @@ Every attack runs the same steps: pick a target, line up, warn, charge, strike, 
 | Warning, once lined up | 2.0 s | The danger zone shows from 40% of the way through |
 | Charge speed | 8 m/s | |
 | Hunt after the strike | 6 s | The orcas hold near the ice and go after anyone in the water within 8 m |
-| Between traps | 20 s (10 s if an attack was called off) | Counted from the end of the whole trap |
+| Between traps | 12 s (6 s if an attack was called off) | Was 20 s. Counted from the end of the whole trap |
 | Needs | At least 2 free orcas | A starving or hunting orca drops out; with too few left, the attack is called off |
 
 #### The wave (`orca_wave.tres`)
@@ -551,6 +656,37 @@ Only ice marked as tippable (`TippableIce`, `levels/tippable_ice.gd`) can be ram
 **Check, the trap:** a penguin the cut-off pushes out to sea goes straight into the carousel (the same frame, trap step 2). A penguin a wave washed in that swims 6 m off the edge is cut off 1.6 s after the wave hit, with no cooldown (smoke test). ✓
 
 **Check, a pod stays a pod:** on patrol the followers keep about 6–7 m from the leader. ✓
+
+## Humpback (in the movement toy)
+
+The values are in `tuning/humpback.tres` (the class is `tuning/humpback_tuning.gd`, which extends `tuning/swimmer_tuning.gd`). The movement toy has two (`MovementToy.humpback_count`).
+
+| Value | Start | Notes |
+|---|---|---|
+| Body | 12 m long, 1.5 m thick | Twice an orca. Touch it and you're dazed 2 s (Dazed, above) |
+| Cruises | 2.5 m/s, 3–7 m deep | Slower than a penguin, so you can keep up. Loops round the ice 14–45 m off its edge |
+| Steering | 45 °/s, 2.5 m/s² | |
+| Breathes | Every 25–40 s | Rolls along the top 6 s (its middle 0.7 m down: back and fin out), blows 3 times 1.8 s apart, then dives nose down at 50°, flukes up, for 2.5 s |
+| Feeds | Every 50–80 s, on a school within 45 m | The school must be in open water: no ice within 12 m. Gives up getting there after 25 s |
+| Bubble net | Circles 8 m down, one turn in 8 s, the ring closing from 7 m to 3.5 m | Fish within 10 m of the middle are herded into a ball at the surface. The water boils in the middle for the last 1.5 s and while it lines up (1 s) |
+| Lunge | Straight up through the middle at 8 m/s, at least 75° steep, until its head is 2.5 m out | Swallows every fish within 4 m; that school is gone for 45 s (a penguin's eaten fish come back in 8) |
+| Scoop | A penguin in the water within 4.5 m of the middle | Thrown up at 7 m/s and out at 4 m/s, dazed 2.5 s, a fish comes back up. Never eaten |
+| Afterwards | Falls back in (1.5 s), rests at the surface 8 s | |
+| Driving off orcas | Notices orcas hunting a penguin within 35 m | A pod's attack, or an orca chasing or lining up a lunge. Swims there at 4 m/s (gives up after 20 s), blowing |
+| Shelter | Any penguin within 10 m of its body | Orcas won't hunt it, a pod attacking it calls the attack off, and an orca sent at it refuses. Leopard seals don't care |
+| Guards | 10 s, keeping 4.5 m off the penguin's side | Its body doesn't daze the penguin it's guarding |
+
+**Check, a bubble net (smoke test).** A 10-fish school in open water: all 10 herded into the ball, all 10 swallowed, none back 10 s later; a penguin held in the middle is scooped up (thrown up at more than 3 m/s), dazed, loses a fish and isn't eaten. In a 2-minute headless run one humpback breathed every 25–40 s and fed once, on a school of 11. ✓
+
+**Check, does it come to help?** Trials (`--humpback=D`): a humpback starts D m from the bot when the orcas strike.
+
+| Humpback starts | Drove the orcas off | How soon |
+|---|---|---|
+| 25 m off (a hunt) | 12 of 20 | 4.4 s |
+| 40 m off (a hunt) | 9 of 20 | 5.7 s (it wanders into range) |
+| 30 m off (a carousel) | 20 of 20 | 5.4 s, before the slap |
+
+A carousel is slow (8–13 s before the slap), so a humpback anywhere near always breaks it up; a quick hunt it only sometimes reaches. With two humpbacks roaming the toy, most hunts get no help. ⚠ Playtest: `mob_range` and `shelter_radius` are the levers if they're too much of a safety net.
 
 ## Multiplayer round
 

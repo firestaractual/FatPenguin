@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="KrillTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/krill_tuning.gd" id="1_krill"]
+
+[resource]
+script = ExtResource("1_krill")
+count = 80
+radius = 2.2
+depth = Vector2(0.6, 3)
+krill_energy = 0.75
+eat_rate = 12.0
+drift_speed = 0.35
+wander = 6.0
+regrow_seconds = 40.0

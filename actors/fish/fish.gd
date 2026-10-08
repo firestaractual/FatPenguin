@@ -10,6 +10,14 @@ extends Area3D
 ##
 ## Without a species (spilled fish, test fish) it swims a small lazy circle around where it was
 ## placed, or holds still if circle_radius is 0.
+##
+## A sick fish (diseased, or full of parasites) looks it: sickly yellow-green, bloated, blotchy,
+## listing on its side and swimming lamely, lagging behind its school with the odd twitch. A
+## penguin that eats one is queasy (Penguin.eat_sick_fish()).
+##
+## A humpback's bubble net herds a school (herd()): while it lasts, the fish forget home and are
+## driven into a tight ball inside the ring of bubbles, up near the surface, where the humpback
+## gulps the lot (get_eaten() with a long respawn).
 
 ## What kind of fish this is. Set it before the fish enters the tree; leave it empty for a fish
 ## that doesn't school.
@@ -20,6 +28,11 @@ extends Area3D
 @export var respawn_seconds := 8.0
 ## Spilled fish (knocked loose in a bump) are eaten once and gone.
 @export var one_shot := false
+## Diseased or full of parasites (see above). Set it before the fish enters the tree.
+@export var sick := false
+## A sick fish swims at this share of its species' speed, and lists this far on its side (°).
+@export var sick_speed_mult := 0.55
+@export var sick_list_deg := 65.0
 ## Can't be eaten by anyone for this long after appearing.
 @export var pickup_delay := 0.0
 ## This body (the penguin that spilled the fish) can't eat it for ignore_seconds.
@@ -43,6 +56,14 @@ const VERTICAL_SHARE := 0.35
 ## only take a (bigger) step every FAR_STEP physics frames. Roughly halves their cost.
 const FAR_DISTANCE := 40.0
 const FAR_STEP := 4
+## Herded (bubble-netted) fish: how hard they're driven back inside the ring and up, and how much
+## faster they swim.
+const HERD_PULL := 3.0
+const HERD_SPEED_MULT := 1.6
+const SICK_MATERIAL := preload("res://art/materials/fish_sick.tres")
+const SICK_SPOT_MATERIAL := preload("res://art/materials/fish_sick_spots.tres")
+## A sick fish twitches about this often (per second).
+const SICK_TWITCH_RATE := 0.6
 
 ## Every schooling fish in the scene, by species. How fish find their school mates.
 static var _by_species := {}
@@ -57,6 +78,11 @@ var _speed := 0.0
 var _wander_dir := Vector3.FORWARD
 var _refresh := 0.0
 var _neighbours: Array[Fish] = []
+## Herded by a bubble net: driven toward this spot (global), kept within this radius of it, for
+## this much longer (s).
+var _herd_centre := Vector3.ZERO
+var _herd_radius := 0.0
+var _herd_time := 0.0
 ## Where this fish was at its last schooling step. School mates read this instead of
 ## global_position, which is slower to fetch.
 var _pos := Vector3.ZERO
@@ -107,6 +133,28 @@ func _ready() -> void:
 		if species.material != null:
 			for mesh: MeshInstance3D in [$Model/Body, $Model/Tail]:
 				mesh.material_override = species.material
+	if sick:
+		_look_sick()
+
+
+## Sickly colours, blotches (parasite cysts) and a bloated body, and a slower swim.
+func _look_sick() -> void:
+	for mesh: MeshInstance3D in [$Model/Body, $Model/Tail]:
+		mesh.material_override = SICK_MATERIAL
+	var spot := SphereMesh.new()
+	spot.radius = 0.028
+	spot.height = 0.05
+	spot.radial_segments = 6
+	spot.rings = 3
+	spot.material = SICK_SPOT_MATERIAL
+	for at in [Vector3(0.05, 0.03, -0.06), Vector3(-0.055, 0.0, 0.03), Vector3(0.02, 0.06, 0.08)]:
+		var blotch := MeshInstance3D.new()
+		blotch.mesh = spot
+		blotch.position = at
+		_model.add_child(blotch)
+	# Bloated, too.
+	_model.scale *= Vector3(1.15, 1.3, 1.0)
+	_speed *= sick_speed_mult
 
 
 func _physics_process(delta: float) -> void:
@@ -141,7 +189,7 @@ func _swim_circle(delta: float) -> void:
 	var offset := Vector3(cos(_phase), sin(_phase * 2.0) * 0.15, sin(_phase)) * circle_radius
 	# Face along the circle.
 	var forward := Vector3(-sin(_phase), 0.0, cos(_phase))
-	global_transform = Transform3D(Basis.looking_at(forward, Vector3.UP), home + offset)
+	global_transform = Transform3D(_listing(Basis.looking_at(forward, Vector3.UP)), home + offset)
 
 
 func _swim_in_school(delta: float) -> void:
@@ -187,21 +235,39 @@ func _swim_in_school(delta: float) -> void:
 	_wander_dir = (_wander_dir + jitter * 2.0 * delta).normalized()
 	steer += _wander_dir * s.wander
 
-	# Stay near home.
-	var from_home := pos - home
-	var past := from_home.length() - s.roam_radius
-	if past > 0.0:
-		steer -= from_home.normalized() * past * s.home_pull
+	var cruise := _speed
+	var vertical := VERTICAL_SHARE
+	var max_steer := s.max_steer
+	if _herd_time > 0.0:
+		# Bubble-netted: no home, just away from the bubbles, into a ball, and up. They swim
+		# hard and climb steeply, as fish do in a net.
+		_herd_time -= delta
+		var from_centre := pos - _herd_centre
+		var past_ring := from_centre.length() - _herd_radius
+		steer -= from_centre.normalized() * maxf(past_ring, 0.0) * HERD_PULL
+		steer.y += (_herd_centre.y - pos.y) * HERD_PULL
+		cruise *= HERD_SPEED_MULT
+		vertical = 1.0
+		max_steer *= HERD_SPEED_MULT
+	else:
+		# Stay near home.
+		var from_home := pos - home
+		var past := from_home.length() - s.roam_radius
+		if past > 0.0:
+			steer -= from_home.normalized() * past * s.home_pull
 
+	# A sick fish twitches now and then: a lurch off its line.
+	if sick and randf() < SICK_TWITCH_RATE * delta:
+		velocity = velocity.rotated(Vector3.UP, randf_range(-1.2, 1.2))
 	# Hold cruising speed: fish never hover.
 	var speed := velocity.length()
 	if speed > 0.001:
-		steer += velocity / speed * (_speed - speed)
+		steer += velocity / speed * (cruise - speed)
 
-	steer.y *= VERTICAL_SHARE
-	velocity += steer.limit_length(s.max_steer) * delta
-	velocity.y = clampf(velocity.y, -VERTICAL_SHARE * _speed, VERTICAL_SHARE * _speed)
-	velocity = velocity.limit_length(_speed * 1.5)
+	steer.y *= vertical
+	velocity += steer.limit_length(max_steer) * delta
+	velocity.y = clampf(velocity.y, -vertical * cruise, vertical * cruise)
+	velocity = velocity.limit_length(cruise * 1.5)
 
 	pos += velocity * delta
 	pos.y = minf(pos.y, GameWorld.WATER_LEVEL - MIN_DEPTH)
@@ -209,8 +275,15 @@ func _swim_in_school(delta: float) -> void:
 	# One transform write per frame: every write also moves the pickup area in physics.
 	var facing := global_basis
 	if velocity.length_squared() > 0.0001:
-		facing = Basis.looking_at(velocity, Vector3.UP)
+		facing = _listing(Basis.looking_at(velocity, Vector3.UP))
 	global_transform = Transform3D(facing, pos)
+
+
+## A sick fish lists on its side, rocking a little; a healthy one swims upright.
+func _listing(facing: Basis) -> Basis:
+	if not sick:
+		return facing
+	return facing * Basis(Vector3.BACK, deg_to_rad(sick_list_deg) + 0.3 * sin(_age * 5.0 + _phase))
 
 
 ## Caches the nearest few visible school mates within school range.
@@ -258,17 +331,42 @@ func _rejoin_school() -> void:
 	_refresh = 0.0
 
 
-## Gone down someone's throat (a penguin's or a predator's). It respawns after respawn_seconds,
-## beside its school if it has one.
-func get_eaten() -> void:
+## Gone down someone's throat (a penguin's or a predator's). It respawns after respawn_seconds
+## (or `respawn_after`, if given: a humpback clears a school out for longer), beside its school if
+## it has one.
+func get_eaten(respawn_after := -1.0) -> void:
 	if not visible:
 		return
 	if one_shot:
 		queue_free()
 		return
 	_set_active(false)
+	_herd_time = 0.0
 	# (false: the timer waits while the game is paused.)
-	get_tree().create_timer(respawn_seconds, false).timeout.connect(_set_active.bind(true))
+	var wait := respawn_after if respawn_after >= 0.0 else respawn_seconds
+	get_tree().create_timer(wait, false).timeout.connect(_set_active.bind(true))
+
+
+## Caught in a bubble net (a humpback feeding): for `seconds`, it's driven toward `centre` and
+## kept within `radius` of it, forgetting its home. Herding again just renews it.
+func herd(centre: Vector3, radius: float, seconds: float) -> void:
+	_herd_centre = centre
+	_herd_radius = radius
+	_herd_time = seconds
+
+
+## Makes it sick now (diseased, or full of parasites), looking it.
+func make_sick() -> void:
+	if sick:
+		return
+	sick = true
+	if is_node_ready():
+		_look_sick()
+
+
+## Is it in a bubble net right now?
+func is_herded() -> bool:
+	return _herd_time > 0.0
 
 
 ## Comes back now, beside its school if it has one (as it does respawn_seconds after being eaten).
@@ -282,19 +380,64 @@ func school_mate_count() -> int:
 
 
 ## The nearest visible fish within max_distance that's swimming in a school (with at least two
-## school mates around it), or null. How a starving predator finds a meal.
-static func nearest_in_school(from: Vector3, max_distance: float) -> Fish:
+## school mates around it), or null; with `healthy_only`, not a sick one. How a starving predator
+## (or a hungry NPC penguin, which can tell a sick fish) finds a meal.
+static func nearest_in_school(from: Vector3, max_distance: float, healthy_only := false) -> Fish:
 	var best: Fish = null
 	var best_sq := max_distance * max_distance
 	for mates: Array in _by_species.values():
 		for fish: Fish in mates:
-			if not fish.visible or fish._neighbours.size() < 2:
+			if not fish.visible or fish._neighbours.size() < 2 or (healthy_only and fish.sick):
 				continue
 			var dist_sq := from.distance_squared_to(fish._pos)
 			if dist_sq < best_sq:
 				best_sq = dist_sq
 				best = fish
 	return best
+
+
+## Herds every visible schooling fish within `reach` of `centre` (flat distance, any depth): see
+## herd(). Returns how many.
+static func herd_near(centre: Vector3, reach: float, radius: float, seconds: float) -> int:
+	var count := 0
+	var reach_sq := reach * reach
+	for mates: Array in _by_species.values():
+		for fish: Fish in mates:
+			if not fish.visible:
+				continue
+			var flat := Vector2(fish._pos.x - centre.x, fish._pos.z - centre.z)
+			if flat.length_squared() <= reach_sq:
+				fish.herd(centre, radius, seconds)
+				count += 1
+	return count
+
+
+## Eats every visible schooling fish within `radius` of `centre` (flat distance) and above
+## `below` (a height): a humpback's gulp. They come back after `respawn_after` seconds. Returns how
+## many.
+static func gulp_near(centre: Vector3, radius: float, below: float, respawn_after: float) -> int:
+	var eaten: Array[Fish] = []
+	var radius_sq := radius * radius
+	for mates: Array in _by_species.values():
+		for fish: Fish in mates:
+			if not fish.visible or fish._pos.y < below:
+				continue
+			if Vector2(fish._pos.x - centre.x, fish._pos.z - centre.z).length_squared() <= radius_sq:
+				eaten.append(fish)
+	for fish in eaten:
+		fish.get_eaten(respawn_after)
+	return eaten.size()
+
+
+## How many visible schooling fish are within `radius` of `centre` (flat distance).
+static func count_near(centre: Vector3, radius: float) -> int:
+	var count := 0
+	var radius_sq := radius * radius
+	for mates: Array in _by_species.values():
+		for fish: Fish in mates:
+			if fish.visible and Vector2(fish._pos.x - centre.x, fish._pos.z - centre.z).length_squared() <= radius_sq:
+				count += 1
+	return count
 
 
 ## A random visible fish swimming in a school within `radius` of `from`, or null.
@@ -313,7 +456,10 @@ func _on_body_entered(body: Node3D) -> void:
 	if body == ignore_body and _age < ignore_seconds:
 		return
 	if body is Penguin and visible:
-		(body as Penguin).eat_fish()
+		if sick:
+			(body as Penguin).eat_sick_fish()
+		else:
+			(body as Penguin).eat_fish()
 		get_eaten()
 
 

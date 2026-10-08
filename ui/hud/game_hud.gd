@@ -1,7 +1,8 @@
 class_name GameHud
 extends CanvasLayer
 ## The in-game HUD for one player's penguin: the air meter (only when short of breath), a pause
-## button, and control prompts at the bottom. There's no energy bar on purpose: body size is the
+## button, control prompts at the bottom, and the screen effects behind them all (ScreenFx: the
+## edges darkening near a predator, tunnel vision, black-outs, queasy). There's no energy bar on purpose: body size is the
 ## energy display (GDD §4.1). The debug numbers are a separate, normally hidden layer (DebugHud).
 ##
 ## It keeps clear of a phone's notch and rounded corners (the display's safe area).
@@ -15,6 +16,7 @@ var penguin: Penguin = null
 @onready var _air: AirMeter = %AirMeter
 @onready var _prompts: ControlPrompts = %Prompts
 @onready var _pause: Button = %PauseButton
+@onready var _fx: ScreenFx = $ScreenFx
 
 
 func _ready() -> void:
@@ -43,12 +45,17 @@ func prompts() -> ControlPrompts:
 	return _prompts
 
 
+func screen_fx() -> ScreenFx:
+	return _fx
+
+
 func _find_penguin() -> void:
 	if not penguin_path.is_empty():
 		penguin = get_node_or_null(penguin_path) as Penguin
 	if penguin == null:
 		penguin = get_tree().get_first_node_in_group(&"player") as Penguin
 	_prompts.penguin = penguin
+	_fx.penguin = penguin
 
 
 func _on_pause_pressed() -> void:

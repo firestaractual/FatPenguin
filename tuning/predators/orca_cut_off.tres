@@ -11,3 +11,4 @@ chains_into = Array[Resource]([ExtResource("3_carousel")])
 warning_seconds = 5.0
 zone_shows_at = 0.3
 hunt_seconds = 4.0
+cooldown = 12.0

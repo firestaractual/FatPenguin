@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="SquidTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/squid_tuning.gd" id="1_squid"]
+
+[resource]
+script = ExtResource("1_squid")
+energy = 25.0
+cruise_speed = 1.5
+roam_radius = 8.0
+depth = Vector2(2, 8)
+flee_range = 4.5
+jet_speed = 9.0
+jet_seconds = 0.5
+jet_cooldown = 1.4
+jets = 3
+spent_seconds = 6.0
+respawn_seconds = 30.0

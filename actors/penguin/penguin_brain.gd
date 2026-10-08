@@ -359,10 +359,10 @@ func _forage(rethink: bool) -> void:
 	if _needs_air():
 		return
 	if rethink and (_meal == null or not is_instance_valid(_meal) or not _meal.visible):
-		_meal = Fish.nearest_in_school(_penguin.global_position, 20.0)
+		_meal = Fish.nearest_in_school(_penguin.global_position, 20.0, true)
 		if _meal == null and _penguin.global_position.distance_to(_school) < 8.0:
 			# Nothing left here: on to the next school, if there's one near enough.
-			_meal = Fish.nearest_in_school(_penguin.global_position, 45.0)
+			_meal = Fish.nearest_in_school(_penguin.global_position, 45.0, true)
 			if _meal == null:
 				_set_mode(Mode.HOME)
 				return
@@ -438,9 +438,17 @@ func _climb() -> void:
 	_walk_to(spot)
 
 
-## A predator is hunting it close by: boost away if it can, and head home.
+## A predator is hunting it close by, or it's inside a humpback's bubble net: boost away if it
+## can, and head home.
 func _danger() -> bool:
 	var me := _penguin.global_position
+	var whale := Humpback.net_closing_on(me) if _penguin.state == Penguin.State.SWIM else null
+	if whale != null:
+		var out := me - whale.net_centre()
+		out.y = 0.0
+		_penguin.wish_dir = out.normalized() if out.length() > 0.1 else _penguin.get_facing()
+		_penguin.wish_action = not _penguin.is_boosting()
+		return true
 	for node in get_tree().get_nodes_in_group(&"predators"):
 		var predator := node as Predator
 		if predator == null or not predator.is_hunting(_penguin):

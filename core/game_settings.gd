@@ -1,7 +1,8 @@
 class_name GameSettings
 extends RefCounted
 ## The player's settings, kept in user://settings.cfg between sessions: control preferences, the
-## control hints and how far through them the player is, and whether the debug numbers show. Not
+## control hints and how far through them the player is, how strong the screen effects are, and
+## whether the debug numbers show. Not
 ## balance numbers (those are in tuning/). There's one set: GameSettings.current().
 ##
 ## Change a setting by assigning it; that saves the file and emits `changed`.
@@ -11,6 +12,10 @@ extends RefCounted
 signal changed(setting: StringName)
 
 const PATH := "user://settings.cfg"
+
+## How strong the screen effects are (ScreenFx: dimming when a predator's near, tunnel vision,
+## black-outs, the queasy wobble): full, reduced (half as strong, no wobble) or off.
+enum ScreenEffects { FULL, REDUCED, OFF }
 
 static var _current: GameSettings = null
 
@@ -29,6 +34,11 @@ var control_hints := true:
 	set(value):
 		control_hints = value
 		_changed(&"control_hints")
+## How strong the screen effects are (ScreenEffects).
+var screen_effects := ScreenEffects.FULL:
+	set(value):
+		screen_effects = clampi(value, ScreenEffects.FULL, ScreenEffects.OFF) as ScreenEffects
+		_changed(&"screen_effects")
 ## Show the debug numbers and tester notes (F1 toggles this too).
 var show_debug := false:
 	set(value):
@@ -85,6 +95,7 @@ func load_file() -> void:
 	invert_pitch = cfg.get_value("controls", "invert_pitch", invert_pitch)
 	left_handed = cfg.get_value("controls", "left_handed", left_handed)
 	control_hints = cfg.get_value("hud", "control_hints", control_hints)
+	screen_effects = int(cfg.get_value("hud", "screen_effects", screen_effects)) as ScreenEffects
 	show_debug = cfg.get_value("debug", "show_debug", show_debug)
 	for key in (cfg.get_section_keys("learned") if cfg.has_section("learned") else PackedStringArray()):
 		_learned[StringName(key)] = int(cfg.get_value("learned", key, 0))
@@ -103,6 +114,7 @@ func _save() -> void:
 	cfg.set_value("controls", "invert_pitch", invert_pitch)
 	cfg.set_value("controls", "left_handed", left_handed)
 	cfg.set_value("hud", "control_hints", control_hints)
+	cfg.set_value("hud", "screen_effects", int(screen_effects))
 	cfg.set_value("debug", "show_debug", show_debug)
 	for id: StringName in _learned:
 		cfg.set_value("learned", String(id), _learned[id])

@@ -35,62 +35,87 @@ theme_override_font_sizes/font_size = 44
 text = "Settings"
 horizontal_alignment = 1
 
-[node name="InvertPitch" type="CheckButton" parent="Center/Sheet/Rows" unique_id=1476663259]
+[node name="Scroll" type="ScrollContainer" parent="Center/Sheet/Rows" unique_id=1071477686]
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="List" type="VBoxContainer" parent="Center/Sheet/Rows/Scroll" unique_id=1959167398]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="InvertPitch" type="CheckButton" parent="Center/Sheet/Rows/Scroll/List" unique_id=1476663259]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Invert swim pitch"
 
-[node name="InvertPitchNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=1959815824]
+[node name="InvertPitchNote" type="MarginContainer" parent="Center/Sheet/Rows/Scroll/List" unique_id=1959815824]
 layout_mode = 2
 theme_override_constants/margin_left = 14
 theme_override_constants/margin_bottom = 2
 
-[node name="InvertPitchCaption" type="Label" parent="Center/Sheet/Rows/InvertPitchNote" unique_id=1814215780]
+[node name="InvertPitchCaption" type="Label" parent="Center/Sheet/Rows/Scroll/List/InvertPitchNote" unique_id=1814215780]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"
 text = "Swimming, push up to dive (like a flight stick)"
 
-[node name="LeftHanded" type="CheckButton" parent="Center/Sheet/Rows" unique_id=1549789263]
+[node name="LeftHanded" type="CheckButton" parent="Center/Sheet/Rows/Scroll/List" unique_id=1549789263]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Left-handed touch controls"
 
-[node name="LeftHandedNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=1816164522]
+[node name="LeftHandedNote" type="MarginContainer" parent="Center/Sheet/Rows/Scroll/List" unique_id=1816164522]
 layout_mode = 2
 theme_override_constants/margin_left = 14
 theme_override_constants/margin_bottom = 2
 
-[node name="LeftHandedCaption" type="Label" parent="Center/Sheet/Rows/LeftHandedNote" unique_id=585125867]
+[node name="LeftHandedCaption" type="Label" parent="Center/Sheet/Rows/Scroll/List/LeftHandedNote" unique_id=585125867]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"
 text = "Steer with your right thumb, boost with your left"
 
-[node name="ControlHints" type="CheckButton" parent="Center/Sheet/Rows" unique_id=25264938]
+[node name="ControlHints" type="CheckButton" parent="Center/Sheet/Rows/Scroll/List" unique_id=25264938]
 unique_name_in_owner = true
 layout_mode = 2
 text = "Hints"
 
-[node name="ControlHintsNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=27536485]
+[node name="ControlHintsNote" type="MarginContainer" parent="Center/Sheet/Rows/Scroll/List" unique_id=27536485]
 layout_mode = 2
 theme_override_constants/margin_left = 14
 theme_override_constants/margin_bottom = 2
 
-[node name="ControlHintsCaption" type="Label" parent="Center/Sheet/Rows/ControlHintsNote" unique_id=344505069]
+[node name="ControlHintsCaption" type="Label" parent="Center/Sheet/Rows/Scroll/List/ControlHintsNote" unique_id=344505069]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"
 text = "Control prompts and warnings at the bottom of the screen"
 
-[node name="ShowDebug" type="CheckButton" parent="Center/Sheet/Rows" unique_id=208374823]
+[node name="ScreenEffects" type="Button" parent="Center/Sheet/Rows/Scroll/List" unique_id=795425564]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Show debug info"
+text = "Screen effects: Full"
 
-[node name="ShowDebugNote" type="MarginContainer" parent="Center/Sheet/Rows" unique_id=1250880998]
+[node name="ScreenEffectsNote" type="MarginContainer" parent="Center/Sheet/Rows/Scroll/List" unique_id=423946139]
 layout_mode = 2
 theme_override_constants/margin_left = 14
 theme_override_constants/margin_bottom = 2
 
-[node name="ShowDebugCaption" type="Label" parent="Center/Sheet/Rows/ShowDebugNote" unique_id=872672471]
+[node name="ScreenEffectsCaption" type="Label" parent="Center/Sheet/Rows/Scroll/List/ScreenEffectsNote" unique_id=947876999]
+layout_mode = 2
+theme_type_variation = &"CaptionLabel"
+text = "Dimming when a predator's near, tunnel vision, black-outs"
+
+[node name="ShowDebug" type="CheckButton" parent="Center/Sheet/Rows/Scroll/List" unique_id=208374823]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Show debug info"
+
+[node name="ShowDebugNote" type="MarginContainer" parent="Center/Sheet/Rows/Scroll/List" unique_id=1250880998]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_bottom = 2
+
+[node name="ShowDebugCaption" type="Label" parent="Center/Sheet/Rows/Scroll/List/ShowDebugNote" unique_id=872672471]
 layout_mode = 2
 theme_type_variation = &"CaptionLabel"
 text = "Numbers for testing (F1 on a keyboard)"

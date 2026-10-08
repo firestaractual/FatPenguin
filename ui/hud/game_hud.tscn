@@ -4,10 +4,45 @@
 [ext_resource type="Script" path="res://ui/hud/air_meter.gd" id="2_i5ojc"]
 [ext_resource type="Script" path="res://ui/hud/pause_icon.gd" id="3_knees"]
 [ext_resource type="Script" path="res://ui/hud/control_prompts.gd" id="4_wo40e"]
+[ext_resource type="Script" path="res://ui/hud/screen_fx.gd" id="5_sfx01"]
+[ext_resource type="Shader" path="res://ui/hud/vignette.gdshader" id="6_vig01"]
+[ext_resource type="Shader" path="res://ui/hud/queasy.gdshader" id="7_qsy01"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vig01"]
+shader = ExtResource("6_vig01")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qsy01"]
+shader = ExtResource("7_qsy01")
 
 [node name="GameHud" type="CanvasLayer" unique_id=1027615463]
 layer = 5
 script = ExtResource("1_72rr5")
+
+[node name="ScreenFx" type="Control" parent="." unique_id=1473158606]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("5_sfx01")
+
+[node name="Queasy" type="ColorRect" parent="ScreenFx" unique_id=339081663]
+visible = false
+material = SubResource("ShaderMaterial_qsy01")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Vignette" type="ColorRect" parent="ScreenFx" unique_id=153710184]
+visible = false
+material = SubResource("ShaderMaterial_vig01")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
 [node name="Root" type="Control" parent="." unique_id=805377794]
 layout_mode = 3

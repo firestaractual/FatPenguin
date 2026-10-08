@@ -7,3 +7,4 @@
 script = ExtResource("1_wave")
 display_name = "Wave"
 chains_into = Array[Resource]([ExtResource("3_cutoff")])
+cooldown = 12.0

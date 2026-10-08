@@ -111,7 +111,10 @@ extends Resource
 ## Closing speed for a hard bump: side hits spin you out, overfed penguins spill a fish.
 @export var hard_bump_speed := 4.0
 ## 1.0 = perfect billiard balls, 0.0 = no bounce at all.
-@export var bump_bounciness := 0.8
+@export var bump_bounciness := 0.85
+## Penguin-on-penguin bumps hit this much harder than the collision maths alone (bumper cars:
+## a bump should dislodge). Outside shoves (waves, jolts, whales) aren't scaled.
+@export var bump_knock_mult := 1.5
 ## On your feet you have grip and take this share of the knockback. On your belly you take it all.
 @export var feet_grip_mult := 0.5
 @export var water_knockback_mult := 0.35
@@ -132,6 +135,9 @@ extends Resource
 ## Every bump makes noise that draws predators: added to both penguins' noise (0 to 1).
 @export var bump_noise_soft := 0.4
 @export var bump_noise_hard := 1.0
+## Going into the water (or bursting out of it) makes at least this much noise (0 to 1):
+## predators hear the splash from farther off than they can see (PredatorTuning.hear_range).
+@export var splash_noise := 0.8
 ## Noise fades from full to nothing over this long (s).
 @export var noise_fade_seconds := 2.0
 
@@ -140,6 +146,24 @@ extends Resource
 @export var stun_turn_mult := 0.35
 ## ...and swim at this share of your cruise speed.
 @export var stun_speed_mult := 0.6
+
+@export_group("Dazed")
+## Dazed (bumped by a whale's body, or scooped up by a humpback): stunned as above, and the water
+## spins you round: your heading wanders by up to this much a second (°/s), so you lose your line.
+@export var daze_drift_deg := 110.0
+
+@export_group("Queasy (a sick fish)")
+## A sick fish (diseased, or full of parasites) makes you queasy for this long (s)...
+@export var queasy_seconds := 6.0
+## ...you swim and walk at this share of your speed, and turn at this share of your turn rate...
+@export var queasy_speed_mult := 0.55
+@export var queasy_turn_mult := 0.5
+## ...your heading wanders by up to this much a second (°/s; gentler than dazed)...
+@export var queasy_wander_deg := 40.0
+## ...you can't boost or belly-slide, and you throw the fish back up this long after eating it (s),
+## so it gives you nothing: you're down this much energy instead.
+@export var throw_up_delay := 1.0
+@export var sick_fish_cost := 3.0
 
 @export_group("Air & gravity")
 @export var air_seconds := 25.0

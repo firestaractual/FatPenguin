@@ -1,8 +1,8 @@
 class_name DebugHud
 extends CanvasLayer
-## Numbers for testers: the penguin's state, speed, energy, fat and air, the nearest predator and
-## any pod attack under way, plus the tester notes. Hidden unless "Show debug info" is on in the
-## settings (GameSettings.show_debug); F1 flips that setting. The real HUD is GameHud.
+## Numbers for testers: the penguin's state, speed, energy, fat and air, the nearest predator,
+## any pod attack under way and the nearest humpback, plus the tester notes. Hidden unless "Show
+## debug info" is on in the settings (GameSettings.show_debug); F1 flips that setting. The real HUD is GameHud.
 ## Also the tester keys for the player's penguin, which work whether it shows or not: Q / E energy
 ## -/+ 10, F2 infinite energy, R reset.
 
@@ -61,7 +61,7 @@ func _process(_delta: float) -> void:
 			_penguin.hop_distance(),
 			_penguin.air,
 			Engine.get_frames_per_second(),
-		] + _predator_line() + _pod_line()
+		] + _predator_line() + _pod_line() + _humpback_line()
 
 
 ## The nearest predator: what it is, what it's doing and how hungry it is.
@@ -83,6 +83,28 @@ func _predator_line() -> String:
 		nearest.hunger,
 		"  (starving)" if nearest.is_starving() else "",
 		"  [hunting you]" if nearest.is_hunting(_penguin) else "",
+	]
+
+
+## The nearest humpback: what it's doing, and when it next breathes and feeds.
+func _humpback_line() -> String:
+	var nearest: Humpback = null
+	var best := INF
+	for node in get_tree().get_nodes_in_group(&"humpbacks"):
+		var whale := node as Humpback
+		var dist := whale.global_position.distance_to(_penguin.global_position)
+		if dist < best:
+			best = dist
+			nearest = whale
+	if nearest == null:
+		return ""
+	return "\nhumpback  %s  %.0f m  breathes in %.0f s  feeds in %.0f s%s%s" % [
+		Humpback.State.keys()[nearest.state],
+		best,
+		nearest.next_breath_in(),
+		nearest.next_feed_in(),
+		"  [guarding you]" if nearest.protege() == _penguin else "",
+		"  [sheltered]" if Humpback.shelters(_penguin.global_position) else "",
 	]
 
 

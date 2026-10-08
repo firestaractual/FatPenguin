@@ -1,5 +1,6 @@
 extends "res://tests/smoke_suite.gd"
-## Leopard seals: patrol, targeting, lock-on, the lunge warning, catches, hunger, and the edge ambush.
+## Leopard seals: patrol, targeting, lock-on, the lunge warning, catches, hunger, the edge ambush,
+## and how readily they come after you (hearing a splash, breaking off feeding or an ambush).
 
 
 func suite_name() -> String:
@@ -9,6 +10,7 @@ func suite_name() -> String:
 func run() -> void:
 	await _test_predators()
 	await _test_seal_ambush()
+	await _test_seal_aggression()
 
 
 func _test_predators() -> void:
@@ -132,7 +134,7 @@ func _test_predators() -> void:
 	var out := Vector3(home.x, 0.0, home.z).normalized()
 	seal = _spawn_seal(Vector3(home.x, -2.5, home.z) + out * 8.0)
 	seal.hunger = 90.0
-	var bait := _spawn_bait(Vector3(home.x, -2.0, home.z) + out * 18.0, 100.0)
+	var bait := _spawn_bait(Vector3(home.x, -2.0, home.z) + out * 22.0, 100.0)
 	var meals := [0]
 	var chased := [false]
 	var bait_id := bait.get_instance_id()
@@ -143,7 +145,7 @@ func _test_predators() -> void:
 		if meals[0] > 0 and seal.state != Predator.State.FEED:
 			break
 	_check(meals[0] > 0 and seal.hunger <= seal.tuning.fed_hunger, "a starving seal eats from a school (%d fish, hunger down to %.0f)" % [meals[0], seal.hunger])
-	_check(not chased[0], "and leaves a fat penguin 10 m away alone while it feeds")
+	_check(not chased[0], "and leaves a fat penguin %.0f m off alone while it feeds" % (22.0 - 8.0))
 	bait.queue_free()
 
 	# Starving, it still lunges at a penguin that swims right up to it.
@@ -311,4 +313,83 @@ func _test_seal_ambush() -> void:
 	seal.queue_free()
 	coming.queue_free()
 	waiting.queue_free()
+	await _frames(2)
+
+
+func _test_seal_aggression() -> void:
+	var berg_radius: float = _level.berg_radius
+	var world: World3D = (_level as Node3D).get_world_3d()
+	# Out in open water: a seal hears a penguin splash in from farther off than it would see one
+	# swimming quietly.
+	var open_water := Vector3(-70.0, -2.5, -70.0)
+	var seal := _spawn_seal(open_water)
+	var stay := seal.tuning.duplicate() as PredatorTuning
+	stay.roam_chance = 0.0
+	seal.tuning = stay
+	var quiet_at := seal.tuning.detect_range + 4.0
+	var quiet := _spawn_bait(open_water + Vector3(quiet_at, 2.0, 0.0), 100.0)
+	quiet.force_state(Penguin.State.SWIM)
+	var noticed := {}
+	seal.locked_on.connect(func(p: Penguin) -> void: noticed[p] = true)
+	for i in 60:
+		quiet.global_position = seal.global_position + Vector3(quiet_at, 0.0, 0.0)
+		quiet.global_position.y = -0.5
+		await tree.physics_frame
+	_check(not noticed.has(quiet), "a seal doesn't notice a penguin swimming quietly %.0f m off" % quiet_at)
+	quiet.queue_free()
+	var diver := _spawn_swimmer(seal.global_position + Vector3(0.0, 0.0, quiet_at), 0.0)
+	diver.global_position.y = 1.5
+	diver.force_state(Penguin.State.AIR)
+	diver.toss(Vector3(0.0, -3.0, 0.0))
+	for i in 90:
+		await tree.physics_frame
+		if noticed.has(diver):
+			break
+	_check(noticed.has(diver) and diver.noise > 0.0, "but it hears one splash in at that distance, and comes for it")
+	diver.queue_free()
+	seal.queue_free()
+	await _frames(2)
+
+	# Lying in wait, a seal comes out after a penguin that goes in near it, out of its reach.
+	var waiting := await _spawn_standing(Vector3(-berg_radius + 3.0, 1.0, 0.0), 60.0)
+	seal = _spawn_seal(Vector3(-berg_radius - 4.0, -2.5, -10.0))
+	var t := seal.tuning.duplicate() as PredatorTuning
+	t.ambush_chance = 1.0
+	t.roam_chance = 0.0
+	seal.tuning = t
+	seal.start_ambush()
+	await _wait_settled(seal, _ambush_spot_for(world, waiting, t), 15 * 60)
+	var along := (t.ambush_strike_range + t.ambush_break_range) * 0.5
+	var angle := along / (berg_radius + 1.0)
+	var spot := Vector3(-cos(angle), 0.0, -sin(angle)) * (berg_radius + 1.0)
+	var came_out := [false]
+	seal.locked_on.connect(func(p: Penguin) -> void: came_out[0] = came_out[0] or p == waiting)
+	_put_in_water(waiting, spot)
+	for i in 60:
+		await tree.physics_frame
+		if came_out[0]:
+			break
+	_check(came_out[0] and seal.state != Predator.State.AMBUSH,
+		"a seal lying in wait comes out after a penguin that goes in %.0f m along the edge" % along)
+	seal.queue_free()
+	waiting.queue_free()
+	await _frames(2)
+
+	# Starving and on its way to feed, a seal still breaks off for a penguin that comes close.
+	seal = _spawn_seal(open_water)
+	seal.tuning = stay
+	seal.hunger = 95.0
+	await _frames(20)
+	var near := _spawn_swimmer(seal.global_position + Vector3(stay.feeding_break_range - 2.0, 0.0, 0.0), 0.0)
+	near.global_position.y = -0.3
+	var chased := [false]
+	seal.locked_on.connect(func(p: Penguin) -> void: chased[0] = chased[0] or p == near)
+	for i in 60:
+		near.set_swim_speed(0.0)
+		await tree.physics_frame
+		if chased[0]:
+			break
+	_check(chased[0], "a starving seal breaks off feeding for a penguin %.0f m off" % (stay.feeding_break_range - 2.0))
+	seal.queue_free()
+	near.queue_free()
 	await _frames(2)
