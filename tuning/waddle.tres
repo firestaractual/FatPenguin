@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="WaddleTuning" format=3]
+
+[ext_resource type="Script" path="res://tuning/waddle_tuning.gd" id="1_wdl"]
+
+[resource]
+script = ExtResource("1_wdl")
+waddle_radius = 7.0
+hatch_energy = 85.0
+hatch_cost = 10.0
+hatch_seconds = 1.4
+feed_radius = 1.8
+feed_energy = 10.0
+feed_interval = 1.6
+feed_min_energy = 30.0
+npc_feed_min = 30.0
+feedings_per_size = 2
+size_weights = PackedFloat32Array(0.6, 1.4, 2.4)
+size_scales = PackedFloat32Array(0.42, 0.58, 0.78)
+wander = 2.5
+beg_range = 6.0
+walk_speed = 0.9
+fledge_seconds = 15.0
+fledge_energy = 45.0
+family_cap = 12
+nest_safe = 0.7
+errand_range = 140.0
+errand_seconds = 70.0
+holds_per_metre = 0.37
+crack_from = 0.45
+pieces = 9
+piece_freeboard = 0.6
+piece_draft = 3.0
+beat_seconds = 0.8
+dip_depth = 1.6
+spread = Vector2(3, 7)
+spread_seconds = 7.0
+toss_speed = 6.5
+flail_seconds = 1.8
+scene_seconds = 4.5
+frenzy_seconds = 40.0

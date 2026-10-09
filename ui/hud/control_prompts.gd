@@ -4,8 +4,10 @@ extends PanelContainer
 ## first times you stand on the ice, "SPACE boost" in the water, "PULL BACK scramble back!" at the
 ## edge. Each tutorial prompt stops once you've done the thing a few times (GameSettings keeps
 ## count, so it doesn't come back next session); warnings (out of breath, teetering, dazed, a
-## predator locked on, inside a humpback's bubble net) are always shown, above tutorials. The key named matches the device the player last used
-## (InputDevice). The "Hints" setting hides them all.
+## predator locked on, inside a humpback's bubble net) are always shown, above tutorials. The
+## match has two tutorials: "Full! Lay your egg..." and "Stand by your chick to feed it".
+## The key named matches the device the player last used (InputDevice). The "Hints" setting hides
+## them all.
 ##
 ## The PromptPanel holds a KeyChip (the control) and the words.
 
@@ -24,6 +26,8 @@ const PROMPTS := {
 	&"dazed": {"key": &"", "text": "Dazed! No boost for a moment", "warning": true, "learn": 0},
 	&"air": {"key": &"", "text": "Low on air: swim up!", "warning": true, "learn": 0},
 	&"seal": {"key": &"", "text": "Locked on! Turn off its line, or boost", "warning": true, "learn": 3},
+	&"egg": {"key": &"", "text": "Full! Lay your egg in any waddle (a rival's will raise it for you)", "warning": false, "learn": 3},
+	&"feed": {"key": &"", "text": "Stand by your chick to feed it", "warning": false, "learn": 3},
 	&"leap": {"key": &"action", "text": "aim up and boost to leap onto the ice", "warning": false, "learn": 2},
 	&"boost": {"key": &"action", "text": "boost", "warning": false, "learn": 3},
 	&"brake": {"key": &"back", "text": "dig in to brake", "warning": false, "learn": 2},
@@ -54,6 +58,8 @@ var _braked_this_slide := false
 var _breached := false
 var _last_state: Penguin.State = Penguin.State.AIR
 var _seal_counted := false
+## The match it's listening to (laying and feeding count toward learning those prompts).
+var _match: WaddleMatch = null
 
 @onready var _chip: PanelContainer = %KeyChip
 @onready var _chip_label: Label = %KeyLabel
@@ -109,6 +115,9 @@ func _pick(delta: float) -> StringName:
 		return &""
 	var p := penguin
 	_state_time += delta
+	_listen_to_match()
+	if p.player_controlled and not (p.input is PlayerInput):
+		return &"" # held for a scene (the ice is breaking): nothing to do but watch
 	if p.state == Penguin.State.SLIDE and p.is_braking():
 		if not _braked_this_slide:
 			_braked_this_slide = true
@@ -141,6 +150,10 @@ func _wanted(id: StringName, p: Penguin, hunted: bool) -> bool:
 			return p.state == Penguin.State.SWIM and p.air < p.tuning.air_seconds * 0.35
 		&"seal":
 			return hunted and (_seal_counted or GameSettings.current().learned(&"seal") < learn)
+		&"egg":
+			return _match != null and _match.active and _match.is_full(p) and WaddleIce.holding(get_tree(), p) == null
+		&"feed":
+			return _match != null and _match.active and p.state == Penguin.State.WALK and _match.begging_chick(p) != null
 		&"leap":
 			return p.state == Penguin.State.SWIM and _near_shore and GameSettings.current().learned(&"boost") > 0 \
 					and GameWorld.WATER_LEVEL - p.global_position.y < 1.5
@@ -151,6 +164,29 @@ func _wanted(id: StringName, p: Penguin, hunted: bool) -> bool:
 		&"slide":
 			return p.state == Penguin.State.WALK and _state_time > 2.0 and not p.is_skidding() and not p.is_teetering()
 	return false
+
+
+func _listen_to_match() -> void:
+	var game := WaddleMatch.current(get_tree())
+	if game == _match:
+		return
+	if _match != null and is_instance_valid(_match):
+		_match.laid.disconnect(_on_laid)
+		_match.fed.disconnect(_on_fed)
+	_match = game
+	if _match != null:
+		_match.laid.connect(_on_laid)
+		_match.fed.connect(_on_fed)
+
+
+func _on_laid(_chick: Chick, parent: Penguin, _cuckoo: bool) -> void:
+	if parent == penguin:
+		GameSettings.current().note_learned(&"egg")
+
+
+func _on_fed(_chick: Chick, by: Penguin) -> void:
+	if by == penguin:
+		GameSettings.current().note_learned(&"feed")
 
 
 ## Is a predator after the penguin right now (locked on, or lining up its lunge)?

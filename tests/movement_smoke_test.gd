@@ -4,15 +4,16 @@ extends SceneTree
 ## predators and checking the results: movement (every verb, the plateau's chutes and steps),
 ## bumping, fish schools, leopard seals (hunting and the edge ambush), the orca pod's attacks and
 ## traps, whales (bumps that daze, orcas pressing an attack, the humpback), the berg field (ways up, gap hops, tunnels, the lagoon, the spire), the NPC colonies,
-## players (each reads only its own controls; the level decides what a catch does), and the UI
-## (HUD, pause menu, settings, the title screen).
+## players (each reads only its own controls; the level decides what a catch does), the UI
+## (HUD, pause menu, settings, the title screen), and the waddles and the match between the families
+## (eggs, chicks, lives, bergs breaking up: last, since it breaks bergs).
 ## Shared helpers are in tests/smoke_suite.gd.
 ##
 ## Run from the project folder:
 ##   godot --headless --fixed-fps 60 --path . --script res://tests/movement_smoke_test.gd
 ## Options (after a lone --):
 ##   --only=orcas,npcs   run only these suites (movement, bumping, fish, seals, orcas, whales,
-##                       bergs, npcs, players, ui)
+##                       bergs, npcs, players, ui, waddle)
 ##   --seed=12345        replay a run: predators, NPCs and fish make random choices, and every run
 ##                       prints the seed it used
 ## Exit code 0 = all checks passed.
@@ -29,6 +30,7 @@ const SUITES: Array[Script] = [
 	preload("res://tests/suites/npcs_suite.gd"),
 	preload("res://tests/suites/players_suite.gd"),
 	preload("res://tests/suites/ui_suite.gd"),
+	preload("res://tests/suites/waddle_suite.gd"),
 ]
 
 var _failures: Array[String] = []
@@ -81,6 +83,12 @@ func _run() -> void:
 	_check(npcs > 0, "the level spawns its colonies of NPC penguins (%d)" % npcs)
 	for npc in get_nodes_in_group(&"npcs"):
 		npc.queue_free()
+	# The match would lay eggs, weigh the waddles and decide what a catch does during the other
+	# checks. The waddle checks turn it back on.
+	var game := level.waddle_match()
+	_check(game != null and game.active and game.families.size() >= 4, "the level has its match on, between %d families" % (game.families.size() if game else 0))
+	if game != null:
+		game.active = false
 
 	var known: Array[String] = []
 	for script in SUITES:

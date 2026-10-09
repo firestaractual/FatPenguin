@@ -341,7 +341,7 @@ The first schooling layout clumped the same food into fewer, farther spots, so s
 
 ## NPC penguins
 
-The live values are in `tuning/npc_default.tres` (the class is `tuning/npc_tuning.gd`). Each NPC is an ordinary penguin driven by `PenguinBrain` (`actors/penguin/penguin_brain.gd`), so it moves by exactly the player's rules (the same speeds, hops, boosts and fatness). The movement toy has 25: 10 on the home floe, 6 on the mesa, 5 on the pinnacle and 4 on the wedge, starting with 40–80 energy. They have their own body tint (`npc_tint` on the level), so you can tell them from the player.
+The live values are in `tuning/npc_default.tres` (the class is `tuning/npc_tuning.gd`). Each NPC is an ordinary penguin driven by `PenguinBrain` (`actors/penguin/penguin_brain.gd`), so it moves by exactly the player's rules (the same speeds, hops, boosts and fatness). The movement toy has 22: 5 on the home floe (your family, with you), 6 on the mesa, 6 on the pinnacle and 5 on the wedge, starting with 40–80 energy. Each colony is a family (see Families and waddles), tinted its family's colour so you can tell them apart (and from you).
 
 **Huddle**
 
@@ -363,7 +363,7 @@ The live values are in `tuning/npc_default.tres` (the class is `tuning/npc_tunin
 | Hungry below | 35 | Then it waits at the edge facing the nearest school (within 70 m) |
 | Party | 3 | Goes in once 3 are waiting, or 20 s after the first got there, with whoever's there |
 | Swims at | 1.2 m down | Comes up for air with 8 s left |
-| Heads home | At 70 energy, or after 50 s out | Or when a predator hunts it, or when there are no fish within 45 m |
+| Heads home | At 70 energy (88 with an egg to lay), or after 50 s out | Or when a predator hunts it, or when there are no fish within 45 m |
 
 **Coming home**
 
@@ -378,6 +378,61 @@ The live values are in `tuning/npc_default.tres` (the class is `tuning/npc_tunin
 **Check, a fishing party:** 4 NPCs at energy 25 go in within 0.5 s of each other, all 4 get past 50 energy, and they're home in about 50 s. One knocked in off the east side swims back, climbs out and rejoins the huddle (smoke test). ✓
 
 **Check, how a colony spends its time:** home at 70, an NPC drains to 35 in about a minute in the huddle (at ×0.3–0.5), and a trip takes 30–50 s. In a 3-minute headless run of the whole field, a colony had about half its penguins huddled at any time, with no NPC stuck anywhere. ⚠ Playtest whether that feels like a busy colony or an empty one.
+
+## Families and waddles (movement toy)
+
+`tuning/waddle.tres` (the class is `tuning/waddle_tuning.gd`), used by `WaddleMatch` (`levels/waddle_match.gd`: families, eggs, chicks, lives), `WaddleIce` (`levels/waddle_ice.gd`: each berg's waddle and its ice) and the chicks (`actors/penguin/chick.gd`). See GDD §4.12.
+
+**Families**
+
+| Value | Start | Notes |
+|---|---|---|
+| Families | One per berg with a colony | Yours (the home floe): you and 5 kin. The Mesa mob 6, the Wedge gang 5, the Pinnacle crew 6 (each berg's `colony`). The dome and the drydock start empty |
+| Lives | Grown penguins + hatched chicks alive | Eggs don't count until they hatch |
+| A family stops laying at | 12 | Adults, chicks and eggs together |
+| A computer penguin lays at home while | Home stays under 70% of what it holds | Counting every chick there grown, and the new one. Otherwise: a rival's waddle within 140 m, picked at random weighted by 0.05 + its load², else the emptiest berg nobody lives on |
+| An errand to another berg | Gives up after 70 s | Then it walks off the ice toward home |
+| With an egg to lay, a computer penguin fishes until | 88 (`npc_default.tres` `breed_above`) | Otherwise 70 (`full_above`) |
+| Predators at the start | One group round each rival's berg | Seals at the mesa and the pinnacle, the orca pod at the wedge (by name). Then they roam as usual |
+
+**The waddle's weight**
+
+| Value | Start | Notes |
+|---|---|---|
+| The waddle | Within 7 m of a berg's waddle spot, on the ice | Every family's penguins count (players and NPCs); the practice dummies don't |
+| Each penguin in it | Its fatness, 0 to 1 | Energy ÷ 100 |
+| Each chick | 0.6 / 1.4 / 2.4 | Tiny / fluffy / fledgling. An egg weighs nothing |
+| A berg holds | 0.37 × its reach | Home floe 11.1, pinnacle 8.6, mesa 7.9, wedge 6.2, dome 5.2, drydock 4.7 (`IceBerg.holds` overrides it) |
+| Cracks show from | 45% of that | And run out as it climbs. The most it has weighed shows |
+
+**Eggs and chicks**
+
+| Value | Start | Notes |
+|---|---|---|
+| Full | 85 energy, reached out in the water | Then the first waddle you reach (anyone's) gets the egg. Your energy on the way doesn't matter (the overfed drain would eat 15 in 5 s) |
+| Laying costs | 10 energy | The egg hatches after 1.4 s |
+| Feeding | 10 energy every 1.6 s, standing within 1.8 m | The first after 0.8 s. A player feeds only its own family's chicks and never below 30; a computer penguin feeds any chick (cuckoos too) while it has 40 or more |
+| Grows a size every | 2 feedings | Full grown (a fledgling) after 4 |
+| Grows up | 15 s after it's full grown | Into a computer penguin of its family with 45 energy, living on the berg where it grew up |
+| Looks | 0.42 / 0.58 / 0.78 × an adult | Its down tinted toward its family's colour |
+| Wanders | Within 2.5 m of where it hatched | Begs from a penguin within 6 m that would feed it, at 0.9 m/s (a little quicker as it grows) |
+
+**Breaking up** (any berg)
+
+| Value | Start | Notes |
+|---|---|---|
+| The beat | 0.8 s | Everyone on it freezes; a player on it loses control until the scene ends and gets a wide shot |
+| Pieces | 9 for a berg the home floe's size, fewer for smaller ones (at least 4) | Cut along the cracks (three meet under the huddle), inside its footprint. 0.6 m above the water, 3 m deep. No waddle on a piece, and it doesn't break again |
+| They bob under / push apart | 1.6 m / 3–7 m each over 7 s | Most of it in the first 1.5 s |
+| Thrown up at | 6.5 m/s (± 10%) | Aimed at open water near where each one was (0.9 m clear of any piece, now and once they stop), preferring outward. Flailing for 1.8 s |
+| Its eggs and chicks | Lost | They tumble into the sea |
+| Its colony | Moves to the nearest berg still standing | Onto a piece if there's none |
+| The scene | 4.5 s after the burst | For a player who was on it |
+| Predators' frenzy | 40 s | Every predator heads for the spot at chase speed (until within 15 m), circles it 4–14 m out, and notices anyone in the water within its hearing range (35 m for a seal, 20 m for an orca) whatever their noise. No feeding, resting (a catch rests it 3 s at most) or lying in wait. Pods may attack at once |
+
+**Trials** (`tests/trials/match_trials.gd -- --runs=2 --minutes=10`, seeds 21–24, the player's penguin living like its kin): per 10-minute match about 2.5 bergs broke, 39 eggs were laid (about half of them cuckoos), 12 chicks grew up, 22 penguins were eaten and 18 chicks lost. One match of the four ended (the player's family went out at 5.6 min, with three families left); the others were still going, 2–14 lives a family. Penguins eaten, all four matches: your family 31, the mesa mob 34, the wedge gang 14, the pinnacle crew 9 (the home floe is the hub predators pass through between bergs). ⚠ A match between computer families alone runs past 10 minutes; playtest how long one runs with a player laying cuckoos, and whether it needs a timer or sudden death.
+
+**Check (smoke test):** with you and two kin on the home floe, three on the mesa and one on the wedge: three families, 3 / 3 / 1 lives. Full in the water, you lay in the mesa's waddle (a cuckoo), it hatches and weighs down their ice (1.8 → 3.2); the mesa's penguins feed it, you don't feed theirs, you do feed your own. A chick full grown grows up in 15 s, keeping the lives the same. Stuffed penguins pile onto the mesa until it gives way at 7.9: 6 pieces, every chick on it lost (yours too), its colony moves. Your fattest kin takes over when you're eaten; with none, your chick grows up on the spot; with none, you're out and the end screen says so. With the rivals gone, "Your family wins!" and the match's penguins go on the all-time board. Your own berg breaking freezes you, throws you off, and gives you control back in the water. ✓
 
 ## Screen effects
 

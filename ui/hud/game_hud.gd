@@ -1,7 +1,9 @@
 class_name GameHud
 extends CanvasLayer
 ## The in-game HUD for one player's penguin: the air meter (only when short of breath), a pause
-## button, control prompts at the bottom, and the screen effects behind them all (ScreenFx: the
+## button, control prompts at the bottom, the waddle's goal top left (WaddleMeter: how close the
+## waddle is to breaking the ice, its chicks, and the banner when it does), and the screen effects
+## behind them all (ScreenFx: the
 ## edges darkening near a predator, tunnel vision, black-outs, queasy). There's no energy bar on purpose: body size is the
 ## energy display (GDD §4.1). The debug numbers are a separate, normally hidden layer (DebugHud).
 ##
@@ -17,9 +19,14 @@ var penguin: Penguin = null
 @onready var _prompts: ControlPrompts = %Prompts
 @onready var _pause: Button = %PauseButton
 @onready var _fx: ScreenFx = $ScreenFx
+var _waddle: WaddleMeter
 
 
 func _ready() -> void:
+	_waddle = WaddleMeter.new()
+	_waddle.name = "WaddleMeter"
+	_waddle.position = Vector2(24.0, 22.0)
+	_root.add_child(_waddle)
 	_pause.pressed.connect(_on_pause_pressed)
 	# Touches on these don't steer or boost (TouchControls skips them).
 	_pause.add_to_group(&"touch_ui")
@@ -49,6 +56,10 @@ func screen_fx() -> ScreenFx:
 	return _fx
 
 
+func waddle_meter() -> WaddleMeter:
+	return _waddle
+
+
 func _find_penguin() -> void:
 	if not penguin_path.is_empty():
 		penguin = get_node_or_null(penguin_path) as Penguin
@@ -56,6 +67,7 @@ func _find_penguin() -> void:
 		penguin = get_tree().get_first_node_in_group(&"player") as Penguin
 	_prompts.penguin = penguin
 	_fx.penguin = penguin
+	_waddle.penguin = penguin
 
 
 func _on_pause_pressed() -> void:

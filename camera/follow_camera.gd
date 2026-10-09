@@ -4,6 +4,8 @@ extends Camera3D
 ## Water: behind and slightly above, tilting with the swim pitch, pulling back as speed rises.
 ## Ice: higher and further back so you can read the edges.
 ## Also switches the world's fog on underwater.
+## A level can take it over for a moment with frame() (a wide shot of something happening, like
+## the waddle breaking through the ice); it goes back to following on its own.
 
 @export var target_path: NodePath
 @export_group("Framing")
@@ -31,9 +33,14 @@ var _surface_fog_color := Color.WHITE
 var _surface_fog_density := 0.0
 var _surface_fog_sky_affect := 0.0
 var _shake := 0.0
+## A shot set by frame(): where it looks, where it sits, and for how much longer (s).
+var _shot_focus := Vector3.ZERO
+var _shot_from := Vector3.ZERO
+var _shot_left := 0.0
 
 
 func _ready() -> void:
+	add_to_group(&"follow_cameras")
 	# Moved in _process from an interpolated target, so skip interpolating the camera itself.
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	_target = get_node_or_null(target_path) as Penguin
@@ -51,6 +58,10 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if _shot_left > 0.0:
+		_shot_left -= delta
+		_hold_shot(delta)
+		return
 	if _target == null:
 		return
 	var target_pos := _target.get_global_transform_interpolated().origin
@@ -64,6 +75,39 @@ func _process(delta: float) -> void:
 	var look_at_point := target_pos + _target.get_heading() * 2.0 + Vector3.UP * 0.4
 	if global_position.distance_squared_to(look_at_point) > 0.01:
 		look_at(look_at_point, Vector3.UP)
+	_update_underwater()
+
+
+## Holds a shot of `focus` from `from` (world space) for `seconds`, easing over to it, then goes
+## back to following its penguin. A shake still shows.
+func frame(focus: Vector3, from: Vector3, seconds: float) -> void:
+	_shot_focus = focus
+	_shot_from = from
+	_shot_left = seconds
+
+
+## The penguin it follows, or null.
+func target() -> Penguin:
+	return _target
+
+
+## Holding a shot set by frame().
+func is_framing() -> bool:
+	return _shot_left > 0.0
+
+
+## Shakes it by `amount` (m), fading over a moment.
+func shake(amount: float) -> void:
+	_shake = minf(maxf(_shake, amount), max_shake)
+
+
+func _hold_shot(delta: float) -> void:
+	global_position = global_position.lerp(_shot_from, 1.0 - exp(-2.5 * delta))
+	if _shake > 0.0:
+		global_position += Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake
+		_shake = move_toward(_shake, 0.0, delta * 1.5)
+	if global_position.distance_squared_to(_shot_focus) > 0.01:
+		look_at(_shot_focus, Vector3.UP)
 	_update_underwater()
 
 

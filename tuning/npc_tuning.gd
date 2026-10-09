@@ -31,8 +31,9 @@ extends Resource
 @export_group("Fishing")
 ## Hungrier than this (energy), a penguin waits at the edge for others to go fishing with.
 @export var hungry_below := 35.0
-## It heads home when it's this full...
+## It heads home when it's this full (this full, with an egg to lay: PenguinBrain.wants_egg)...
 @export var full_above := 70.0
+@export var breed_above := 88.0
 ## ...or after this long out (s).
 @export var trip_seconds := 50.0
 ## A party goes in once this many are waiting at the edge...

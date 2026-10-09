@@ -15,6 +15,8 @@ extends IceBerg
 @export var ramp_dir := Vector3(-1.0, 0.0, 0.0)
 ## Where the ramp comes out on the floe's top (local).
 @export var ramp_top := Vector3(26.5, 0.0, 0.0)
+## The scene's bodies that make up its ice (they go when it breaks up).
+@export var ice_paths: Array[NodePath] = [^"../../Iceberg", ^"../../Plateau", ^"../../Ramp"]
 
 
 func reach() -> float:
@@ -27,6 +29,19 @@ func top_height() -> float:
 
 func waddle_spot() -> Vector3:
 	return to_global(waddle_offset + Vector3.UP * height)
+
+
+func ice_bodies() -> Array[Node3D]:
+	var list: Array[Node3D] = []
+	for path in ice_paths:
+		var body := get_node_or_null(path) as Node3D
+		if body != null:
+			list.append(body)
+	return list
+
+
+func footprint() -> Rect2:
+	return Rect2(-radius, -radius, radius * 2.0, radius * 2.0)
 
 
 func exits() -> Array[Dictionary]:

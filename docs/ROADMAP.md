@@ -37,7 +37,7 @@ Each prototype answers one question. Don't move on until the current one's answe
 
 ## Prototype 1: Energy loop + leopard seal
 
-**Status: started early.** The leopard seal is in the movement toy: patrol (round one berg at a time, roaming between them), targeting rule, visible lock-on, lunge warning with a strike line, sated state, plus hunger (starving seals eat fish). Bump noise is built. NPC colonies huddle in the middle of their bergs, turning over like emperor huddles, and leave in fishing parties, which is a start on the waddle. Still to do: the energy loop, food pulses, the waddle as a safe zone for the player (and its drain), breathing holes, chum, exhaustion and a goal level.
+**Status: started early.** The leopard seal is in the movement toy: patrol (round one berg at a time, roaming between them), targeting rule, visible lock-on, lunge warning with a strike line, sated state, plus hunger (starving seals eat fish). Bump noise is built. NPC colonies huddle in the middle of their bergs, turning over like emperor huddles, and leave in fishing parties, which is a start on the waddle. The toy is a game now (GDD §4.12): every colony is a family, yours among them, and the last family alive wins. Eggs go in any waddle (cuckoo eggs in a rival's), chicks grow up into more lives, and every berg's ice breaks if its waddle gets too heavy. Still to do: the energy loop, food pulses, the waddle as a safe zone for the player (and its drain), breathing holes, chum, exhaustion, and what a match needs next (a timer or sudden death, human rivals).
 
 **Question:** does deciding when to leave the waddle create real tension?
 

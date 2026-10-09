@@ -1,6 +1,6 @@
 # Fat Penguin — Game Design Document
 
-Last updated: 2026-10-05 · Status: pre-production
+Last updated: 2026-10-08 · Status: pre-production
 
 Status tags used below:
 
@@ -18,7 +18,9 @@ A cartoony mobile game based on real ecology. Penguins dive for fish on a shrink
 
 **Platform:** mobile first (touch, one thumb). **Engine:** Godot 4, 3D.
 
-**Title screen** [Proposed]: the logo comes to life. Each tap feeds the penguin a fish, and it swells until the ice cracks and it drops through; the splash starts the game. Thin ice exists only here. In play, ice never breaks under a penguin's weight [Locked] (see DECISIONS, 2026-10-01). Built in the movement toy with the placeholder penguin (DECISIONS, 2026-10-07).
+**Title screen** [Proposed]: the logo comes to life, and previews the goal (§4.12). A little waddle of fat penguins stands on thin ice. Each tap feeds the hero a fish, and he swells until the ice cracks and gives way; cartoon style, they hang in the air a moment, then drop one after another, the hero last, and his splash starts the game. Built in the movement toy with the placeholder penguin (DECISIONS, 2026-10-07 and 2026-10-08).
+
+**Ice and weight:** in play, ice never breaks under one penguin's weight [Locked] (DECISIONS, 2026-10-01). A whole waddle together can break the berg it's on: in a match between families that's both the risk and the weapon (§4.12) [Proposed] (DECISIONS, 2026-10-08).
 
 ## 2. Pillars
 
@@ -235,6 +237,19 @@ Fish come in species, all based on real Antarctic forage fish. For now every spe
 - **Squid** [Proposed]: a big meal (two and a half fish) that won't sit still: get close and it jets away squirting ink. It can only jet so often, and runs out after a few, so you chase it down or time a boost (which costs energy).
 - [Open] Should species be worth different amounts (a big icefish worth more than a lanternfish)? Should schools react to penguins and predators by scattering or balling up? (§11)
 
+### 4.12 Families: eggs in any waddle, breaking the ice, last family alive [Proposed]
+
+The movement toy's game (a candidate for a mode of its own, §6, and for "Feed the chick" levels, §8): families of penguins outlast each other, and the ice under a waddle is both the prize and the weapon.
+
+- **Families and lives:** every colony is a family with its own colour, and yours is one of them. Your lives are your kin alive: your family's grown penguins and its hatched chicks, wherever they are. Everyone lives the same loop: huddle, fish, come home, lay, raise chicks.
+- **Eggs in any waddle:** fill up out in the water and you're full: lay your egg in the first waddle you reach, yours or anyone's. A chick belongs to whoever laid it.
+- **Cuckoos:** computer penguins can't tell whose chick is whose, and feed any chick that begs, so a chick laid in a rival's waddle is raised on their fish, and its weight piles onto their ice. You feed only your own. A chick grows a size every few feedings (tiny, fluffy, a big fat fledgling) and, full grown for a while, grows up into a young adult of its family: one more life, living where it grew up (a cuckoo grows up into a sleeper in the rivals' waddle).
+- **Every berg is a waddle that can break:** everyone in a berg's waddle counts how fat they are, and every chick its size; a bigger berg holds more. Cracks spread from under the huddle as the weight climbs (they stay when it drops: the ice remembers). At the limit the berg bursts into pieces too small for a waddle: everyone on it is thrown into the water, every egg and chick on it is lost, its family is homeless and moves to the nearest berg still standing, and every predator comes for the commotion. So your own success can sink you, and a few cuckoo eggs can sink a rival.
+- **Death:** caught is eaten. You carry on as your fattest grown kin; with none, your biggest chick grows up on the spot; with none, your family is out. The last family with anyone alive wins.
+- **Leaderboards:** the most prolific penguins, by eggs laid (then chicks raised, then cuckoo eggs): this match, and the all-time top ten on the device.
+- **Why:** it puts Greed (§2) at the scale of a family: more chicks are more lives and more weight on your own ice. It gives the ice a reason to break (§4.10) that the players cause, and a way to fight that isn't bumping: the cuckoo egg. The ice shrinks as the match goes on, so it ends in the water.
+- Built in the movement toy against three computer families (TUNING, Families and waddles). [Open] Human rivals (split screen, online), how long a match should run (a timer, sudden death), threats to chicks other than a break, smarter computer families (moving out of a waddle that's too heavy, guarding home), and where predators go (the hub berg is the deadliest).
+
 ## 5. Predators
 
 ### 5.1 Targeting rule [Proposed]
@@ -292,6 +307,7 @@ The screen tells you how much trouble you're in, without a meter (ART_DIRECTION,
 | **Free-for-all** (main multiplayer) | 4–6 penguins, AI predators | Last penguin standing | [Locked] |
 | **Single-player campaign** | 1, plus computer-controlled penguins | Depends on the level (§8) | [Locked] length, [Proposed] details |
 | **Coop** | 2–4 | [Open] Could reuse campaign level goals | [Proposed] |
+| **Families** (the movement toy) | 1, plus computer families | Last family with anyone alive (§4.12) | [Proposed] |
 | **Asymmetric** (humans as predators) | 1 pod vs. penguins | [Open] | Later |
 
 ## 7. Multiplayer round arc [Proposed]
@@ -318,7 +334,7 @@ Levels last 5–10 minutes [Locked]. Only the later levels have a kill screen [L
 - **Level goals:**
   - **Journey:** reach a destination through predator territory.
   - **Feast:** fatten up past a target before the ice closes.
-  - **Feed the chick:** carry fish home to the chick.
+  - **Feed the chick:** carry fish home to the chick. The movement toy's match between families builds on this (§4.12).
   - **Hold out:** survive until the predators move on.
   - **Breakup:** kill-screen finale. The pod has a visible **hunger meter** that works like a boss's health bar. Survive the lunges and feed the pod chum to fill it; when it's full, the pod leaves. Chum costs the energy you need for dodging.
 - **Getting caught:** costs most of your energy instead of ending the level. Being caught while thin ends it, so fat works as armor. Checkpoints on floes are the backup. [Open: energy cost vs. instant fail]
@@ -357,6 +373,8 @@ In coop, the same tools work with the intent reversed: lure predators away from 
 | NPC fishing parties | Adélie penguins crowd at the ice edge before going in, and once one goes, the rest follow, so they go to sea in groups |
 | Belly-slide | Penguins slide on their bellies, which is called tobogganing |
 | Knocking fish loose | Adélie penguins steal nest pebbles from each other |
+| Chicks | Emperor parents take turns at sea and feed the chick by bringing food back up; the chick grows from a tiny grey ball of down with a black cap and a white face into a big, fluffy fledgling. (Breaking the ice with the waddle's weight is a game liberty) |
+| Cuckoo eggs | Cuckoos and cowbirds lay their eggs in other birds' nests and the hosts raise the chicks as their own (brood parasitism). Penguins don't, but adult penguins do sometimes adopt or steal chicks that aren't theirs |
 
 ## 11. Open questions
 

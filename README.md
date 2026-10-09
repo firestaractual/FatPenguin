@@ -6,7 +6,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 ## Status
 
-**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, slide down chutes, hop up steps and across gaps, bump other penguins, eat fish and get fat. The ice is a field of bergs of real shapes to climb, with ice tunnels and pack ice, and colonies of computer penguins huddle on them and go fishing. Two leopard seals (the first piece of Prototype 1) and a pod of orcas hunt the water, and two humpback whales roam it: not enemies, but they feed with bubble nets and drive orcas off. It starts at a title screen (feed the penguin until he falls through the ice), and has a HUD (an air meter and control prompts), a pause menu and settings. There are no goals yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Prototype 0 (movement toy) is in progress.** A placeholder penguin can swim, boost, porpoise, launch onto the ice, walk, belly-slide, slide down chutes, hop up steps and across gaps, bump other penguins, eat fish and get fat. The ice is a field of bergs of real shapes to climb, with ice tunnels and pack ice, and colonies of computer penguins huddle on them and go fishing. Two leopard seals (the first piece of Prototype 1) and a pod of orcas hunt the water, and two humpback whales roam it: not enemies, but they feed with bubble nets and drive orcas off. It starts at a title screen (feed the penguin until the ice gives way under his waddle), and has a HUD (an air meter, your family's lives and the waddles' cracks, a feed of what's happening, control prompts), a pause menu with the leaderboards, and settings. The game: every colony is a family, yours is one of them, and the last family alive wins. Lay eggs in any waddle (a rival's will raise your cuckoo for you), raise chicks into more lives, and break your rivals' ice with the weight. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - **Engine:** Godot 4.7.2 (standard build), GDScript
 - **Renderer:** Mobile
@@ -15,7 +15,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 1. Install **Godot 4.7.2 stable**, the standard build rather than .NET, from [godotengine.org](https://godotengine.org/download).
 2. In the Godot Project Manager, click **Import** and pick `project.godot` in this folder.
-3. Press **F5**. On the title screen, tap, click or press Space to feed the penguin; when he's fat enough he falls through the ice and the movement toy starts. (Open `levels/movement_toy/movement_toy.tscn` and press **F6** to skip the title.)
+3. Press **F5**. On the title screen, tap, click or press Space to feed the penguin; when he's fat enough the ice gives way under the whole waddle and the movement toy starts. (Open `levels/movement_toy/movement_toy.tscn` and press **F6** to skip the title.)
 
 ## Controls
 
@@ -25,7 +25,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 | Boost (water) / belly-slide (ice) | Space | A | Tap the right half of the screen |
 | Flipper push (mid-slide) | Space again | A again | Tap again |
 | Dig in / brake (mid-slide) | S / Down | Left stick back | Pull the stick back |
-| Pause (Resume, Restart, Settings, Quit to title) | Esc / P | Start | Pause button, top right |
+| Pause (Resume, Restart, Settings, Most prolific, Quit to title) | Esc / P | Start | Pause button, top right |
 | Reset to spawn (testing) | R | – | – |
 | Energy −10 / +10 (testing) | Q / E | – | – |
 | Infinite energy (testing) | F2 | – | – |
@@ -35,6 +35,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 **Things to try:**
 
+- **Families: last one alive wins.** Your family (blue) huddles on the north-east of the home berg; the Mesa mob (purple), the Wedge gang (green) and the Pinnacle crew (pink) live on theirs. Top left: each family's lives (its penguins and chicks alive), and below it the waddle you're in or near, with how close its ice is to breaking. Eat until you're full (85 energy) out in the water and an egg's on its way: the first waddle you reach gets it, yours or anyone's. Stand by your chick to feed it; every two feedings it grows, and a while after it's full grown it grows up into one more of your family. Every waddle's ice breaks if it gets too heavy, and everything on it goes into the sea, chicks and all: so don't overload your own, and lay a **cuckoo egg** in a rival's waddle instead, where their penguins (who can't tell) will feed it until their berg gives way. Eaten, you carry on as your fattest kin. Pause › Most prolific shows the leaderboards. (To see it quickly: E for energy, swim out, come back.)
 - Dive deep, pitch up, then boost to rocket out of the water onto the iceberg. You'll land in a belly-slide.
 - Compare a thin penguin with a fat one (Q/E): the fat one turns wider and gets less height when launching.
 - Run low and you get thin and weak, but never quite stuck: the cold can't take you below the energy floor, and if you spend below it you get your breath back in a few seconds. You can also climb out of the water without boosting using the low ramp on the east side of the iceberg.
@@ -55,7 +56,7 @@ A cartoony mobile game based on real ecology. Penguins dive for fish to fuel up,
 
 ## Tuning
 
-Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, the NPC penguins' behaviour is in **`tuning/npc_default.tres`**, each fish species is in **`tuning/fish/`**, the predators are in **`tuning/predators/`** (`leopard_seal.tres`, `orca.tres`, `orca_pod.tres`, and the pod's attacks `orca_wave.tres`, `orca_ram.tres`, `orca_cut_off.tres` and `orca_carousel.tres`), the humpback is **`tuning/humpback.tres`**, krill and squid are **`tuning/krill.tres`** and **`tuning/squid.tres`**, and the screen effects are **`tuning/screen_fx.tres`**. What spawns in the movement toy is in `levels/movement_toy/predators/`. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. Each berg's size and shape are on its node under `BergField` in the movement toy scene: select it and edit them in the Inspector, and the berg rebuilds as you go. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
+Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, the NPC penguins' behaviour is in **`tuning/npc_default.tres`**, each fish species is in **`tuning/fish/`**, the predators are in **`tuning/predators/`** (`leopard_seal.tres`, `orca.tres`, `orca_pod.tres`, and the pod's attacks `orca_wave.tres`, `orca_ram.tres`, `orca_cut_off.tres` and `orca_carousel.tres`), the humpback is **`tuning/humpback.tres`**, krill and squid are **`tuning/krill.tres`** and **`tuning/squid.tres`**, the screen effects are **`tuning/screen_fx.tres`**, and the families, eggs, chicks and the ice breaking are **`tuning/waddle.tres`**. How many penguins each family starts with is each berg's `colony` in the scene. What spawns in the movement toy is in `levels/movement_toy/predators/`. Select one in the FileSystem dock and edit the values in the Inspector; no code changes needed. Each berg's size and shape are on its node under `BergField` in the movement toy scene: select it and edit them in the Inspector, and the berg rebuilds as you go. When a value feels right, copy it into [docs/TUNING.md](docs/TUNING.md).
 
 ## Project layout
 
@@ -63,7 +64,7 @@ Every penguin balance number is in **`tuning/penguin_tuning_default.tres`**, the
 actors/penguin/     Penguin body and movement rules (penguin.gd) + placeholder model scene, and its parts:
                     controls (penguin_input.gd; player_input.gd for each player, brain_input.gd for NPCs),
                     energy and air (penguin_vitals.gd), the look (penguin_look.gd, on the Model node);
-                    penguin_brain.gd drives NPCs
+                    penguin_brain.gd drives NPCs; chick.gd is a chick (it builds its own look)
 actors/fish/        Fish pickup (schools with its own species)
 actors/swimmer.gd   What every big swimmer shares (steering, staying in the water, ice, its shadow, a whale's
                     body that dazes penguins): the base of predators and whales
@@ -76,10 +77,14 @@ actors/predators/   Predators: predator.gd (every kind), leopard seal and orca s
 camera/             Follow camera (also switches on the underwater fog)
 core/               What every part shares: game_world.gd (water level, physics layers), game_mode.gd
                     (a level's rules: what a catch does), game_settings.gd (the player's settings, saved to
-                    user://settings.cfg)
-levels/             tippable_ice.gd (ice that orcas can tip), ice_edges.gd (where the ice ends, for predators)
+                    user://settings.cfg), leaderboard.gd (the all-time most prolific penguins, saved to
+                    user://leaderboard.cfg)
+levels/             tippable_ice.gd (ice that orcas can tip), ice_edges.gd (where the ice ends, for predators),
+                    waddle_ice.gd (each berg's waddle: its weight, cracks and breaking up), waddle_match.gd
+                    (the match: families, eggs, chicks, lives, who wins)
 levels/bergs/       IceBerg (ice_berg.gd, the base class) and each kind of berg: tabular, wedge, drydock,
-                    pinnacle, dome; home_floe.gd (the original berg) and floe_chain.gd (pack ice)
+                    pinnacle, dome; home_floe.gd (the original berg), floe_chain.gd (pack ice) and
+                    floe_piece.gd (a piece of broken berg, any convex outline)
 levels/movement_toy Prototype 0 test level (home berg + plateau, ramp, floes, berg field, fish, colonies,
                     dummy penguins)
 tuning/             PenguinTuning resource class + default values; FishSpecies class + species in tuning/fish/;
@@ -87,15 +92,18 @@ tuning/             PenguinTuning resource class + default values; FishSpecies c
                     PodAttackTuning classes + the seal, orca, orca pod and its attacks in tuning/predators/
 ui/                 Touch controls, the debug layer (debug_hud: numbers and tester keys, hidden unless
                     asked for) and input_device.gd (which device the player is using, for prompts)
-ui/hud/             The in-game HUD: air meter, control prompts, pause button, and the screen effects
+ui/hud/             The in-game HUD: air meter, the goal's meter (waddle_meter.gd, and the banner when the ice
+                    breaks), control prompts, pause button, and the screen effects
                     (screen_fx.gd + shaders: dimming near predators, tunnel vision, black-outs, queasy)
-ui/menus/           Pause menu and the settings sheet
-ui/title/           The title screen (the feeding gag)
+ui/menus/           Pause menu, the settings sheet, the leaderboards (leaderboard_table.gd) and the end of a
+                    match (match_end.gd)
+ui/title/           The title screen (the feeding gag, and the waddle falling through the ice)
 ui/theme/, ui/fonts The UI theme (fat_penguin_theme.tres, set project-wide) and its fonts (Outfit, Erica One;
                     SIL Open Font License, licence files alongside)
 art/materials/      Placeholder materials
 tests/              Headless smoke test: movement_smoke_test.gd runs the suites in tests/suites/;
-                    tests/trials/ holds tuning trials (whale_trials.gd: orca attacks against a bot penguin)
+                    tests/trials/ holds tuning trials (whale_trials.gd: orca attacks against a bot penguin;
+                    match_trials.gd: whole matches between the families)
 docs/               Design docs (ignored by Godot)
 ```
 
@@ -113,7 +121,7 @@ Exit code 0 means every check passed. Run it after changing movement code or tun
 godot --headless --fixed-fps 60 --path . --script res://tests/movement_smoke_test.gd -- --only=orcas,npcs
 ```
 
-The suites are movement, bumping, fish, seals, orcas, whales, bergs, npcs, players and ui. Predators and NPC penguins make random choices, so a run can fail now and then where it usually passes: every run prints its seed, and `-- --seed=N` replays it.
+The suites are movement, bumping, fish, seals, orcas, whales, bergs, npcs, players, ui and waddle (the families' match; last, since it breaks bergs). Predators and NPC penguins make random choices, so a run can fail now and then where it usually passes: every run prints its seed, and `-- --seed=N` replays it.
 
 Tuning trials play many short encounters and print how often a bot penguin gets caught (they're not pass/fail). For the orcas, with each scenario and the bot's reaction to a lunge warning:
 

@@ -202,7 +202,7 @@ mesh = SubResource("CylinderMesh_rbbxl")
 
 [node name="HomeFloe" type="StaticBody3D" parent="BergField"]
 script = ExtResource("12_home")
-colony = 10
+colony = 5
 
 [node name="Mesa" type="StaticBody3D" parent="BergField"]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 80, 0, -70)
@@ -212,12 +212,12 @@ colony = 6
 [node name="Wedge" type="StaticBody3D" parent="BergField"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 93, 0, 35)
 script = ExtResource("14_wedge")
-colony = 4
+colony = 5
 
 [node name="Pinnacle" type="StaticBody3D" parent="BergField"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -100, 0, -30)
 script = ExtResource("15_pin")
-colony = 5
+colony = 6
 
 [node name="Dome" type="StaticBody3D" parent="BergField"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -75, 0, 85)

@@ -31,6 +31,10 @@ extends Swimmer
 ##             and one in the water within ambush_break_range brings it out of hiding after them.
 ##             It gives up after waiting ambush_seconds, or when nobody's near that edge any more.
 ##
+## Frenzy (alert()): something big happened (the waddle broke through the ice). For a while it
+## heads for the spot and patrols round it, hunting anyone it can hear (out to hear_range whatever
+## their noise), and doesn't stop to eat, rest or lie in wait.
+##
 ## Hunting: it notices penguins in the water within detect_range (farther, up to hear_range, the
 ## noisier they are: a splash going in, a bump), and penguins out of the water (on the ice edge,
 ## or in the air) within edge_detect_range, and only with a clear line of sight (no hunting
@@ -110,6 +114,9 @@ var _ambush_for: Penguin = null
 var _ambush_rethink := 0.0
 ## How long it's been waiting still at its spot (s).
 var _ambush_waited := 0.0
+## Frenzied (alert()): how much longer (s), and where the commotion is (at the waterline).
+var _frenzy_time := 0.0
+var _frenzy_at := Vector3.ZERO
 
 var _ring: MeshInstance3D
 var _line: MeshInstance3D
@@ -134,6 +141,7 @@ func _think(delta: float) -> void:
 		target = null # it left the level
 	_state_time += delta
 	_lunge_cooldown = maxf(_lunge_cooldown - delta, 0.0)
+	_frenzy_time = maxf(_frenzy_time - delta, 0.0)
 	_tick_ignored(delta)
 	if state != State.SATED:
 		hunger = minf(hunger + tuning.hunger_rate * delta, 100.0)
@@ -236,6 +244,38 @@ func shies_from(p: Penguin) -> bool:
 	return tuning.shy_of_humpbacks and p != null and Humpback.shelters(p.global_position)
 
 
+## Something big just happened at `at` (the waddle broke through the ice): for `seconds` it heads
+## there and patrols round it, hunting anyone it can hear (hear_range, whatever their noise), and
+## doesn't stop to eat, rest or lie in wait. One that's eating, sated or lying in wait drops it and
+## comes now. A longer frenzy replaces a shorter one.
+func alert(at: Vector3, seconds: float) -> void:
+	_frenzy_time = maxf(_frenzy_time, seconds)
+	_frenzy_at = Vector3(at.x, GameWorld.WATER_LEVEL, at.z)
+	_ignored.clear()
+	match state:
+		State.FEED, State.SATED, State.AMBUSH:
+			_meal = null
+			_ambush_for = null
+			_set_state(State.PATROL)
+			_next_waypoint()
+		State.PATROL:
+			_next_waypoint()
+
+
+## In a frenzy (alert()).
+func is_frenzied() -> bool:
+	return _frenzy_time > 0.0
+
+
+## Patrols round `berg` from now on, starting a fresh leg (levels use it to place predators: put it
+## near the berg first).
+func patrol_round(berg: IceBerg) -> void:
+	patrol_berg = berg
+	patrol_centre = Vector3(berg.global_position.x, 0.0, berg.global_position.z)
+	ice_radius = berg.reach()
+	_next_waypoint()
+
+
 ## Drops a chase so its pod can give it orders.
 func recall() -> void:
 	if state == State.CHASE:
@@ -259,10 +299,12 @@ func release() -> void:
 # --- States -----------------------------------------------------------------
 
 func _patrol(delta: float) -> void:
-	_swim_toward(_waypoint, tuning.patrol_speed, delta)
+	# In a frenzy it races to the commotion, then circles it.
+	var rushing := is_frenzied() and Vector2(global_position.x - _frenzy_at.x, global_position.z - _frenzy_at.z).length() > 15.0
+	_swim_toward(_waypoint, tuning.chase_speed if rushing else tuning.patrol_speed, delta)
 	if global_position.distance_to(_waypoint) < WAYPOINT_REACHED or _state_time > 25.0:
 		# End of a leg: lie in wait at the ice edge now and then, if a penguin is near one.
-		if randf() < tuning.ambush_chance and _start_ambush():
+		if not is_frenzied() and randf() < tuning.ambush_chance and _start_ambush():
 			return
 		_next_waypoint()
 		_state_time = 0.0
@@ -271,8 +313,9 @@ func _patrol(delta: float) -> void:
 		return
 	_scan = SCAN_INTERVAL
 	var best := _best_target()
-	# Starving, it goes to eat, unless a penguin is right there to go after instead.
-	if is_starving() and not _worth_breaking_off_for(best) and _find_meal():
+	# Starving, it goes to eat, unless a penguin is right there to go after instead (or it's in a
+	# frenzy).
+	if is_starving() and not is_frenzied() and not _worth_breaking_off_for(best) and _find_meal():
 		_set_state(State.FEED)
 		return
 	if best != null:
@@ -294,7 +337,7 @@ func _chase(delta: float) -> void:
 	if _scan > 0.0:
 		return
 	_scan = SCAN_INTERVAL
-	if is_starving() and not _worth_breaking_off_for(target) and _find_meal():
+	if is_starving() and not is_frenzied() and not _worth_breaking_off_for(target) and _find_meal():
 		target = null
 		_set_state(State.FEED)
 		return
@@ -380,7 +423,8 @@ func _sated(delta: float) -> void:
 	_swim_toward(_waypoint, tuning.sated_speed, delta)
 	if global_position.distance_to(_waypoint) < WAYPOINT_REACHED:
 		_next_waypoint()
-	if _state_time >= tuning.sated_seconds:
+	# In a frenzy it only stops a moment.
+	if _state_time >= (minf(tuning.sated_seconds, 3.0) if is_frenzied() else tuning.sated_seconds):
 		_set_state(State.PATROL)
 
 
@@ -400,7 +444,7 @@ func _ordered(delta: float) -> void:
 	if _scan > 0.0:
 		return
 	_scan = SCAN_INTERVAL
-	if is_starving() and _find_meal():
+	if is_starving() and not is_frenzied() and _find_meal():
 		_set_state(State.FEED)
 		return
 	if not _order_hunts:
@@ -455,7 +499,7 @@ func _ambush(delta: float) -> void:
 
 ## Starts an ambush if there's a penguin on the ice near an edge to wait for. False if not.
 func _start_ambush() -> bool:
-	if tuning.ambush_chance <= 0.0 or is_starving() or not _pick_ambush_spot():
+	if tuning.ambush_chance <= 0.0 or is_starving() or is_frenzied() or not _pick_ambush_spot():
 		return false
 	_set_state(State.AMBUSH)
 	return true
@@ -569,6 +613,8 @@ func _best_target(only_in_water := false, max_range := -1.0) -> Penguin:
 
 ## How far off it notices `p` (m): detect_range, stretched toward hear_range by its noise.
 func _notice_range(p: Penguin) -> float:
+	if is_frenzied():
+		return maxf(tuning.hear_range, tuning.detect_range)
 	return lerpf(tuning.detect_range, maxf(tuning.hear_range, tuning.detect_range), clampf(p.noise, 0.0, 1.0))
 
 
@@ -746,6 +792,12 @@ func _tick_ignored(delta: float) -> void:
 ## Next patrol leg: on along the ice edge, or now and then past a nearby school.
 func _next_waypoint() -> void:
 	var depth := randf_range(tuning.patrol_depth.x, tuning.patrol_depth.y)
+	if is_frenzied():
+		# Round and round the commotion.
+		var a := randf() * TAU
+		_waypoint = _frenzy_at + Vector3(cos(a), 0.0, sin(a)) * randf_range(4.0, 14.0)
+		_waypoint.y = GameWorld.WATER_LEVEL - depth
+		return
 	if randf() < tuning.school_visit_chance:
 		var fish := Fish.random_in_school_near(global_position, tuning.school_visit_range)
 		if fish != null:

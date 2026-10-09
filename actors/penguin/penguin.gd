@@ -51,6 +51,8 @@ signal sickened(seconds: float)
 signal threw_up(at: Vector3)
 ## Feathers flew (a bump, at the contact point, or a catch). For the look: PenguinLook puffs.
 signal feathers_flew(at: Vector3, strength: float)
+## Its body_tint changed (it joined a family, say).
+signal tinted(colour: Color)
 
 enum State { SWIM, AIR, WALK, SLIDE }
 
@@ -101,8 +103,12 @@ const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 		return vitals.infinite
 	set(value):
 		vitals.infinite = value
-## Tints the body so dummies are easy to tell from the player. Alpha 0 = leave it alone.
-@export var body_tint := Color(0, 0, 0, 0)
+## Tints the body so dummies (and families) are easy to tell from the player. Alpha 0 = leave it
+## alone. Changing it later retints it (the tinted signal).
+@export var body_tint := Color(0, 0, 0, 0):
+	set(value):
+		body_tint = value
+		tinted.emit(value)
 
 var state: State = State.AIR
 ## Energy and air, and their rules. The properties below are shortcuts to its numbers.
@@ -182,6 +188,8 @@ var _queasy_time := 0.0
 var _queasy_length := 0.0
 var _queasy_clock := 0.0
 var _throw_up_in := -1.0
+## Flailing (thrown off the ice when the waddle broke through): how much longer (s).
+var _flail_time := 0.0
 ## How fast its path is curving (turning()), and which way it moved last frame (NAN: not moving).
 var _turning := 0.0
 var _moved_yaw := NAN
@@ -221,6 +229,11 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_read_input()
 	_tick_timers(delta)
+	# Thrown flailing through the air, it passes other penguins by (they're all flying).
+	var mask := GameWorld.WORLD_LAYER if is_flailing() and state == State.AIR \
+			else GameWorld.WORLD_LAYER | GameWorld.PENGUIN_LAYER
+	if collision_mask != mask:
+		collision_mask = mask
 
 	match state:
 		State.SWIM:
@@ -430,6 +443,17 @@ func toss(launch: Vector3) -> void:
 	velocity = launch
 
 
+## Flailing for `seconds`, flippers going and tumbling head over heels in the air (thrown off the
+## ice when the waddle broke through: WaddleIce). It moves as usual, except that in the air it
+## passes other penguins by instead of bumping them (everyone's flying).
+func flail(seconds: float) -> void:
+	_flail_time = maxf(_flail_time, seconds)
+
+
+func is_flailing() -> bool:
+	return _flail_time > 0.0
+
+
 ## A fish comes back up and floats off to one side (it costs one fish's worth of energy): what a
 ## hard bump does to an overfed penguin, and a humpback's gulp to anyone.
 func lose_fish() -> void:
@@ -474,6 +498,14 @@ func turn_rate_mult() -> float:
 ## Where it respawns (reset(), getting caught in the movement toy).
 func spawn_point() -> Vector3:
 	return _spawn_position
+
+
+## Moves where it respawns to `point`, facing `yaw` (0 faces -Z; leave it out to keep the old
+## facing): the ice it started on is gone (the waddle broke through it), say.
+func set_spawn_point(point: Vector3, yaw := NAN) -> void:
+	_spawn_position = point
+	if not is_nan(yaw):
+		_spawn_yaw = yaw
 
 
 # --- Placing and steering by hand -------------------------------------------
@@ -540,6 +572,7 @@ func reset() -> void:
 	_daze_time = 0.0
 	_queasy_time = 0.0
 	_throw_up_in = -1.0
+	_flail_time = 0.0
 	_turning = 0.0
 	_moved_yaw = NAN
 	_knock = Vector3.ZERO
@@ -1174,6 +1207,7 @@ func _tick_timers(delta: float) -> void:
 	_daze_time = maxf(_daze_time - delta, 0.0)
 	if _daze_time > 0.0:
 		_daze_clock += delta
+	_flail_time = maxf(_flail_time - delta, 0.0)
 	_queasy_time = maxf(_queasy_time - delta, 0.0)
 	if _queasy_time > 0.0:
 		_queasy_clock += delta

@@ -24,6 +24,9 @@ const MAX_DRAFT := 25.0
 
 ## How many NPC penguins huddle on this berg (the level spawns them at its waddle spot).
 @export var colony := 0
+## How much weight its waddle holds before the berg breaks up (WaddleIce). 0: worked out from its
+## size (WaddleTuning.holds_per_metre × its reach).
+@export var holds := 0.0
 
 var _rebuild_queued := false
 
@@ -64,6 +67,39 @@ func exits() -> Array[Dictionary]:
 ## "height", "swim": true for one under the water}.
 func tunnels() -> Array[Dictionary]:
 	return []
+
+
+## Can a waddle huddle here (and so lay eggs, and break it)? Every berg can; a piece of a broken one
+## can't (FloePiece).
+func holds_waddle() -> bool:
+	return true
+
+
+## The bodies that make up its ice: what goes when it breaks up. Usually just itself.
+func ice_bodies() -> Array[Node3D]:
+	return [self]
+
+
+## Its ice seen from above, at the waterline (local x, z): what the pieces are cut from when it
+## breaks. Worked out from the pieces it built; a square of its reach if it built none.
+func footprint() -> Rect2:
+	var area := Rect2()
+	var first := true
+	for child in get_children():
+		var col := child as CollisionShape3D
+		var view := col.get_node_or_null("Mesh") as MeshInstance3D if col != null else null
+		if view == null or not child.has_meta(&"generated"):
+			continue
+		var box := col.transform * view.get_aabb()
+		if box.end.y < 0.05:
+			continue # all under water (a keel)
+		var flat := Rect2(box.position.x, box.position.z, box.size.x, box.size.z)
+		area = flat if first else area.merge(flat)
+		first = false
+	if first:
+		var r := reach()
+		return Rect2(-r, -r, r * 2.0, r * 2.0)
+	return area
 
 
 ## Draft for a freeboard of `height` with this kind's real height-to-draft ratio `ratio`.

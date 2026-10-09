@@ -7,7 +7,9 @@ extends Node3D
 ## penguins huddle on the bergs and go fishing in parties (PenguinBrain). Fish school round every
 ## berg; dummy penguins to bump; and predators: leopard seals hunting the water and lying in wait
 ## under the ice edge, and an orca pod that washes penguins off low ice, tips floes and traps
-## penguins in the water (early pieces of Prototypes 1 and 2). No goals yet.
+## penguins in the water (early pieces of Prototypes 1 and 2). The game (WaddleMatch, GDD §4.12):
+## each colony is a family, yours on the home floe; lay eggs in any waddle, raise chicks, break your
+## rivals' ice with the weight (every berg's waddle is a WaddleIce), and be the last family alive.
 
 const FISH_SCENE := preload("res://actors/fish/fish.tscn")
 const PENGUIN_SCENE := preload("res://actors/penguin/penguin.tscn")
@@ -67,6 +69,9 @@ const SQUID_SCRIPT := preload("res://actors/food/squid.gd")
 @export var humpback_count := 2
 @export var humpback_start_deg := 45.0
 
+## The match between the families (WaddleMatch), and every berg's waddle (WaddleIce): on.
+@export var play_match := true
+
 var _wet_time := {}
 
 
@@ -102,13 +107,71 @@ func _ready() -> void:
 	var colony_rng := RandomNumberGenerator.new()
 	colony_rng.seed = fish_seed + 3000
 	_spawn_colonies(colony_rng, bergs)
+	_make_waddles(bergs)
 	var spawner := PredatorSpawner.new()
 	spawner.name = "Predators"
 	spawner.spawns = predator_spawns
 	spawner.ice_centre = Vector3.ZERO
 	spawner.ice_radius = berg_radius
 	add_child(spawner)
+	if play_match:
+		_spread_predators(spawner, colony_rng)
 	_spawn_humpbacks()
+
+
+## A waddle (WaddleIce) on every berg that holds one, and the match between the families living on
+## them.
+func _make_waddles(bergs: Array[IceBerg]) -> void:
+	for berg in bergs:
+		if berg.holds_waddle():
+			var ice := WaddleIce.new()
+			ice.berg = berg
+			add_child(ice)
+	var game := WaddleMatch.new()
+	game.name = "WaddleMatch"
+	add_child(game)
+	game.active = play_match
+	game.begin()
+	var end := MatchEnd.new()
+	end.name = "MatchEnd"
+	add_child(end)
+
+
+## In a match, the predators start round the rival families' bergs (one group each, in turn), not
+## all round the player's: everyone's in the same water from the start.
+func _spread_predators(spawner: PredatorSpawner, rng: RandomNumberGenerator) -> void:
+	var player := get_node_or_null(^"Penguin") as Node3D
+	var homes: Array[IceBerg] = []
+	for berg in _bergs():
+		var players_home := player != null and Vector2(player.global_position.x - berg.global_position.x, player.global_position.z - berg.global_position.z).length() < berg.reach()
+		if berg.colony > 0 and not players_home:
+			homes.append(berg)
+	if homes.is_empty():
+		return
+	homes.sort_custom(func(a: IceBerg, b: IceBerg) -> bool: return String(a.name) < String(b.name))
+	var i := 0
+	for group in spawner.get_children():
+		var berg := homes[i % homes.size()]
+		i += 1
+		var members: Array[Predator] = []
+		if group is PredatorPod:
+			members = (group as PredatorPod).members()
+		elif group is Predator:
+			members.append(group as Predator)
+		if members.is_empty():
+			continue
+		var a := rng.randf() * TAU
+		var r := berg.reach() + members[0].tuning.patrol_offset
+		var shift := berg.global_position + Vector3(cos(a), 0.0, sin(a)) * r - members[0].global_position
+		shift.y = 0.0
+		for member in members:
+			member.global_position += shift
+			member.patrol_round(berg)
+
+
+## The match between the families (null if the level has none).
+func waddle_match() -> WaddleMatch:
+	return get_node_or_null(^"WaddleMatch") as WaddleMatch
 
 
 ## Krill swarms and squid round the bergs, under a Food node.

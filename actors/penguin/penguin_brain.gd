@@ -18,9 +18,15 @@ extends Node
 ##   HOME    - swims to the nearest way out of the water onto its berg: up a ramp, or a boost and
 ##             launch onto a low edge. A penguin knocked into the water comes here too.
 ##   CLIMB   - back on the ice: walks up to the huddle (through the exit's climb spots).
+##   LEAVE   - done somewhere else (an errand to another berg): walks off its ice toward home.
 ## A predator hunting it close by: it boosts away if it can afford to and heads home.
+##
+## Errands (visit()): with an egg to lay somewhere other than home (WaddleMatch decides where),
+## HOME and CLIMB take it to that berg's waddle instead, and it stands there until it's done
+## (end_visit(), or it gives up after errand_seconds), then leaves for home. With an egg to lay
+## (wants_egg) it fishes until breed_above instead of full_above.
 
-enum Mode { HUDDLE, GATHER, GO_IN, FORAGE, HOME, CLIMB }
+enum Mode { HUDDLE, GATHER, GO_IN, FORAGE, HOME, CLIMB, LEAVE }
 
 ## How often it rethinks targets (s).
 const THINK := 0.25
@@ -38,6 +44,8 @@ static var _colonies := {}
 var berg: IceBerg = null
 
 var mode: Mode = Mode.HUDDLE
+## It has an egg to lay (WaddleMatch sets it): it fishes until it's breed_above.
+var wants_egg := false
 ## 0 (frozen) to 1 (toasty).
 var warmth := 0.6
 ## True while it's pushing in toward the middle of the huddle (until it's warm).
@@ -61,6 +69,13 @@ var _detour := 0.0
 var _detour_dir := Vector3.ZERO
 var _avoid_side := 0.0
 var _avoid_time := 0.0
+## An errand: the berg it's going to (null: none), how long it's been at it, and the way off the
+## ice once it's done ({"spot", "out"}, or {} to just walk toward home).
+var _visit: IceBerg = null
+var _visit_time := 0.0
+var _leave_way := {}
+## How long an errand may take (s); WaddleMatch sets it from WaddleTuning.errand_seconds.
+var errand_seconds := 70.0
 
 
 func _ready() -> void:
@@ -92,6 +107,42 @@ static func huddlers(home: IceBerg) -> Array:
 	return colony_of(home).filter(func(b: PenguinBrain) -> bool: return is_instance_valid(b) and b.mode == Mode.HUDDLE)
 
 
+## Goes to `target`'s waddle (an errand: to lay an egg there), then home. In the water it swims
+## there now; on the ice it walks off toward it first.
+func visit(target: IceBerg) -> void:
+	if target == null or target == berg:
+		end_visit()
+		return
+	_visit = target
+	_visit_time = 0.0
+	_exit = {}
+	if _penguin == null:
+		return
+	if _penguin.state == Penguin.State.SWIM:
+		_set_mode(Mode.HOME)
+	elif mode in [Mode.HUDDLE, Mode.GATHER, Mode.CLIMB]:
+		_leave_party()
+		_set_mode(Mode.LEAVE)
+
+
+## The errand's over (done, or no point any more): back home.
+func end_visit() -> void:
+	var was := _visit
+	_visit = null
+	_exit = {}
+	if _penguin == null or was == null:
+		return
+	if _penguin.state == Penguin.State.SWIM:
+		_set_mode(Mode.HOME)
+	elif not _on_berg(berg):
+		_set_mode(Mode.LEAVE)
+
+
+## The berg it's on an errand to, or null.
+func visiting() -> IceBerg:
+	return _visit if is_instance_valid(_visit) else null
+
+
 func set_home(home: IceBerg) -> void:
 	if berg != null and _colonies.has(berg.get_instance_id()):
 		(_colonies[berg.get_instance_id()] as Array).erase(self)
@@ -115,6 +166,10 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 	_mode_time += delta
 	_think -= delta
+	if _visit != null:
+		_visit_time += delta
+		if not is_instance_valid(_visit) or _visit_time > errand_seconds:
+			end_visit()
 	var rethink := _think <= 0.0
 	if rethink:
 		_think = THINK
@@ -125,7 +180,7 @@ func _physics_process(delta: float) -> void:
 		_penguin.wish_brake = true
 		return
 	var in_water := _penguin.state == Penguin.State.SWIM
-	if in_water and mode in [Mode.HUDDLE, Mode.GATHER, Mode.CLIMB]:
+	if in_water and mode in [Mode.HUDDLE, Mode.GATHER, Mode.CLIMB, Mode.LEAVE]:
 		_leave_party()
 		_set_mode(Mode.HOME) # knocked in, or slipped
 	if not in_water and _penguin.state == Penguin.State.WALK and mode in [Mode.FORAGE, Mode.HOME]:
@@ -143,6 +198,8 @@ func _physics_process(delta: float) -> void:
 			_home(rethink)
 		Mode.CLIMB:
 			_climb()
+		Mode.LEAVE:
+			_leave()
 	if mode != Mode.HUDDLE:
 		_penguin.drain_mult = tuning.travel_drain
 	_check_stuck(delta)
@@ -282,10 +339,10 @@ func _leave_party() -> void:
 	_party = {}
 
 
-## Where to go in from the huddle toward `goal`: a clear walk across flat ice to the edge.
-## {"spot": a little way in from the edge, "out": the way off it} or {} if there isn't one.
-func _way_to_water(goal: Vector3) -> Dictionary:
-	var start := berg.waddle_spot()
+## Where to go in from the huddle (or from `from`) toward `goal`: a clear walk across flat ice to
+## the edge. {"spot": a little way in from the edge, "out": the way off it} or {} if there isn't one.
+func _way_to_water(goal: Vector3, from := Vector3.INF) -> Dictionary:
+	var start := berg.waddle_spot() if from == Vector3.INF else from
 	var toward := Vector3(goal.x - start.x, 0.0, goal.z - start.z).normalized()
 	var space := _penguin.get_world_3d().direct_space_state
 	for turn_deg in [0.0, 30.0, -30.0, 60.0, -60.0, 90.0, -90.0, 135.0, -135.0, 180.0]:
@@ -353,7 +410,8 @@ func _go_in() -> void:
 # --- In the water -------------------------------------------------------------
 
 func _forage(rethink: bool) -> void:
-	if _danger() or _penguin.energy >= tuning.full_above or _mode_time > tuning.trip_seconds:
+	var full := tuning.breed_above if wants_egg else tuning.full_above
+	if _danger() or _penguin.energy >= full or _mode_time > tuning.trip_seconds:
 		_set_mode(Mode.HOME)
 		return
 	if _needs_air():
@@ -378,7 +436,7 @@ func _home(rethink: bool) -> void:
 		_exit = _nearest_exit()
 		_launched = false
 	if _exit.is_empty():
-		_swim_toward(berg.waddle_spot(), -tuning.swim_depth)
+		_swim_toward(_target().waddle_spot(), -tuning.swim_depth)
 		return
 	if not _launched and _needs_air():
 		return
@@ -422,20 +480,46 @@ func _climb() -> void:
 	if _penguin.state == Penguin.State.SWIM:
 		_set_mode(Mode.HOME)
 		return
-	if not _on_home_berg():
-		# On the wrong ice (a floe, another berg): back into the water toward home.
-		var home := berg.waddle_spot()
+	var target := _target()
+	if not _on_berg(target):
+		# On the wrong ice (a floe, another berg): back into the water toward where it's going.
+		var home := target.waddle_spot()
 		_penguin.wish_dir = Vector3(home.x - _penguin.global_position.x, 0.0, home.z - _penguin.global_position.z).normalized()
 		return
 	if not _route.is_empty():
 		_walk_route()
 		return
-	var spot := berg.waddle_spot()
-	if Vector2(_penguin.global_position.x - spot.x, _penguin.global_position.z - spot.z).length() < 4.0:
+	var spot := target.waddle_spot()
+	var there := Vector2(_penguin.global_position.x - spot.x, _penguin.global_position.z - spot.z).length()
+	if _visit != null:
+		# On an errand: into the middle of their waddle, and wait there until it's done.
+		if there > 2.0:
+			_walk_to(spot)
+		else:
+			_penguin.wish_dir = Vector3.ZERO
+		return
+	if there < 4.0:
 		_exit = {}
 		_set_mode(Mode.HUDDLE)
 		return
 	_walk_to(spot)
+
+
+## Off the ice it's on, toward home: to a clear stretch of edge facing home, and over it.
+func _leave() -> void:
+	if _mode_time < 0.05 or (_leave_way.is_empty() and _mode_time < 0.3):
+		_leave_way = _way_to_water(berg.waddle_spot(), _penguin.global_position)
+	var home := berg.waddle_spot()
+	var toward := Vector3(home.x - _penguin.global_position.x, 0.0, home.z - _penguin.global_position.z).normalized()
+	if _leave_way.is_empty():
+		_penguin.wish_dir = toward
+	elif _penguin.global_position.distance_to(_leave_way["spot"]) > 1.2 and _mode_time < 12.0:
+		_walk_to(_leave_way["spot"])
+	else:
+		_penguin.wish_dir = _leave_way["out"]
+	if _mode_time > 25.0:
+		_leave_way = {}
+		_mode_time = 0.0
 
 
 ## A predator is hunting it close by, or it's inside a humpback's bubble net: boost away if it
@@ -519,12 +603,13 @@ func _round_ice(dir: Vector3, look: float) -> Vector3:
 ## the slow part).
 func _nearest_exit() -> Dictionary:
 	var me := _penguin.global_position
-	var huddle := berg.waddle_spot()
+	var target := _target()
+	var huddle := target.waddle_spot()
 	var swim_speed := _penguin.tuning.swim_cruise_speed
 	var walk_speed := _penguin.tuning.walk_speed
 	var best := {}
 	var best_time := INF
-	for exit: Dictionary in berg.exits():
+	for exit: Dictionary in target.exits():
 		var at: Vector3 = exit["at"]
 		var time := me.distance_to(at) / swim_speed + Vector2(at.x - huddle.x, at.z - huddle.z).length() / walk_speed
 		# A launch takes energy for the boost; low on it, prefer a ramp.
@@ -547,9 +632,20 @@ func _exit_out() -> float:
 
 
 func _on_home_berg() -> bool:
+	return _on_berg(berg)
+
+
+func _on_berg(which: IceBerg) -> bool:
+	if which == null:
+		return false
 	var me := _penguin.global_position
-	var centre := berg.global_position
-	return Vector2(me.x - centre.x, me.z - centre.z).length() <= berg.reach() + 0.5 and me.y > GameWorld.WATER_LEVEL + 0.2
+	var centre := which.global_position
+	return Vector2(me.x - centre.x, me.z - centre.z).length() <= which.reach() + 0.5 and me.y > GameWorld.WATER_LEVEL + 0.2
+
+
+## Where it's headed: the berg it's on an errand to, or home.
+func _target() -> IceBerg:
+	return _visit if _visit != null and is_instance_valid(_visit) else berg
 
 
 # --- Walking ------------------------------------------------------------------

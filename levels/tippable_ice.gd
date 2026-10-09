@@ -44,6 +44,11 @@ func _exit_tree() -> void:
 			_by_body.erase((body as Node3D).get_instance_id())
 
 
+## The tippable piece of ice `body` is part of, or null.
+static func of(body: Node3D) -> TippableIce:
+	return _by_body.get(body.get_instance_id()) if body != null else null
+
+
 ## The tippable piece of ice right under `point`, or null.
 static func under(world: World3D, point: Vector3) -> TippableIce:
 	var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.5, point + Vector3.DOWN * 3.0, GameWorld.WORLD_LAYER)

@@ -225,6 +225,14 @@ func clear_cooldown() -> void:
 	_cooldown = 0.0
 
 
+## Something big just happened at `at` (the waddle broke through the ice): every member heads
+## there and hunts for `seconds` (Predator.alert), and the pod may attack straight away.
+func alert(at: Vector3, seconds: float) -> void:
+	_cooldown = 0.0
+	for member in members():
+		member.alert(at, seconds)
+
+
 ## Narrows the attacks it knows to `list` (made from its tuning; see attacks()). For a level that
 ## saves an attack for later, and for tests.
 func set_attacks(list: Array[PodAttack]) -> void:
@@ -369,7 +377,8 @@ func _try_chain() -> bool:
 ## left, or its target has got away (or is sheltering by a humpback the pod is shy of).
 func _still_on() -> bool:
 	attack.attackers = attack.attackers.filter(func(m: Predator) -> bool: return is_instance_valid(m) and m.is_available())
-	var sheltered := not attack.attackers.is_empty() and attack.attackers[0].shies_from(attack.target)
+	# (The target may have been eaten since: then it's escaped.)
+	var sheltered := not attack.attackers.is_empty() and is_instance_valid(attack.target) and attack.attackers[0].shies_from(attack.target)
 	if attack.attackers.size() >= attack.settings.min_attackers and not attack.escaped() and not sheltered:
 		return true
 	attack.cancel()

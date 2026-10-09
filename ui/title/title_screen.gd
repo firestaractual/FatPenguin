@@ -1,14 +1,16 @@
 class_name TitleScreen
 extends Node3D
-## The title screen: the logo acted out (ART_DIRECTION, Logo; GDD §1). An overstuffed penguin
-## stands on a disc of thin ice. Each tap (or Space, or A) throws it a fish: it gulps it down and
-## swells. From the third fish the ice starts to crack under it, the cracks running out along the
-## seams of the ice; on the last fish it drops straight through, and the splash starts the game.
-## Thin ice exists only here: in play, ice never breaks under a penguin (DECISIONS, 2026-10-01).
+## The title screen: the logo acted out (ART_DIRECTION, Logo; GDD §1), and a preview of the game's
+## goal (GDD §4.12: a waddle fat enough breaks through the ice). A little waddle of fat penguins
+## stands on a disc of thin ice, the hero in front. Each tap (or Space, or A) throws him a fish: he
+## gulps it down and swells, and the others bob along. From the third fish the ice starts to crack,
+## the cracks running out along the seams of the ice; on the last fish it gives way. The ice drops
+## out from under them and, cartoon style, they hang in the air a moment, look down, flap, and
+## drop one after another, the hero last, and his splash starts the game.
 ##
-## The penguin is the game's own penguin scene with its processing switched off: this script
-## poses its Model by hand, so a new penguin model shows up here too. The rest (the ice, the
-## cracks, the splash) is built in code. The game scene loads in the background from the first fish.
+## The penguins are the game's own penguin scene with processing switched off: this script poses
+## their Models by hand, so a new penguin model shows up here too. The rest (the ice, the cracks,
+## the splashes) is built in code. The game scene loads in the background from the first fish.
 
 ## It ate a fish (how many so far).
 signal fed(count: int)
@@ -30,14 +32,23 @@ const SPLASH := preload("res://art/materials/splash.tres")
 ## Off for tests: it stops at the white-out (and emits finished) instead of starting the game.
 @export var start_game := true
 ## The thin ice: how wide, how far above the water its top is, and how many pieces it breaks into.
-@export var floe_radius := 2.2
+@export var floe_radius := 3.0
 @export var ice_top := 0.1
-@export var ice_pieces := 7
+@export var ice_pieces := 9
 ## How wide the penguin's body gets by the last fish (×), and how tall.
 @export var fat_width := 1.9
 @export var fat_height := 1.12
 ## How long a fish takes to fly to its beak (s).
 @export var fish_flight := 0.45
+## The rest of the waddle: where each stands (behind and beside the hero) and how fat it is (×).
+@export var waddle_spots: Array[Vector3] = [Vector3(-1.4, 0.0, -0.5), Vector3(1.45, 0.0, -0.45), Vector3(-0.7, 0.0, -1.5), Vector3(0.8, 0.0, -1.55)]
+@export var waddle_widths: Array[float] = [1.55, 1.7, 1.45, 1.6]
+## When the ice goes, how long each hangs in the air before it drops (s): the others in turn, then
+## the hero, longest of all.
+@export var hang_seconds: Array[float] = [0.18, 0.32, 0.44, 0.56]
+@export var hero_hang := 0.8
+## A drop into the water takes this long (s).
+@export var drop_seconds := 0.36
 
 ## Fish eaten so far.
 var feeds := 0
@@ -59,6 +70,12 @@ var _pieces: Array[Node3D] = []
 var _cracks: Array[Array] = []
 var _crack_material: StandardMaterial3D
 var _loading := false
+## The rest of the waddle: each {"penguin", "model", "width", "phase", "look", "flap", "stretch",
+## "bob"}. The hero's look, flap and stretch are in _hero.
+var _others: Array[Dictionary] = []
+var _hero := {"look": 0.0, "flap": false, "stretch": 0.0}
+## Each penguin's flippers at rest, by model.
+var _flippers := {}
 
 @onready var _camera: Camera3D = $Camera
 @onready var _prompt: Label = %Prompt
@@ -71,6 +88,7 @@ var _loading := false
 func _ready() -> void:
 	_build_floe()
 	_spawn_penguin()
+	_spawn_waddle()
 	_settings_button.pressed.connect(_open_settings)
 	_settings.closed.connect(func() -> void: _settings_button.grab_focus())
 	_settings_button.add_to_group(&"touch_ui")
@@ -87,6 +105,7 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	_clock += delta
 	_pose_penguin()
+	_pose_waddle()
 	# The prompt breathes, and names the right control.
 	_prompt.text = "Tap to feed him" if InputDevice.kind == InputDevice.Kind.TOUCH \
 			else "Press %s to feed him" % InputDevice.control_name(&"action")
@@ -173,6 +192,10 @@ func _gulp(fish: Fish) -> void:
 	create_tween().tween_property(self, "_tilt", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
 	# The ice takes the weight.
 	create_tween().tween_property(_floe, "position:y", -0.025 * feeds, 0.25)
+	# The others bob along (they'd like one too).
+	for other in _others:
+		var bob := create_tween()
+		bob.tween_method(_bob_other.bind(other), 0.0, 1.0, 0.45).set_delay(randf() * 0.12)
 	_grow_cracks()
 	if feeds >= feeds_to_break:
 		_break_through()
@@ -204,7 +227,8 @@ func _break_through() -> void:
 	beat.tween_callback(_drop)
 
 
-## The ice gives way: the pieces tip into the water and the penguin drops through.
+## The ice gives way: the pieces tip into the water and, cartoon style, the penguins hang in the
+## air a moment, look down, flap, and drop one after another, the hero last.
 func _drop() -> void:
 	_wobble = 0.0
 	for pivot in _pieces:
@@ -216,16 +240,51 @@ func _drop() -> void:
 	for seam in _cracks:
 		for segment: Node3D in seam:
 			segment.hide()
-	var fall := create_tween()
-	fall.tween_property(_penguin, "position:y", -1.6, 0.42).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	fall.parallel().tween_callback(_splash).set_delay(0.12)
+	for i in _others.size():
+		var hang: float = hang_seconds[i] if i < hang_seconds.size() else 0.3 + 0.12 * i
+		_hang_and_drop(_others[i], _others[i]["penguin"], hang, false)
+	var fall := _hang_and_drop(_hero, _penguin, hero_hang, true)
 	# White-out, then the game.
-	fall.tween_property(_flash, "color:a", 1.0, 0.55).set_delay(0.15)
+	fall.tween_property(_flash, "color:a", 1.0, 0.55).set_delay(0.2)
 	fall.tween_callback(_finish)
 
 
-func _splash() -> void:
-	broke_through.emit()
+## `who` hangs in the air for `hang` (s), looking down at where the ice was, flapping, then drops
+## into the water, stretched out, with a splash. Returns the tween, to chain onto.
+func _hang_and_drop(who: Dictionary, penguin: Penguin, hang: float, hero: bool) -> Tween:
+	var fall := create_tween()
+	who["flap"] = true
+	fall.tween_method(_set_look.bind(who), 0.0, 0.5, hang * 0.45).set_trans(Tween.TRANS_SINE)
+	fall.tween_method(_set_look.bind(who), 0.5, -0.15, hang * 0.25).set_delay(hang * 0.1).set_trans(Tween.TRANS_BACK)
+	fall.tween_interval(hang * 0.2)
+	fall.tween_method(_set_stretch.bind(who), 0.0, 1.0, drop_seconds * 0.4)
+	fall.parallel().tween_property(penguin, "position:y", -1.6, drop_seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	fall.parallel().tween_callback(_splash_at.bind(penguin, hero)).set_delay(drop_seconds * 0.55)
+	if not hero:
+		# Bob back up, head out of the water, a bit stunned.
+		fall.tween_callback(func() -> void:
+			who["flap"] = false
+			who["stretch"] = 0.0
+			who["look"] = -0.2)
+		fall.tween_property(penguin, "position:y", -0.12, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	return fall
+
+
+func _set_look(value: float, who: Dictionary) -> void:
+	who["look"] = value
+
+
+func _set_stretch(value: float, who: Dictionary) -> void:
+	who["stretch"] = value
+
+
+func _bob_other(t: float, other: Dictionary) -> void:
+	other["bob"] = sin(t * PI) * 0.12
+
+## A splash where `penguin` hits the water: a big one for the hero (and that's the breakthrough).
+func _splash_at(penguin: Penguin, hero: bool) -> void:
+	if hero:
+		broke_through.emit()
 	var spray := CPUParticles3D.new()
 	var drop := SphereMesh.new()
 	drop.radius = 0.035
@@ -234,7 +293,7 @@ func _splash() -> void:
 	drop.rings = 4
 	drop.material = SPLASH
 	spray.mesh = drop
-	spray.amount = 160
+	spray.amount = 160 if hero else 70
 	spray.lifetime = 1.0
 	spray.one_shot = true
 	spray.explosiveness = 0.95
@@ -247,11 +306,11 @@ func _splash() -> void:
 	spray.scale_amount_max = 1.6
 	spray.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
 	spray.emission_ring_axis = Vector3.UP
-	spray.emission_ring_radius = 0.6
+	spray.emission_ring_radius = 0.6 if hero else 0.45
 	spray.emission_ring_inner_radius = 0.2
 	spray.emission_ring_height = 0.05
 	add_child(spray)
-	spray.position = Vector3(0.0, GameWorld.WATER_LEVEL, 0.0)
+	spray.position = Vector3(penguin.position.x, GameWorld.WATER_LEVEL, penguin.position.z)
 	spray.emitting = true
 
 
@@ -286,17 +345,97 @@ func _spawn_penguin() -> void:
 
 
 ## Faces the camera, as wide and tall as it's been fed, squashed as it gulps, tipped back to
-## catch a fish, wobbling as the ice goes.
+## catch a fish, wobbling as the ice goes; looking down, flapping and stretched out as it drops.
 func _pose_penguin() -> void:
 	if _model == null:
 		return
-	var width := _width * (1.0 + 0.12 * _squash)
-	var height := _height * (1.0 - 0.1 * _squash)
+	var stretch: float = _hero["stretch"]
+	var width := _width * (1.0 + 0.12 * _squash) * (1.0 - 0.22 * stretch)
+	var height := _height * (1.0 - 0.1 * _squash) * (1.0 + 0.35 * stretch)
 	var wobble := _wobble * 0.18 * sin(_clock * 38.0)
-	var b := Basis(Vector3.UP, PI) * Basis(Vector3.RIGHT, _tilt) * Basis(Vector3.BACK, wobble)
+	var b := Basis(Vector3.UP, PI) * Basis(Vector3.RIGHT, _tilt + _hero["look"]) * Basis(Vector3.BACK, wobble)
 	_model.basis = b * Basis.from_scale(Vector3(width, height, width))
 	# Feet stay on the ice as it grows taller.
 	_model.position.y = (height - 1.0) * 0.3
+	_flap(_model, _hero["flap"])
+
+
+## The rest of the waddle: fat, swaying, bobbing when the hero gets a fish, wobbling as the ice
+## goes, and the same hang and drop as the hero.
+func _pose_waddle() -> void:
+	for other in _others:
+		var model: Node3D = other["model"]
+		var phase: float = other["phase"]
+		var stretch: float = other["stretch"]
+		var w: float = other["width"] * (1.0 - 0.22 * stretch)
+		var h := 1.08 * (1.0 + 0.35 * stretch)
+		var sway := 0.05 * sin(_clock * 1.3 + phase) + _wobble * 0.16 * sin(_clock * 35.0 + phase)
+		var turn: float = other["turn"]
+		model.basis = Basis(Vector3.UP, PI + turn) * Basis(Vector3.RIGHT, other["look"]) * Basis(Vector3.BACK, sway) \
+				* Basis.from_scale(Vector3(w, h, w))
+		model.position.y = (h - 1.0) * 0.3 + other["bob"]
+		_flap(model, other["flap"])
+
+
+## Flippers beating (as it hangs in the air), or at rest.
+func _flap(model: Node3D, flapping: bool) -> void:
+	if not _flippers.has(model):
+		var rest := {}
+		for flipper_name in [&"FlipperL", &"FlipperR"]:
+			var flipper := model.get_node_or_null(NodePath(flipper_name)) as Node3D
+			if flipper != null:
+				rest[flipper] = flipper.transform
+		_flippers[model] = rest
+	var flippers: Dictionary = _flippers[model]
+	for flipper: Node3D in flippers:
+		var at_rest: Transform3D = flippers[flipper]
+		if not flapping:
+			flipper.transform = at_rest
+			continue
+		var side := signf(at_rest.origin.x)
+		var angle := side * 0.75 * (0.5 + 0.5 * sin(_clock * 34.0 + side))
+		var pivot := at_rest.origin + at_rest.basis.y * 0.15
+		flipper.transform = Transform3D(Basis(Vector3.BACK, angle), pivot) * Transform3D(Basis.IDENTITY, -pivot) * at_rest
+
+
+## The rest of the waddle, already fat, round and behind the hero.
+func _spawn_waddle() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	for i in waddle_spots.size():
+		var other := PENGUIN_SCENE.instantiate() as Penguin
+		other.player_controlled = false
+		other.infinite_energy = true
+		other.process_mode = Node.PROCESS_MODE_DISABLED
+		add_child(other)
+		other.remove_from_group(&"penguins")
+		other.position = waddle_spots[i] + Vector3.UP * (ice_top + other.base_radius())
+		_others.append({
+			"penguin": other,
+			"model": other.get_node("Model"),
+			"width": waddle_widths[i] if i < waddle_widths.size() else 1.5,
+			"phase": rng.randf() * TAU,
+			"turn": rng.randf_range(-0.35, 0.35) - waddle_spots[i].x * 0.12,
+			"look": 0.0,
+			"flap": false,
+			"stretch": 0.0,
+			"bob": 0.0,
+		})
+	_pose_waddle()
+
+
+## The penguins standing on the thin ice: the hero first.
+func penguin_count() -> int:
+	return 1 + _others.size()
+
+
+## How many penguins are still up on the ice (not dropped into the water yet).
+func penguins_on_ice() -> int:
+	var n := 1 if _penguin.position.y > 0.0 else 0
+	for other in _others:
+		if (other["penguin"] as Penguin).position.y > 0.0:
+			n += 1
+	return n
 
 
 func _beak() -> Vector3:

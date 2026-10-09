@@ -3,8 +3,8 @@ extends Node3D
 ## How a penguin looks: the script on its Model node. The body (a sphere that never rotates) does
 ## the physics; this node only shows it. Each physics frame, right after the penguin moves, it
 ## turns the model to match what the penguin is doing (standing, lying belly-down to slide or
-## swim, hopping, windmilling at an edge, spinning out, dazed, queasy), widens it with fat and keeps its
-## feet on the ice as the collider grows. It plays the bubbles, splashes and feather puffs from the
+## swim, hopping, windmilling at an edge, spinning out, dazed, queasy, flailing), widens it with fat
+## and keeps its feet on the ice as the collider grows. It plays the bubbles, splashes and feather puffs from the
 ## penguin's signals (and a sick fish coming back up).
 ##
 ## It only reads the penguin (its state, its public getters and signals), so a real model can
@@ -18,12 +18,19 @@ const TURN_SMOOTHING := 12.0
 const DROP_SMOOTHING := 10.0
 ## Spinning out: turns per second (rad/s).
 const SPIN_SPEED := 18.0
+## Flailing: head over heels this fast in the air (rad/s), and the flippers beat this fast (rad/s)
+## and this far (rad).
+const FLAIL_TUMBLE := 9.0
+const FLAP_SPEED := 30.0
+const FLAP_ANGLE := 0.9
 
 @export var bubbles_path := ^"../Bubbles"
 @export var splash_path := ^"../Splash"
 @export var puff_path := ^"../Puff"
 ## The mesh that body_tint colours.
 @export var body_path := ^"Body"
+## The flippers, which flap when it flails (rotating about their top end).
+@export var flipper_paths: Array[NodePath] = [^"FlipperL", ^"FlipperR"]
 
 var _penguin: Penguin
 var _spin_angle := 0.0
@@ -31,6 +38,9 @@ var _bubbles: CPUParticles3D
 var _splash: CPUParticles3D
 var _puff: CPUParticles3D
 var _sick: CPUParticles3D
+var _tumble := 0.0
+var _flippers: Array[Node3D] = []
+var _flipper_rest: Array[Transform3D] = []
 
 
 func _ready() -> void:
@@ -44,15 +54,17 @@ func _ready() -> void:
 			(particles as CPUParticles3D).top_level = true
 	if _penguin == null:
 		return
-	var body := get_node_or_null(body_path) as MeshInstance3D
-	if body != null and _penguin.body_tint.a > 0.0:
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = _penguin.body_tint
-		body.material_override = mat
+	_tint(_penguin.body_tint)
+	_penguin.tinted.connect(_tint)
 	_penguin.splashed.connect(_on_splashed)
 	_penguin.feathers_flew.connect(_on_feathers_flew)
 	_penguin.threw_up.connect(_on_threw_up)
 	_sick = _make_sick_spray()
+	for path in flipper_paths:
+		var flipper := get_node_or_null(path) as Node3D
+		if flipper != null:
+			_flippers.append(flipper)
+			_flipper_rest.append(flipper.transform)
 
 
 func _physics_process(delta: float) -> void:
@@ -76,6 +88,18 @@ func _physics_process(delta: float) -> void:
 			target = Basis(Vector3.UP, p.facing_yaw()) if p.is_hopping() else _belly_down_basis(p.get_heading())
 		_:
 			target = _belly_down_basis(p.get_heading())
+	if p.is_flailing():
+		var t := Time.get_ticks_msec() * 0.001
+		if p.state == Penguin.State.AIR and not p.is_hopping():
+			# Thrown up off the ice: head over heels.
+			_tumble += FLAIL_TUMBLE * delta
+			target = Basis(Vector3.UP, p.facing_yaw()) * Basis(Vector3.RIGHT, _tumble)
+		elif p.state == Penguin.State.SWIM:
+			# Splashed down: bolt upright in the water, flapping, rocking back.
+			target = Basis(Vector3.UP, p.facing_yaw()) * Basis(Vector3.RIGHT, 0.45 + 0.2 * sin(t * 7.0))
+	else:
+		_tumble = 0.0
+	_flap(p.is_flailing())
 	if p.is_spun_out():
 		_spin_angle += SPIN_SPEED * delta
 		target = Basis(Vector3.UP, _spin_angle) * target
@@ -104,6 +128,34 @@ func _physics_process(delta: float) -> void:
 
 	if _bubbles != null:
 		_bubbles.emitting = p.state == Penguin.State.SWIM and (p.is_boosting() or p.swim_speed() > p.tuning.porpoise_min_speed)
+
+
+## Colours the body `colour` (alpha 0: its own colour).
+func _tint(colour: Color) -> void:
+	var body := get_node_or_null(body_path) as MeshInstance3D
+	if body == null:
+		return
+	if colour.a <= 0.0:
+		body.material_override = null
+		return
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = colour
+	body.material_override = mat
+
+
+## Flippers beating while it flails; at rest otherwise.
+func _flap(flailing: bool) -> void:
+	var t := Time.get_ticks_msec() * 0.001
+	for i in _flippers.size():
+		var rest := _flipper_rest[i]
+		if not flailing:
+			_flippers[i].transform = rest
+			continue
+		var side := signf(rest.origin.x) if absf(rest.origin.x) > 0.001 else 1.0
+		var angle := side * FLAP_ANGLE * (0.5 + 0.5 * sin(t * FLAP_SPEED + float(i) * 0.6))
+		# Turn about the flipper's top end, where it meets the body.
+		var pivot := rest.origin + rest.basis.y * 0.15
+		_flippers[i].transform = Transform3D(Basis(Vector3.BACK, angle), pivot) * Transform3D(Basis.IDENTITY, -pivot) * rest
 
 
 ## Lays the model belly-down with its head along `dir` (`up` is the way its back faces).

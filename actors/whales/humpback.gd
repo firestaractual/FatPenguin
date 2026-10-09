@@ -240,7 +240,7 @@ func net_radius() -> float:
 
 ## The penguin it's on its way to help, or guarding (null if none).
 func protege() -> Penguin:
-	return _protege
+	return _protege if is_instance_valid(_protege) else null
 
 
 ## Seconds until it next comes up to breathe, and next goes looking for a meal (for testers).
@@ -579,7 +579,7 @@ func _start_mob(p: Penguin) -> void:
 
 
 func _mob(delta: float) -> void:
-	var p := _protege
+	var p: Penguin = _protege if is_instance_valid(_protege) else null # it may have been eaten
 	if not _penguin_ok(p):
 		_end_mob()
 		return
@@ -609,7 +609,7 @@ func _drive_off(p: Penguin) -> void:
 
 
 func _guard(delta: float) -> void:
-	var p := _protege
+	var p: Penguin = _protege if is_instance_valid(_protege) else null # it may have been eaten
 	if not _penguin_ok(p) or _state_time > tuning.guard_seconds:
 		_end_mob()
 		return
